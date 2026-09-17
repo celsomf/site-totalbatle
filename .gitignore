@@ -1,0 +1,9 @@
+# AI Agents & IDE customizations
+.agents/
+.agent/
+_agents/
+_agent/
+
+# Spec Kit
+.specify/
+specs/
