@@ -246,14 +246,15 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
           <button
             type="button"
             onClick={handleCopy}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-sans font-black text-xs shadow-lg transition-all ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-sans font-bold text-xs shadow-md transition-all ${
               copied
                 ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
-                : 'bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-600 hover:brightness-110 text-[#1a1006] ring-2 ring-amber-400/80'
+                : 'bg-[#2a1a10] hover:bg-[#382316] text-[#caa568] hover:text-[#fef08a] border border-[#5a3e22]'
             }`}
+            title="Copia um resumo em texto para compartilhar no Chat do Clã ou Discord"
           >
-            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            <span>{copied ? 'Copiado para o Jogo!' : '📋 Copiar para o Jogo'}</span>
+            {copied ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4 text-amber-400" />}
+            <span>{copied ? 'Copiado para o Chat do Clã!' : '💬 Copiar Texto para o Clã'}</span>
           </button>
         </div>
       </div>
@@ -406,10 +407,15 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
       {/* 4. STEP 2: O QUE COLOCAR NO JOGO (Main Focus / Army Selection Cards) */}
       <div className="bg-[#140d08] p-4 sm:p-5 rounded-xl border-2 border-[#caa568] space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#5a3e22] pb-2 gap-2">
-          <span className="text-xs font-black uppercase tracking-wider text-[#fef08a] flex items-center gap-2 font-serif">
-            <span className="w-5 h-5 rounded-full bg-amber-900 text-amber-200 border border-amber-500 flex items-center justify-center text-xs font-black">2</span>
-            Composição Exata para Digitar no Jogo (Ordem de Marcha)
-          </span>
+          <div>
+            <span className="text-xs font-black uppercase tracking-wider text-[#fef08a] flex items-center gap-2 font-serif">
+              <span className="w-5 h-5 rounded-full bg-amber-900 text-amber-200 border border-amber-500 flex items-center justify-center text-xs font-black">2</span>
+              Composição de Marcha (Digite estes valores na tela do jogo)
+            </span>
+            <span className="text-[11px] text-[#caa568]/80 font-sans block pt-0.5">
+              ⌨️ Digite ou deslize os campos do quartel/marcha no Total Battle com as quantidades abaixo:
+            </span>
+          </div>
           <span className="text-xs font-sans font-bold text-[#caa568]">
             Capacidade de Guardas: <strong className="text-[#fef08a]">{allocatedGuards.toLocaleString('pt-BR')}</strong> / {maxGuards.toLocaleString('pt-BR')}
           </span>
