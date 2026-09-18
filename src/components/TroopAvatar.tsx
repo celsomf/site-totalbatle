@@ -227,7 +227,7 @@ export const TroopAvatar: React.FC<TroopAvatarProps> = ({ id, tier, size = 'md',
     }
   };
 
-  const realImgSrc = REAL_TROOP_IMAGES[id];
+  const realImgSrc = REAL_TROOP_IMAGES[id] || `/assets/troops/${id}.png`;
 
   // High-fidelity illustrated vector graphics matching the game screenshots
   const renderVisual = () => {
@@ -667,12 +667,35 @@ export const TroopAvatar: React.FC<TroopAvatarProps> = ({ id, tier, size = 'md',
         );
 
       // Default Fallback
-      default:
+      default: {
+        const isRanged = id.includes('ranged') || id.includes('archer') || id.includes('deadshot') || id.includes('legitimist') || id.includes('purificador') || id.includes('besteiro');
+        const isMelee = id.includes('melee') || id.includes('sword') || id.includes('heavy') || id.includes('duelist') || id.includes('justiceiro') || id.includes('alabardeiro');
+        const isMounted = id.includes('mounted') || id.includes('rider') || id.includes('lion') || id.includes('whitemane') || id.includes('triturador') || id.includes('cavaleiro');
+        const isFlying = id.includes('flying') || id.includes('grifo') || id.includes('corvo') || id.includes('vulture') || id.includes('royal_lion');
+        const isScout = id.includes('spy') || id.includes('jaeger') || id.includes('panoptic');
+        const isMonster = id.includes('golem') || id.includes('specter') || id.includes('beast') || id.includes('titan') || id.includes('berserker') || id.includes('elemental');
+
+        let symbol = '🛡️';
+        let bgGradient = 'from-[#2b1810] to-[#140b07]';
+        if (isRanged) { symbol = '🏹'; bgGradient = 'from-[#1e3a1e] to-[#0c1f0c]'; }
+        else if (isMelee) { symbol = '⚔️'; bgGradient = 'from-[#3a1d1d] to-[#1f0c0c]'; }
+        else if (isMounted) { symbol = '🐴'; bgGradient = 'from-[#2c1d3a] to-[#120a1a]'; }
+        else if (isFlying) { symbol = '🦅'; bgGradient = 'from-[#1c2c3d] to-[#0b141f]'; }
+        else if (isScout) { symbol = '🐕'; bgGradient = 'from-[#3a2c1a] to-[#1c1208]'; }
+        else if (isMonster) { symbol = '🐺'; bgGradient = 'from-[#3a1228] to-[#1a0510]'; }
+
         return (
-          <div className="w-full h-full bg-[#182030] flex flex-col items-center justify-center font-bold text-slate-400 text-xs">
-            <span className="text-lg">🛡️</span>
+          <div
+            title={`Arquivo de imagem esperado: /assets/troops/${id}.png`}
+            className={`w-full h-full bg-gradient-to-b ${bgGradient} flex flex-col items-center justify-center font-bold text-[#fef08a] select-none p-1`}
+          >
+            <span className="text-lg drop-shadow">{symbol}</span>
+            <span className="text-[7px] text-[#caa568] font-mono truncate max-w-full px-0.5 mt-0.5 leading-none text-center">
+              {id.replace(/^(g[0-9]_|s[0-9]_|m[0-9]_)/, '')}
+            </span>
           </div>
         );
+      }
     }
   };
 
