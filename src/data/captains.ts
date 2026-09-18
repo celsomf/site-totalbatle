@@ -11,7 +11,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 20,
     description: 'Valquíria de Combate. Bônus de liderança, ataque corpo-a-corpo e caçada a monstros.',
-    avatarIcon: 'Flame',
+    avatarIcon: '/assets/troops/brunhild.png',
   },
   // 2. Xi Guiying (Lvl 23)
   {
@@ -23,7 +23,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 15,
     description: 'Guerreira Heroica Oriental. Especialista em bônus para infantaria e caça a monstros.',
-    avatarIcon: 'Swords',
+    avatarIcon: '/assets/troops/xi_guiying.png',
   },
   // 3. Aydae (Lvl 23)
   {
@@ -35,7 +35,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 15,
     description: 'Arqueira Mística. Especialista em bônus para arqueiros e caça a monstros.',
-    avatarIcon: 'Crosshair',
+    avatarIcon: '/assets/troops/aydae.png',
   },
   // 3. Farhad (Lvl 20)
   {
@@ -47,7 +47,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 15,
     description: 'Capitão combatente versátil para expedições e ataques de monstros.',
-    avatarIcon: 'Swords',
+    avatarIcon: '/assets/troops/farhad.png',
   },
   // 4. Alexander
   {
@@ -59,7 +59,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 15,
     description: 'Grande Conquistador. Especialista em liderança de exércitos e combate em campo aberto.',
-    avatarIcon: 'Crown',
+    avatarIcon: '/assets/troops/alexander.png',
   },
   // 5. Amanitore
   {
@@ -71,7 +71,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 5,
     marchSpeedBonusPercent: 10,
     description: 'Rainha Construtora. Acelera construção e fornece bônus defensivos.',
-    avatarIcon: 'Shield',
+    avatarIcon: '/assets/troops/amanitore.png',
   },
   // 6. Aurora
   {
@@ -83,7 +83,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 12,
     description: 'Sacerdotisa da Luz. Cura acelerada e bônus contra forças das trevas.',
-    avatarIcon: 'Sun',
+    avatarIcon: '/assets/troops/aurora.png',
   },
   // 7. Beowulf
   {
@@ -95,7 +95,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 10,
     description: 'Matador de Feras lendário. Bônus massivo contra monstros épicos.',
-    avatarIcon: 'Axe',
+    avatarIcon: '/assets/troops/beowulf.png',
   },
   // 8. Bernard
   {
@@ -107,7 +107,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 10,
     description: 'Mestre Arqueiro. Bônus massivo para tropas de Longo Alcance (Ranged).',
-    avatarIcon: 'Target',
+    avatarIcon: '/assets/troops/bernard.png',
   },
   // 9. Brann
   {
@@ -119,7 +119,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 12,
     description: 'Mestre da Forja e Cerco. Aumenta poder de máquinas de guerra e catapultas.',
-    avatarIcon: 'Hammer',
+    avatarIcon: '/assets/troops/brann.png',
   },
   // 10. Carter
   {
@@ -131,7 +131,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 30,
     marchSpeedBonusPercent: 25,
     description: 'Arqueólogo Explorador. Reduz consumo de Alcatrão (Tar) em criptas em até 30%.',
-    avatarIcon: 'Compass',
+    avatarIcon: '/assets/troops/carter.png',
   },
   // 11. Cleopatra
   {
@@ -143,7 +143,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 10,
     marchSpeedBonusPercent: 15,
     description: 'Rainha do Nilo. Bônus econômico e equilíbrio geral para todas as tropas.',
-    avatarIcon: 'Coins',
+    avatarIcon: '/assets/troops/cleopatra.png',
   },
   // 12. Dustan
   {
@@ -155,7 +155,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 12,
     description: 'Ranger das Planícies. Rastreamento e bônus de ataque rápido.',
-    avatarIcon: 'Eye',
+    avatarIcon: '/assets/troops/dustan.png',
   },
   // 13. Heimdall
   {
@@ -167,7 +167,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 15,
     description: 'Guardião dos Reinos. Defesa intransponível para a cidade e muralhas.',
-    avatarIcon: 'Eye',
+    avatarIcon: '/assets/troops/heimdall.png',
   },
   // 14. Helen
   {
@@ -179,7 +179,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 5,
     marchSpeedBonusPercent: 15,
     description: 'Inspiradora das tropas. Aumenta moral e capacidade de transporte.',
-    avatarIcon: 'Heart',
+    avatarIcon: '/assets/troops/helen.png',
   },
   // 15. Hercules
   {
@@ -191,7 +191,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 10,
     description: 'Semideus da Força. Bônus titânico de ataque corpo-a-corpo.',
-    avatarIcon: 'Zap',
+    avatarIcon: '/assets/troops/hercules.png',
   },
   // 16. Ingrid
   {
@@ -203,7 +203,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 15,
     description: 'Guerreira do Norte. Resiliência contra magias elementais.',
-    avatarIcon: 'Flame',
+    avatarIcon: '/assets/troops/ingrid.png',
   },
   // 17. Logos
   {
@@ -215,7 +215,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 10,
     description: 'Mestre Tático. Bônus especial para unidades Especialistas (S1-S7).',
-    avatarIcon: 'Brain',
+    avatarIcon: '/assets/troops/logos.png',
   },
   // 20. Lucius
   {
@@ -227,7 +227,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 12,
     description: 'Comandante de Legião. Fortalece a formação de infantaria pesada.',
-    avatarIcon: 'Sword',
+    avatarIcon: '/assets/troops/lucius.png',
   },
   // 21. Minamoto
   {
@@ -239,7 +239,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 20,
     description: 'Senhor da Guerra Samurai. Ataques rápidos e precisos.',
-    avatarIcon: 'Crosshair',
+    avatarIcon: '/assets/troops/minamoto.png',
   },
   // 22. Proscope
   {
@@ -251,7 +251,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 20,
     marchSpeedBonusPercent: 20,
     description: 'Navegador Noturno. Eficiência em criptas e marcha veloz.',
-    avatarIcon: 'Compass',
+    avatarIcon: '/assets/troops/proscope.png',
   },
   // 23. Ramses II
   {
@@ -263,7 +263,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 5,
     marchSpeedBonusPercent: 15,
     description: 'Faraó Construtor de Monumentos. Bônus imperial e glória de marcha.',
-    avatarIcon: 'Crown',
+    avatarIcon: '/assets/troops/ramses_II.png',
   },
   // 24. Skadi
   {
@@ -275,7 +275,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 15,
     description: 'Deusa da Caça na Neve. Bônus crítico em arqueiros e caçadas.',
-    avatarIcon: 'Crosshair',
+    avatarIcon: '/assets/troops/skadi.png',
   },
   // 25. Sofia
   {
@@ -287,7 +287,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 10,
     marchSpeedBonusPercent: 15,
     description: 'Erudita Real. Pesquisa acelerada e diplomacia.',
-    avatarIcon: 'Sparkles',
+    avatarIcon: '/assets/troops/sofia.png',
   },
   // 26. Stror
   {
@@ -299,7 +299,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 10,
     description: 'Anão das Montanhas. Especialista em fortificações e defesa pesada.',
-    avatarIcon: 'Shield',
+    avatarIcon: '/assets/troops/stror.png',
   },
   // 27. Tengel
   {
@@ -311,7 +311,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 35,
     description: 'Mestre da Cavalaria. Aumenta a velocidade de todas as marchas em até 35%.',
-    avatarIcon: 'Wind',
+    avatarIcon: '/assets/troops/tengel.png',
   },
   // 28. Wu Zetian
   {
@@ -323,7 +323,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 8,
     marchSpeedBonusPercent: 15,
     description: 'Imperatriz Suprema. Liderança administrativa e poder em campanhas militares.',
-    avatarIcon: 'Crown',
+    avatarIcon: '/assets/troops/wu_zetian.png',
   },
   // 27. Ye Ho-Sung
   {
@@ -335,7 +335,7 @@ export const DEFAULT_CAPTAINS: Captain[] = [
     cryptTarReductionPercent: 0,
     marchSpeedBonusPercent: 18,
     description: 'General do Vento. Ataques fulminantes contra exércitos de monstros.',
-    avatarIcon: 'Swords',
+    avatarIcon: '/assets/troops/ye_ho_sung.png',
   },
 ];
 

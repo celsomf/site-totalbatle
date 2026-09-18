@@ -172,7 +172,7 @@ export const CaptainsView: React.FC<CaptainsViewProps> = ({
                         : 'bg-slate-800 text-slate-300 border-slate-600'
                     }`}
                   >
-                    {isPrimary ? '👑 Líder da Marcha' : `Capitão #${idx + 1}`}
+                    {isPrimary ? '👑 Líder' : `Capitão #${idx + 1}`}
                   </span>
 
                   <button
@@ -235,6 +235,22 @@ export const CaptainsView: React.FC<CaptainsViewProps> = ({
               </div>
             );
           })}
+
+          {/* Empty Captain Slots (if fewer than 3) */}
+          {Array.from({ length: Math.max(0, 3 - selectedCaptainIds.length) }).map((_, idx) => (
+            <div
+              key={`empty-slot-${idx}`}
+              className="p-5 rounded-2xl border-2 border-dashed border-slate-700/70 bg-[#0b0f19]/60 flex flex-col items-center justify-center text-center gap-2 min-h-[180px]"
+            >
+              <UserCheck className="w-8 h-8 text-slate-500" />
+              <span className="text-xs font-bold text-slate-300">
+                Vaga #{selectedCaptainIds.length + idx + 1} Disponível
+              </span>
+              <span className="text-2xs text-slate-400">
+                Selecione um capitão na lista abaixo para ocupar este slot
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 

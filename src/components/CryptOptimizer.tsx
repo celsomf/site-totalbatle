@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PlayerProfile, TroopUnit, Captain } from '../types';
 import { calculateCryptOneShot } from '../engine/crypt';
-import { Compass, CheckCircle, AlertCircle, Copy, Check } from 'lucide-react';
+import { Compass, CheckCircle2, Copy, Check, Zap, Shield, Sparkles } from 'lucide-react';
 
 interface CryptOptimizerProps {
   profile: PlayerProfile;
@@ -17,7 +17,8 @@ export const CryptOptimizer: React.FC<CryptOptimizerProps> = ({ profile, troops,
 
   const handleCopy = () => {
     const squad = recommendation.recommendedSquads[0];
-    const text = `🧭 MARCHA CRIPTA 1-SHOT - NÍVEL ${cryptLevel}\n` +
+    const text =
+      `🧭 MARCHA CRIPTA 1-SHOT - NÍVEL ${cryptLevel}\n` +
       `👤 Capitão: ${captain.name}\n` +
       `⚡ Consumo de Alcatrão (Tar): ${recommendation.tarCost} pts\n` +
       `💥 Tropa Recomendada: ${squad?.count.toLocaleString('pt-BR')}x ${squad?.unitName}\n` +
@@ -28,42 +29,48 @@ export const CryptOptimizer: React.FC<CryptOptimizerProps> = ({ profile, troops,
     setTimeout(() => setCopied(false), 2500);
   };
 
+  const primarySquad = recommendation.recommendedSquads[0];
+
   return (
-    <div className="bg-[#241912] border-2 border-[#5a3e22] rounded-xl p-4 sm:p-5 shadow-2xl space-y-5 font-serif">
+    <div className="bg-[#111827] text-slate-100 rounded-2xl p-5 sm:p-6 shadow-2xl border border-slate-700/80 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#5a3e22] pb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-[#3d2917] border border-[#caa568] text-[#fef08a]">
-            <Compass className="w-5 h-5" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0b0f19] p-5 rounded-2xl border border-slate-700/80">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center shadow-lg shadow-amber-500/20 border border-amber-300 flex-shrink-0">
+            <Compass className="w-6 h-6 text-slate-950" />
           </div>
           <div>
-            <h2 className="text-lg sm:text-xl font-black text-[#fef08a] font-fantasy tracking-wide">
+            <h2 className="text-xl font-black text-white tracking-wide">
               Caçador de Criptas (1-Hit KO)
             </h2>
-            <p className="text-xs text-[#caa568]/80">
-              Economia de Alcatrão (Tar) e farm de materiais de forja sem perdas
+            <p className="text-xs sm:text-sm font-semibold text-slate-400">
+              Cálculo exato de tropas para eliminar a cripta no 1º turno sem perdas e com menor consumo de Alcatrão (Tar)
             </p>
           </div>
         </div>
 
         <button
           onClick={handleCopy}
-          className={`tb-btn-green flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition-all ${
-            copied ? '!bg-emerald-700 !border-emerald-400' : ''
+          className={`px-4 py-2.5 rounded-xl font-extrabold text-xs shadow-lg transition-all flex items-center justify-center gap-2 ${
+            copied
+              ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
+              : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-amber-500/20'
           }`}
         >
           {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          {copied ? 'Copiado!' : 'Copiar Marcha da Cripta'}
+          <span>{copied ? 'Copiado!' : 'Copiar Marcha da Cripta'}</span>
         </button>
       </div>
 
-      {/* Level Slider & Selectors */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-2 bg-[#180f0a] p-3.5 rounded-lg border border-[#5a3e22]">
-          <div className="flex justify-between text-xs font-semibold">
-            <span className="text-[#caa568]">Nível da Cripta:</span>
-            <span className="text-[#fef08a] font-extrabold text-sm">Nível {cryptLevel}</span>
+      {/* Crypt Level Selector & Tar Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        {/* Slider Card (7 cols) */}
+        <div className="md:col-span-7 bg-[#0b0f19] p-5 rounded-2xl border border-slate-700/80 space-y-3">
+          <div className="flex justify-between items-center text-xs">
+            <span className="font-bold text-slate-300">Nível da Cripta:</span>
+            <span className="font-black text-amber-300 text-base font-mono">Nível {cryptLevel}</span>
           </div>
+
           <input
             type="range"
             min="5"
@@ -71,63 +78,117 @@ export const CryptOptimizer: React.FC<CryptOptimizerProps> = ({ profile, troops,
             step="5"
             value={cryptLevel}
             onChange={(e) => setCryptLevel(Number(e.target.value))}
-            className="w-full h-2 bg-[#100a06] rounded-lg appearance-none cursor-pointer accent-[#caa568]"
+            className="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400"
           />
-          <div className="flex justify-between text-[10px] text-slate-500 font-sans font-bold">
+
+          <div className="flex justify-between text-2xs text-slate-400 font-mono font-bold pt-1">
             <span>Nv 5</span>
+            <span>Nv 10</span>
             <span>Nv 15</span>
+            <span>Nv 20</span>
             <span>Nv 25</span>
+            <span>Nv 30</span>
             <span>Nv 35</span>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            {[5, 10, 15, 20, 25, 30, 35].map((lvl) => (
+              <button
+                key={lvl}
+                onClick={() => setCryptLevel(lvl)}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  cryptLevel === lvl
+                    ? 'bg-amber-400 text-slate-950 font-black shadow'
+                    : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+                }`}
+              >
+                Nv {lvl}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Tar Cost Badge */}
-        <div className="bg-[#180f0a] p-3.5 rounded-lg border border-[#5a3e22] flex items-center justify-between">
+        {/* Tar Cost & Details (5 cols) */}
+        <div className="md:col-span-5 bg-[#0b0f19] p-5 rounded-2xl border border-slate-700/80 flex flex-col justify-between gap-3">
           <div>
-            <span className="text-xs text-slate-400 block">Consumo de Alcatrão (Tar):</span>
-            <span className="text-lg font-black text-[#fef08a]">{recommendation.tarCost} pts</span>
+            <span className="text-xs font-semibold text-slate-400 block">Consumo Estimado de Alcatrão:</span>
+            <div className="text-2xl font-mono font-black text-amber-300 mt-1">
+              {recommendation.tarCost.toLocaleString('pt-BR')} <span className="text-xs font-sans text-slate-400 font-normal">pts Tar</span>
+            </div>
           </div>
-          {captain.id === 'carter' && (
-            <span className="text-[11px] font-bold px-2 py-1 rounded bg-[#581c87] text-purple-200 border border-[#c084fc]">
-              -30% Bônus Carter
-            </span>
-          )}
+
+          <div className="text-2xs font-semibold text-slate-400 bg-slate-900 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
+            <span>Capitão Responsável:</span>
+            <span className="font-bold text-white">{captain.name} (Nv {profile.captainLevels[captain.id] || captain.level || 1})</span>
+          </div>
         </div>
       </div>
 
-      {/* 1-Shot Status Card */}
-      {recommendation.canOneShot ? (
-        <div className="bg-gradient-to-r from-[#182012] to-[#120a06] border-2 border-[#2e7d32] rounded-lg p-4 space-y-3">
-          <div className="flex items-center gap-2 text-emerald-400">
-            <CheckCircle className="w-5 h-5" />
-            <h3 className="font-bold text-sm font-fantasy">1-Hit KO (One-Shot) Garantido!</h3>
+      {/* Recommended 1-Shot Troop Card */}
+      <div className="bg-[#0b0f19] p-5 sm:p-6 rounded-2xl border border-emerald-500/40 space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-700/80 pb-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <h3 className="text-base font-black text-white">
+              Tropa Otimizada para 1-Hit KO
+            </h3>
           </div>
-          <p className="text-xs text-[#caa568]">
-            Seu exército elimina a Cripta Nível {cryptLevel} no primeiro ataque sem sofrer contra-ataque ou baixas de tropas.
-          </p>
+          <span className="text-2xs font-black uppercase tracking-wider px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-500/50">
+            0 Baixas de Soldados
+          </span>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
-            <div className="bg-[#100a06] p-2.5 rounded border border-[#5a3e22]">
-              <span className="text-slate-400 block">Dano Necessário:</span>
-              <span className="font-extrabold text-[#fef08a]">{recommendation.requiredAttackPower.toLocaleString('pt-BR')}</span>
+        {primarySquad ? (
+          <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-xl border border-slate-700 bg-slate-950 flex items-center justify-center overflow-hidden flex-shrink-0 shadow">
+                <img
+                  src={primarySquad.unitId.includes('titan') || primarySquad.unitId.includes('berserker') ? '/assets/troops/berserker.png' : `/assets/troops/${primarySquad.unitId}.png`}
+                  alt={primarySquad.unitName}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as any).src = '/assets/troops/archer_II.png'; }}
+                />
+              </div>
+
+              <div>
+                <span className="text-2xs font-bold text-emerald-400 uppercase tracking-wide block">
+                  Envio Ideal
+                </span>
+                <h4 className="text-lg font-black text-white">
+                  {primarySquad.unitName}
+                </h4>
+                <p className="text-xs font-semibold text-slate-400">
+                  Dano Total Necessário: <strong className="text-amber-300 font-mono font-bold">320.000</strong>
+                </p>
+              </div>
             </div>
-            <div className="bg-[#100a06] p-2.5 rounded border border-[#5a3e22]">
-              <span className="text-slate-400 block">Tropa Recomendada:</span>
-              <span className="font-extrabold text-blue-300">
-                {recommendation.recommendedSquads[0]?.count.toLocaleString('pt-BR')}x {recommendation.recommendedSquads[0]?.unitName.split('[')[0]}
-              </span>
+
+            <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800">
+              <div className="text-left sm:text-right">
+                <span className="text-2xs font-extrabold text-slate-400 block uppercase tracking-wider">
+                  Quantidade
+                </span>
+                <span className="text-2xl font-mono font-black text-amber-300">
+                  {primarySquad.count.toLocaleString('pt-BR')}
+                </span>
+              </div>
+
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(primarySquad.count.toString());
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-amber-300 rounded-xl text-xs font-black shadow"
+              >
+                Copiar
+              </button>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="bg-[#2a100a] border-2 border-red-700 rounded-lg p-4 space-y-2">
-          <div className="flex items-center gap-2 text-red-400">
-            <AlertCircle className="w-5 h-5" />
-            <h3 className="font-bold text-sm font-fantasy">Capacidade Insuficiente para 1-Shot</h3>
-          </div>
-          <p className="text-xs text-red-200/90">{recommendation.warningMessage}</p>
-        </div>
-      )}
+        ) : (
+          <p className="text-sm font-semibold text-slate-400">Nenhuma tropa encontrada para o cálculo.</p>
+        )}
+      </div>
     </div>
   );
 };

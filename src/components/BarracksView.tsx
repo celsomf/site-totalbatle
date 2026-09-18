@@ -185,7 +185,7 @@ export const BarracksView: React.FC<BarracksViewProps> = ({
               {/* Top row: Avatar, Name, Tier, Type Badge */}
               <div className="flex items-start gap-3.5">
                 <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#0b0f19] border border-slate-700 group-hover:border-amber-400/80 flex items-center justify-center flex-shrink-0 shadow-md group-hover:scale-105 transition-all">
-                  <TroopAvatar id={troop.id} tier={troop.tier} size="lg" />
+                  <TroopAvatar id={troop.avatarIcon || troop.id} tier={troop.tier} size="lg" />
                 </div>
 
                 <div className="flex-1 min-w-0">

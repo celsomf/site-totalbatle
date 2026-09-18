@@ -59,7 +59,7 @@ export function App() {
               }`}
             >
               <BookOpen className="w-4 h-4 text-amber-300" />
-              <span>⚔️ Livro de Marcha</span>
+              <span>Livro de Marcha</span>
             </button>
 
             <button
@@ -71,7 +71,7 @@ export function App() {
               }`}
             >
               <Shield className="w-4 h-4 text-amber-300" />
-              <span>🏰 Quartel & Tropas</span>
+              <span>Quartel & Tropas</span>
             </button>
 
             <button
@@ -83,7 +83,7 @@ export function App() {
               }`}
             >
               <Crown className="w-4 h-4 text-amber-300" />
-              <span>👑 Herói & Capitães</span>
+              <span>Herói & Capitães</span>
             </button>
 
             <button
@@ -95,7 +95,7 @@ export function App() {
               }`}
             >
               <Compass className="w-4 h-4 text-amber-300" />
-              <span>🗺️ Criptas</span>
+              <span>Criptas</span>
             </button>
 
             <button
@@ -107,7 +107,7 @@ export function App() {
               }`}
             >
               <Library className="w-4 h-4 text-amber-300" />
-              <span>📚 Enciclopédia</span>
+              <span>Enciclopédia</span>
             </button>
           </div>
 

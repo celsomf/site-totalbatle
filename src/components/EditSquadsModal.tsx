@@ -102,43 +102,43 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
   const totalCalculatedAtk = squads.reduce((sum, s) => sum + (s.unitAttack * s.count), 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-[#1e140d] border-2 border-[#caa568] rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden font-serif">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-[#111827] border border-slate-700 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-[#2e1d12] via-[#24160d] to-[#1a0f08] border-b-2 border-[#caa568]/60 p-4 sm:p-5 flex items-center justify-between">
+        <div className="bg-[#0b0f19] border-b border-slate-700/80 p-4 sm:p-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[#3d2917] border border-[#caa568] text-amber-300">
-              <ShieldAlert className="w-6 h-6" />
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-red-600 to-rose-800 border border-rose-400 text-white shadow-md">
+              <ShieldAlert className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-black text-[#fef08a] font-fantasy tracking-wide">
+              <h3 className="text-base sm:text-lg font-black text-white tracking-wide">
                 Ajustar Composição das Tropas Inimigas
               </h3>
-              <p className="text-xs text-[#caa568]">
-                Alvo: <strong className="text-white">{monsterName} (Nv {monsterLevel})</strong> — Edite os esquadrões para bater 100% com o seu jogo
+              <p className="text-xs font-semibold text-slate-400">
+                Alvo: <strong className="text-amber-300">{monsterName} (Nv {monsterLevel})</strong> — Edite os esquadrões para bater 100% com o seu jogo
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#caa568] hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-400 hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body: Squads List */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 font-sans text-xs">
-          <div className="bg-[#140d08] p-3 rounded-xl border border-[#5a3e22] flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-4 text-xs font-serif">
-              <span>
-                Esquadrões: <strong className="text-[#fef08a]">{squads.length}</strong>
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 text-xs">
+          <div className="bg-[#0b0f19] p-3 rounded-xl border border-slate-700 flex flex-wrap items-center justify-between gap-3 shadow-inner">
+            <div className="flex items-center gap-4 text-xs">
+              <span className="text-slate-300 font-semibold">
+                Esquadrões: <strong className="text-white font-mono">{squads.length}</strong>
               </span>
-              <span>
-                Saúde Total Inimiga: <strong className="text-red-400">{totalCalculatedHp.toLocaleString('pt-BR')}</strong>
+              <span className="text-slate-300 font-semibold">
+                Saúde Total Inimiga: <strong className="text-rose-400 font-mono font-black">{totalCalculatedHp.toLocaleString('pt-BR')}</strong>
               </span>
-              <span>
-                Força Total Inimiga: <strong className="text-amber-300">{totalCalculatedAtk.toLocaleString('pt-BR')}</strong>
+              <span className="text-slate-300 font-semibold">
+                Força Total Inimiga: <strong className="text-amber-300 font-mono font-black">{totalCalculatedAtk.toLocaleString('pt-BR')}</strong>
               </span>
             </div>
 
@@ -149,7 +149,7 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
                   onResetToTemplate();
                   onClose();
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#2a1a10] text-[#caa568] hover:text-[#fef08a] border border-[#5a3e22] text-xs font-serif transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600 text-xs font-bold transition-colors"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Restaurar Padrão do Nível</span>
@@ -162,11 +162,11 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
               return (
                 <div
                   key={sq.id || idx}
-                  className="bg-[#241912] border-2 border-[#5a3e22] rounded-xl p-3.5 sm:p-4 space-y-3 relative group hover:border-[#caa568]/80 transition-all shadow-md"
+                  className="bg-[#0b0f19] border border-slate-700/80 rounded-xl p-3.5 sm:p-4 space-y-3 relative group hover:border-amber-400/60 transition-all shadow-md"
                 >
-                  <div className="flex items-center justify-between border-b border-[#5a3e22]/80 pb-2">
-                    <span className="font-bold text-[#fef08a] flex items-center gap-2 font-serif text-sm">
-                      <span className="w-5 h-5 rounded-full bg-amber-900/80 text-amber-200 border border-amber-500 flex items-center justify-center text-xs">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-black text-white flex items-center gap-2 text-sm">
+                      <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-xs">
                         {idx + 1}
                       </span>
                       Esquadrão Inimigo #{idx + 1}
@@ -175,7 +175,7 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleRemoveSquad(idx)}
-                      className="text-red-400/80 hover:text-red-300 p-1 rounded hover:bg-red-950/50 transition-colors flex items-center gap-1 text-xs"
+                      className="text-rose-400 hover:text-rose-300 p-1.5 rounded-lg hover:bg-rose-950/40 transition-colors flex items-center gap-1 text-xs font-bold"
                       title="Remover este esquadrão"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -186,13 +186,13 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
                   {/* Preset Quick Select from Monster Catalog */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-[#caa568]">
+                      <label className="text-2xs font-bold text-slate-400">
                         Carregar Monstro do Catálogo:
                       </label>
                       <select
                         onChange={(e) => handleSelectCatalogUnit(idx, e.target.value)}
                         defaultValue=""
-                        className="w-full bg-[#140d08] border border-[#5a3e22] rounded-lg px-2.5 py-1.5 text-xs text-[#fef08a] focus:outline-none focus:border-[#caa568]"
+                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-bold focus:outline-none focus:border-amber-400"
                       >
                         <option value="" disabled>
                           -- Selecionar Monstro Conhecido --
@@ -206,12 +206,12 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-[#caa568]">Nome do Monstro:</label>
+                      <label className="text-2xs font-bold text-slate-400">Nome do Monstro:</label>
                       <input
                         type="text"
                         value={sq.name}
                         onChange={(e) => handleUpdateField(idx, 'name', e.target.value)}
-                        className="w-full bg-[#140d08] border border-[#5a3e22] rounded-lg px-2.5 py-1.5 text-xs text-white font-bold focus:outline-none focus:border-[#caa568]"
+                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-bold focus:outline-none focus:border-amber-400"
                       />
                     </div>
                   </div>
@@ -219,11 +219,11 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
                   {/* Squad Stats: Tier, Class, Count, Attack, Health */}
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                     <div className="space-y-1">
-                      <label className="text-[11px] text-slate-400">Tier:</label>
+                      <label className="text-2xs text-slate-400 font-bold">Tier:</label>
                       <select
                         value={sq.tier}
                         onChange={(e) => handleUpdateField(idx, 'tier', Number(e.target.value))}
-                        className="w-full bg-[#140d08] border border-[#5a3e22] rounded px-2 py-1 text-xs text-amber-200 font-bold"
+                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2 py-1 text-xs text-amber-300 font-bold"
                       >
                         <option value={1}>Tier I</option>
                         <option value={2}>Tier II</option>
@@ -234,11 +234,11 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[11px] text-slate-400">Classe:</label>
+                      <label className="text-2xs text-slate-400 font-bold">Classe:</label>
                       <select
                         value={sq.troopClass}
                         onChange={(e) => handleUpdateField(idx, 'troopClass', e.target.value as TroopClass)}
-                        className="w-full bg-[#140d08] border border-[#5a3e22] rounded px-2 py-1 text-xs text-slate-200"
+                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200 font-bold"
                       >
                         <option value="ranged">🏹 Longo Alcance</option>
                         <option value="melee">⚔️ Corpo a Corpo</option>
@@ -249,54 +249,54 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-red-300">Quantidade (un.):</label>
+                      <label className="text-2xs font-bold text-rose-300">Quantidade (un.):</label>
                       <input
                         type="number"
                         min="1"
                         value={sq.count}
                         onChange={(e) => handleUpdateField(idx, 'count', Math.max(1, Number(e.target.value)))}
-                        className="w-full bg-[#100a06] border border-red-900/60 rounded px-2 py-1 text-xs text-red-300 font-black text-center"
+                        className="w-full bg-[#111827] border border-rose-500/40 rounded-lg px-2 py-1 text-xs text-rose-300 font-mono font-black text-center"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[11px] text-amber-300">Força Unitária:</label>
+                      <label className="text-2xs text-amber-300 font-bold">Força Unitária:</label>
                       <input
                         type="number"
                         min="1"
                         value={sq.unitAttack}
                         onChange={(e) => handleUpdateField(idx, 'unitAttack', Math.max(1, Number(e.target.value)))}
-                        className="w-full bg-[#140d08] border border-[#5a3e22] rounded px-2 py-1 text-xs text-amber-300 font-bold text-center"
+                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2 py-1 text-xs text-amber-300 font-mono font-bold text-center"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[11px] text-red-400">Saúde Unitária:</label>
+                      <label className="text-2xs text-emerald-400 font-bold">Saúde Unitária:</label>
                       <input
                         type="number"
                         min="1"
                         value={sq.unitHealth}
                         onChange={(e) => handleUpdateField(idx, 'unitHealth', Math.max(1, Number(e.target.value)))}
-                        className="w-full bg-[#140d08] border border-[#5a3e22] rounded px-2 py-1 text-xs text-red-400 font-bold text-center"
+                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2 py-1 text-xs text-emerald-400 font-mono font-bold text-center"
                       />
                     </div>
                   </div>
 
                   {/* SubType & Aspect Text */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-2xs">
                     <div className="space-y-1">
-                      <label className="text-[10px] text-slate-400">Subtipo / Descrição (ex: Amaldiçoado, Voador):</label>
+                      <label className="text-2xs text-slate-400">Subtipo / Descrição (ex: Amaldiçoado, Voador):</label>
                       <input
                         type="text"
                         value={sq.subType || ''}
                         onChange={(e) => handleUpdateField(idx, 'subType', e.target.value)}
                         placeholder="Ex: Fera, Amaldiçoado, Unidade voadora"
-                        className="w-full bg-[#140d08] border border-[#5a3e22] rounded px-2 py-1 text-[11px] text-slate-300"
+                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-300"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] text-amber-400">Aspecto de Bônus / Habilidade:</label>
+                      <label className="text-2xs text-amber-400 font-bold">Aspecto de Bônus / Habilidade:</label>
                       <input
                         type="text"
                         value={sq.aspects?.description || ''}
@@ -315,7 +315,7 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
                           });
                         }}
                         placeholder="Ex: Força contra unidades corpo a corpo: +30%"
-                        className="w-full bg-[#140d08] border border-[#5a3e22] rounded px-2 py-1 text-[11px] text-amber-200"
+                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2 py-1 text-xs text-amber-200"
                       />
                     </div>
                   </div>
@@ -328,17 +328,17 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
           <button
             type="button"
             onClick={handleAddSquad}
-            className="w-full py-2.5 rounded-xl border-2 border-dashed border-[#caa568]/50 hover:border-[#caa568] bg-[#140d08] text-[#caa568] hover:text-[#fef08a] font-serif font-bold text-xs flex items-center justify-center gap-2 transition-all hover:bg-[#241912]"
+            className="w-full py-2.5 rounded-xl border border-dashed border-slate-700 hover:border-amber-400/80 bg-[#0b0f19] text-slate-400 hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition-all hover:bg-slate-800"
           >
-            <Plus className="w-4 h-4 text-[#fef08a]" />
+            <Plus className="w-4 h-4 text-amber-400" />
             <span>Adicionar Novo Esquadrão Inimigo</span>
           </button>
         </div>
 
         {/* Modal Footer */}
-        <div className="bg-[#140d08] border-t-2 border-[#5a3e22] p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-[#caa568]/80 font-serif flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#fef08a]" />
+        <div className="bg-[#0b0f19] border-t border-slate-700/80 p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-2xs text-slate-400 font-semibold flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>As tropas recomendadas e baixas serão recalculadas imediatamente ao salvar.</span>
           </p>
 
@@ -346,14 +346,14 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-[#241912] text-[#caa568] hover:text-white border border-[#5a3e22] text-xs font-serif font-bold transition-colors"
+              className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600 text-xs font-bold transition-colors"
             >
               Cancelar
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="flex-1 sm:flex-initial px-5 py-2 rounded-lg bg-gradient-to-r from-emerald-800 to-emerald-700 hover:from-emerald-700 hover:to-emerald-600 text-emerald-100 border border-emerald-400 font-serif font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg transition-all"
+              className="flex-1 sm:flex-initial px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-lg transition-all"
             >
               <Save className="w-4 h-4" />
               <span>Salvar & Recalcular</span>
