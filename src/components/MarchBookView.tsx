@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { TroopUnit, Captain, MonsterTarget, PlayerProfile } from '../types';
+import { TroopUnit, Captain, MonsterTarget, PlayerProfile, EnemySquadUnit } from '../types';
 import { TroopAvatar } from './TroopAvatar';
-import { Copy, Check, ChevronRight, Zap, Flame, ShieldAlert, Sparkles, UserCheck, Shield, CheckCircle2 } from 'lucide-react';
+import { EditSquadsModal } from './EditSquadsModal';
+import { updateMonsterSquads } from '../data/monsters';
+import { Copy, Check, ChevronRight, Zap, Flame, ShieldAlert, Sparkles, UserCheck, Shield, CheckCircle2, Edit3 } from 'lucide-react';
 
 interface MarchBookViewProps {
   profile: PlayerProfile;
@@ -10,6 +12,7 @@ interface MarchBookViewProps {
   selectedCaptainId?: string;
   onSelectCaptain: (id: string) => void;
   targetMonster: MonsterTarget;
+  onUpdateMonsterTarget?: (monster: MonsterTarget) => void;
 }
 
 export const MarchBookView: React.FC<MarchBookViewProps> = ({
@@ -19,9 +22,11 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   selectedCaptainId,
   onSelectCaptain,
   targetMonster,
+  onUpdateMonsterTarget,
 }) => {
   const [copied, setCopied] = useState(false);
   const [sendDragon, setSendDragon] = useState(true);
+  const [isEditingSquads, setIsEditingSquads] = useState(false);
 
   const isRare = targetMonster.attackMode === 'rare';
   const isCommon = targetMonster.attackMode === 'common';
@@ -554,13 +559,24 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
 
         {/* Right Page (5 Cols): Enemy Troops & Strategy */}
         <div className="lg:col-span-5 bg-[#f6efe2] p-4 rounded-xl border border-[#d6c39f] shadow-inner space-y-4">
-          <div className="flex items-center justify-between border-b border-[#d6c39f] pb-1">
+          <div className="flex items-center justify-between border-b border-[#d6c39f] pb-2 gap-2 flex-wrap">
             <span className="text-xs font-bold uppercase tracking-wider text-[#7c5f2b]">
               ♦ Tropas Inimigas no Destino ♦
             </span>
-            <span className="text-xs font-black text-red-800 font-sans bg-red-100 px-2 py-0.5 rounded border border-red-300">
-              Nível {targetMonster.level}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black text-red-800 font-sans bg-red-100 px-2 py-0.5 rounded border border-red-300">
+                Nível {targetMonster.level}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsEditingSquads(true)}
+                className="flex items-center gap-1 text-[11px] font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded border border-amber-500 shadow-sm transition-all"
+                title="Editar quantidade ou atributos dos esquadrões inimigos"
+              >
+                <Edit3 className="w-3 h-3 text-amber-800" />
+                <span>✏️ Ajustar</span>
+              </button>
+            </div>
           </div>
 
           {/* Enemy Squads Display */}
@@ -571,7 +587,9 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                 return (
                   <div
                     key={sq.id}
-                    className="bg-white p-3 rounded-xl border-2 border-red-500/60 shadow-sm space-y-2"
+                    onClick={() => setIsEditingSquads(true)}
+                    className="bg-white p-3 rounded-xl border-2 border-red-500/60 shadow-sm space-y-2 cursor-pointer hover:border-red-600 transition-all group"
+                    title="Clique para editar este esquadrão"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
@@ -579,7 +597,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                           {tierRoman}
                         </span>
                         <div className="min-w-0">
-                          <h4 className="text-sm font-bold text-red-950 font-serif truncate leading-tight">
+                          <h4 className="text-sm font-bold text-red-950 font-serif truncate leading-tight group-hover:text-amber-900 transition-colors">
                             {sq.name}
                           </h4>
                           <span className="text-[10px] text-slate-500 font-sans block truncate">
@@ -654,6 +672,21 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Edit Squads Modal for MarchBookView */}
+      {isEditingSquads && onUpdateMonsterTarget && (
+        <EditSquadsModal
+          isOpen={isEditingSquads}
+          onClose={() => setIsEditingSquads(false)}
+          initialSquads={targetMonster.enemySquads || []}
+          monsterName={targetMonster.name}
+          monsterLevel={targetMonster.level}
+          onSaveSquads={(newSquads) => {
+            const updated = updateMonsterSquads(targetMonster, newSquads);
+            onUpdateMonsterTarget(updated);
+          }}
+        />
+      )}
     </div>
   );
 };

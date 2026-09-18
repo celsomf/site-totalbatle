@@ -173,6 +173,7 @@ export function App() {
                       selectActiveCaptain(id);
                     }}
                     targetMonster={selectedMonster}
+                    onUpdateMonsterTarget={setSelectedMonster}
                   />
                 </>
               )}

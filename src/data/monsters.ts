@@ -830,3 +830,30 @@ export function createMonsterInstance(archetype: any, level: number): MonsterTar
   const tpl = MONSTER_PRESET_TEMPLATES.find((t) => t.id === archetype.id) || MONSTER_PRESET_TEMPLATES[0];
   return buildMonsterTargetFromTemplate(tpl, level);
 }
+
+export function updateMonsterSquads(
+  monster: MonsterTarget,
+  newSquads: EnemySquadUnit[]
+): MonsterTarget {
+  const totalHealth = newSquads.reduce((sum, s) => sum + (s.unitHealth * s.count), 0);
+  const baseAttack = newSquads.reduce((sum, s) => sum + (s.unitAttack * s.count), 0);
+
+  const classesPresent = newSquads.map((s) => s.troopClass);
+  const weaknessClasses: TroopClass[] = [];
+  if (classesPresent.includes('ranged')) weaknessClasses.push('melee', 'mounted');
+  if (classesPresent.includes('mounted')) weaknessClasses.push('ranged', 'melee');
+  if (classesPresent.includes('flying')) weaknessClasses.push('ranged');
+  if (classesPresent.includes('melee')) weaknessClasses.push('ranged');
+
+  const uniqueWeaknesses = Array.from(new Set(weaknessClasses));
+
+  return {
+    ...monster,
+    totalHealth,
+    baseAttack,
+    squadCount: newSquads.length,
+    weaknessClasses: uniqueWeaknesses.length > 0 ? uniqueWeaknesses : ['ranged'],
+    enemySquads: newSquads,
+  };
+}
+

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { MonsterTarget, TroopClass, AttackMode } from '../types';
-import { MONSTER_PRESET_TEMPLATES, buildMonsterTargetFromTemplate } from '../data/monsters';
-import { Skull, Crosshair, Flame, Swords, Crown, ShieldAlert, Sparkles } from 'lucide-react';
+import { MonsterTarget, TroopClass, AttackMode, EnemySquadUnit } from '../types';
+import { MONSTER_PRESET_TEMPLATES, buildMonsterTargetFromTemplate, updateMonsterSquads } from '../data/monsters';
+import { EditSquadsModal } from './EditSquadsModal';
+import { Skull, Crosshair, Flame, Swords, Crown, ShieldAlert, Sparkles, Edit3 } from 'lucide-react';
 
 interface MonsterSelectorProps {
   selectedMonster: MonsterTarget;
@@ -21,6 +22,7 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
   });
 
   const [monsterLevel, setMonsterLevel] = useState<number>(selectedMonster.level || 17);
+  const [isEditingSquads, setIsEditingSquads] = useState<boolean>(false);
 
   const filteredTemplates = MONSTER_PRESET_TEMPLATES.filter((t) => t.attackMode === activeAttackMode);
   const currentTemplate =
@@ -55,6 +57,16 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
     onSelectMonster(newTarget);
   };
 
+  const handleSaveCustomSquads = (updatedSquads: EnemySquadUnit[]) => {
+    const updated = updateMonsterSquads(selectedMonster, updatedSquads);
+    onSelectMonster(updated);
+  };
+
+  const handleResetToTemplate = () => {
+    const fresh = buildMonsterTargetFromTemplate(currentTemplate, monsterLevel);
+    onSelectMonster(fresh);
+  };
+
   const getTroopClassBadge = (tc: TroopClass) => {
     switch (tc) {
       case 'ranged':
@@ -83,7 +95,7 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
               Seletor de Monstros & Tropas do Mapa
             </h2>
             <p className="text-xs text-[#caa568]/80 font-serif">
-              Escolha o Tipo de Ataque, a Tropa e o Nível para auto-preenchimento
+              Escolha o Tipo de Ataque, a Tropa e o Nível ou ajuste os esquadrões manualmente
             </p>
           </div>
         </div>
@@ -190,14 +202,25 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
       {/* Enemy Squads Inside Target (Exact Total Battle squad cards) */}
       {selectedMonster.enemySquads && selectedMonster.enemySquads.length > 0 && (
         <div className="space-y-2 bg-[#180f0a] p-3.5 rounded-lg border border-[#5a3e22]">
-          <div className="flex items-center justify-between border-b border-[#5a3e22]/70 pb-1.5">
-            <span className="text-xs font-bold text-[#fef08a] flex items-center gap-1.5">
-              <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-              Composição Inimiga no Destino ({selectedMonster.enemySquads.length} tipos de monstros):
-            </span>
-            <span className="text-[11px] text-[#caa568]">
-              Total HP: <strong className="text-red-400">{selectedMonster.totalHealth.toLocaleString('pt-BR')}</strong>
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#5a3e22]/70 pb-2 gap-2">
+            <div className="flex items-center gap-1.5">
+              <ShieldAlert className="w-4 h-4 text-amber-400" />
+              <span className="text-xs font-bold text-[#fef08a]">
+                Composição Inimiga ({selectedMonster.enemySquads.length} esquadrões):
+              </span>
+              <span className="text-[11px] text-[#caa568] ml-2">
+                HP Total: <strong className="text-red-400 font-sans">{selectedMonster.totalHealth.toLocaleString('pt-BR')}</strong>
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsEditingSquads(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-900/80 to-yellow-900/80 hover:from-amber-800 hover:to-yellow-800 text-amber-200 border border-amber-500/60 font-serif text-xs font-bold shadow-md transition-all self-start sm:self-auto"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-amber-300" />
+              <span>✏️ Ajustar Esquadrões Inimigos</span>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1 font-sans">
@@ -206,7 +229,9 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
               return (
                 <div
                   key={sq.id}
-                  className="bg-[#241912] p-2.5 rounded-lg border border-[#caa568]/40 flex flex-col justify-between space-y-1.5 relative overflow-hidden"
+                  onClick={() => setIsEditingSquads(true)}
+                  className="bg-[#241912] p-2.5 rounded-lg border border-[#caa568]/40 hover:border-[#caa568] cursor-pointer flex flex-col justify-between space-y-1.5 relative overflow-hidden transition-all group"
+                  title="Clique para editar este esquadrão"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black text-[#fef08a] flex items-center gap-1 truncate">
@@ -238,6 +263,10 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
                       ⚡ {sq.aspects.description}
                     </div>
                   )}
+
+                  <div className="text-[10px] text-amber-300/0 group-hover:text-amber-300 text-right transition-colors font-serif">
+                    ✏️ Clique para editar
+                  </div>
                 </div>
               );
             })}
@@ -287,6 +316,19 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Edit Squads Modal */}
+      {isEditingSquads && (
+        <EditSquadsModal
+          isOpen={isEditingSquads}
+          onClose={() => setIsEditingSquads(false)}
+          initialSquads={selectedMonster.enemySquads || []}
+          monsterName={selectedMonster.name}
+          monsterLevel={selectedMonster.level}
+          onSaveSquads={handleSaveCustomSquads}
+          onResetToTemplate={handleResetToTemplate}
+        />
+      )}
     </div>
   );
 };
