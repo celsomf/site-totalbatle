@@ -158,6 +158,9 @@ export function App() {
             <MonsterSelector
               selectedMonster={selectedMonster}
               onSelectMonster={setSelectedMonster}
+              troops={hydratedTroops}
+              profile={profile}
+              captain={DEFAULT_CAPTAINS.find((c) => c.id === (profile.selectedCaptainId || profile.selectedCaptainIds?.[0] || 'farhad')) || DEFAULT_CAPTAINS[0]}
             />
 
             <MarchBookView

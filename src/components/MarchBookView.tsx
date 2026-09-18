@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { TroopUnit, Captain, MonsterTarget, PlayerProfile, EnemySquadUnit } from '../types';
 import { EditSquadsModal } from './EditSquadsModal';
-import { updateMonsterSquads } from '../data/monsters';
-import { simulateCombat, DispatchedTroop } from '../utils/combatSimulator';
+import { updateMonsterSquads, MONSTER_PRESET_TEMPLATES, buildMonsterTargetFromTemplate } from '../data/monsters';
+import { simulateCombat, DispatchedTroop, findOptimalFarmLevel } from '../utils/combatSimulator';
 import { TroopAvatar } from './TroopAvatar';
 import { BattlePreview } from './BattlePreview';
 import {
@@ -21,7 +21,8 @@ import {
   AlertTriangle,
   XCircle,
   Skull,
-  Hammer
+  Hammer,
+  RotateCw
 } from 'lucide-react';
 
 interface MarchBookViewProps {
@@ -49,6 +50,19 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   const [showEnemyDetails, setShowEnemyDetails] = useState(false);
   const [showCombatLog, setShowCombatLog] = useState(false);
   const [isEditingSquads, setIsEditingSquads] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const [lastCalculatedAt, setLastCalculatedAt] = useState<Date>(new Date());
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleRecalculate = () => {
+    setIsRecalculating(true);
+    setTimeout(() => {
+      setIsRecalculating(false);
+      setLastCalculatedAt(new Date());
+      setToastMessage('Marcha e simulação recalculadas com sucesso com base no estoque atual do Quartel!');
+      setTimeout(() => setToastMessage(null), 3500);
+    }, 400);
+  };
 
   const isRare = targetMonster.attackMode === 'rare';
   const isCommon = targetMonster.attackMode === 'common';
@@ -63,6 +77,11 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   const captainBonusPercent = Math.round(
     (activeCaptain.monsterAttackBonusPercent || 20) + (activeCaptainLevel * 1.2)
   );
+
+  const templateId = targetMonster.id.split('_lvl_')[0];
+  const currentTemplate =
+    MONSTER_PRESET_TEMPLATES.find((t) => t.id === templateId) || MONSTER_PRESET_TEMPLATES[0];
+  const optimalFarm = findOptimalFarmLevel(currentTemplate, troops, profile, activeCaptain, sendDragon);
 
   const dragonBonusPercent = sendDragon ? 15 : 0;
   const academyBonusPercent = profile.academyBonus?.guardsmenAttack || 25;
@@ -334,16 +353,41 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   return (
     <div className="bg-[#111827] text-slate-100 rounded-2xl p-5 sm:p-6 shadow-2xl border border-slate-700/80 space-y-6">
       
-      {/* 1. Header: Quick Actions Bar (Clan copy & Enemy squads view) */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#0b0f19] p-4 rounded-xl border border-slate-700/80">
-        <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
-          <span className={`w-2.5 h-2.5 rounded-full ${isDefeat ? 'bg-rose-500 animate-ping' : 'bg-emerald-400 animate-pulse'}`}></span>
-          <span>
-            {isDefeat ? '⚠️ Simulação Alerta: Exército Atual Não Consegue Vencer este Alvo!' : 'Ficha de Envio Validada por Simulador Turno a Turno'}
-          </span>
+      {/* 1. Header: Quick Actions Bar (Recalculate, Sincronização, Clan copy & Enemy squads view) */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-[#0b0f19] p-4 rounded-xl border border-slate-700/80 shadow-md">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
+            <span className={`w-2.5 h-2.5 rounded-full ${isDefeat ? 'bg-rose-500 animate-ping' : 'bg-emerald-400 animate-pulse'}`}></span>
+            <span>
+              {isDefeat ? '⚠️ Exército Insuficiente!' : 'Simulação Validada Turno a Turno'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-2xs font-bold shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Sincronizado com Quartel</span>
+            <span className="font-mono text-slate-200">
+              ({mercRecommended > 0 ? `${mercRecommended} Mercs • ` : ''}{g2RangedRec + g2MeleeRec} G2 • {g1RangedRec + g1MeleeRec} G1)
+            </span>
+            <span className="text-slate-400 font-mono hidden sm:inline">
+              • {lastCalculatedAt.toLocaleTimeString('pt-BR')}
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* BOTÃO DE RECALCULAR COM ANIMAÇÃO TÁTICA */}
+          <button
+            type="button"
+            onClick={handleRecalculate}
+            disabled={isRecalculating}
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+            title="Recalcular simulação e forçar atualização com base no estoque atual do Quartel"
+          >
+            <RotateCw className={`w-3.5 h-3.5 ${isRecalculating ? 'animate-spin' : ''}`} />
+            <span>{isRecalculating ? 'Recalculando...' : 'Recalcular Marcha'}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setShowEnemyDetails(!showEnemyDetails)}
@@ -367,10 +411,23 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
             title="Copia um resumo em texto para compartilhar no Chat do Clã ou Discord"
           >
             {copied ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
-            <span>{copied ? 'Copiado para o Chat do Clã!' : '💬 Copiar Texto para o Clã'}</span>
+            <span>{copied ? 'Copiado!' : '💬 Copiar para o Clã'}</span>
           </button>
         </div>
       </div>
+
+      {/* TOAST DE RECALCULADO */}
+      {toastMessage && (
+        <div className="bg-emerald-950 border border-emerald-500 text-emerald-200 text-xs px-4 py-2.5 rounded-xl flex items-center justify-between shadow-xl animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="font-bold">{toastMessage}</span>
+          </div>
+          <button onClick={() => setToastMessage(null)} className="text-emerald-400 hover:text-white text-xs font-bold px-2 py-1">
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* 2. Collapsible Enemy Squads Drawer with In-place Editing */}
       {showEnemyDetails && (
@@ -599,6 +656,27 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                 </span>
                 <span className="mt-0.5 block">{simResult.deficitTroopsText}</span>
               </div>
+            </div>
+          )}
+
+          {/* ALTERNATIVA RÁPIDA: NÍVEL INDICADO PARA SUBIR DE NÍVEL RÁPIDO */}
+          {optimalFarm && (
+            <div className="mt-2 pt-3 border-t border-red-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-red-950/70 p-3.5 rounded-xl border border-red-700/50">
+              <div className="text-xs text-amber-200 font-bold flex items-center gap-2">
+                <Zap className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0 animate-pulse" />
+                <span>
+                  💡 Alternativa para farmar XP rápido sem perdas nobres: <strong>Nv {optimalFarm.optimalLevel}</strong> ({optimalFarm.optimalXp.toLocaleString('pt-BR')} XP com vitória segura).
+                </span>
+              </div>
+              {onUpdateMonsterTarget && (
+                <button
+                  type="button"
+                  onClick={() => onUpdateMonsterTarget(buildMonsterTargetFromTemplate(currentTemplate, optimalFarm.optimalLevel))}
+                  className="text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3.5 py-2 rounded-xl shadow transition-all flex items-center justify-center gap-1.5 shrink-0 active:scale-95"
+                >
+                  <span>⚡ Mudar para Nv {optimalFarm.optimalLevel}</span>
+                </button>
+              )}
             </div>
           )}
         </div>

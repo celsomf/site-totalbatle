@@ -1,4 +1,5 @@
-import { TroopUnit, PlayerProfile, EnemySquadUnit, CombatRoundStep, SquadCasualty, CombatSimulationResult } from '../types';
+import { TroopUnit, PlayerProfile, EnemySquadUnit, CombatRoundStep, SquadCasualty, CombatSimulationResult, Captain, MonsterTarget } from '../types';
+import { MonsterPresetTemplate, buildMonsterTargetFromTemplate } from '../data/monsters';
 
 export interface DispatchedTroop {
   id: string;
@@ -255,3 +256,222 @@ export function simulateCombat(
     recommendedTroopsNeeded,
   };
 }
+
+/**
+ * Constrói a lista de tropas enviadas na marcha com base no estoque real do jogador,
+ * respeitando os limites de marcha do monstro e aplicando bônus de dragão, academia e capitão.
+ */
+export function buildDispatchedTroops(
+  troops: TroopUnit[],
+  profile: PlayerProfile,
+  targetMonster: MonsterTarget,
+  captain: Captain,
+  sendDragon: boolean
+): DispatchedTroop[] {
+  const isRare = targetMonster.attackMode === 'rare';
+  const isCommon = targetMonster.attackMode === 'common';
+
+  const activeCaptainLevel = profile.captainLevels?.[captain.id] || captain.level || 1;
+  const captainBonusPercent = Math.round(
+    (captain.monsterAttackBonusPercent || 20) + (activeCaptainLevel * 1.2)
+  );
+  const dragonBonusPercent = sendDragon ? 15 : 0;
+  const academyBonusPercent = profile.academyBonus?.guardsmenAttack || 25;
+
+  const maxGuards = targetMonster.marchCapacities?.guards || (isRare ? 5250 : isCommon ? 2000 : profile.maxMarchCapacity || 3125);
+  const maxMercs = targetMonster.marchCapacities?.mercenaries || (isRare ? 2520 : isCommon ? 1000 : profile.mercenaryCapacity || 1540);
+
+  const activeMercenary = troops.find(
+    (t) => t.category === 'mercenary' && t.isUnlocked && t.ownedCount > 0
+  ) || troops.find((t) => t.id === 'epic_monster_hunter_v');
+
+  const mercRecommended = activeMercenary
+    ? Math.min(activeMercenary.ownedCount, maxMercs)
+    : 0;
+
+  const weakness = targetMonster.weaknessClasses || ['ranged'];
+  const prefersRanged = weakness.includes('ranged');
+  const prefersMelee = weakness.includes('melee');
+
+  const g2Ranged = troops.find((t) => t.id === 'g2_ranged');
+  const g1Ranged = troops.find((t) => t.id === 'g1_ranged');
+  const g2Melee = troops.find((t) => t.id === 'g2_melee');
+  const g1Melee = troops.find((t) => t.id === 'g1_melee');
+
+  let g2RangedRec = 0;
+  let g1RangedRec = 0;
+  let g1MeleeRec = 0;
+  let g2MeleeRec = 0;
+  let allocatedGuards = 0;
+
+  if (prefersRanged) {
+    g2RangedRec = Math.min(g2Ranged?.ownedCount || 0, maxGuards - 100);
+    allocatedGuards += g2RangedRec;
+
+    if (maxGuards - allocatedGuards > 50) {
+      g1RangedRec = Math.min(g1Ranged?.ownedCount || 0, maxGuards - allocatedGuards - 50);
+      allocatedGuards += g1RangedRec;
+    }
+
+    g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
+    allocatedGuards += g1MeleeRec;
+  } else if (prefersMelee) {
+    g2MeleeRec = Math.min(g2Melee?.ownedCount || 0, maxGuards - 100);
+    allocatedGuards += g2MeleeRec;
+
+    g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
+    allocatedGuards += g1MeleeRec;
+  } else {
+    g2RangedRec = Math.min(g2Ranged?.ownedCount || 0, Math.floor((maxGuards - 100) / 2));
+    allocatedGuards += g2RangedRec;
+
+    g2MeleeRec = Math.min(g2Melee?.ownedCount || 0, Math.floor((maxGuards - allocatedGuards) / 2));
+    allocatedGuards += g2MeleeRec;
+
+    g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
+    allocatedGuards += g1MeleeRec;
+  }
+
+  const dispatchedTroopsList: DispatchedTroop[] = [];
+
+  if (activeMercenary && mercRecommended > 0) {
+    dispatchedTroopsList.push({
+      id: activeMercenary.id,
+      name: activeMercenary.name,
+      tier: activeMercenary.tier,
+      troopClass: activeMercenary.troopClass,
+      isMercenary: true,
+      count: mercRecommended,
+      unitAttack: Math.round(
+        (activeMercenary.customAttack || activeMercenary.baseAttack) *
+          (1 + (dragonBonusPercent + (profile.academyBonus?.monstersAttack || 20) + (captain.specialty === 'monsters' ? captainBonusPercent : 0)) / 100)
+      ),
+      unitHealth: Math.round(
+        (activeMercenary.customHealth || activeMercenary.baseHealth) *
+          (1 + (profile.academyBonus?.monstersHealth || 40) / 100)
+      ),
+    });
+  }
+
+  if (g2Ranged && g2RangedRec > 0) {
+    dispatchedTroopsList.push({
+      id: g2Ranged.id,
+      name: g2Ranged.name,
+      tier: 2,
+      troopClass: 'ranged',
+      isMercenary: false,
+      count: g2RangedRec,
+      unitAttack: Math.round(
+        (g2Ranged.customAttack || g2Ranged.baseAttack) *
+          (1 + (captainBonusPercent + dragonBonusPercent + academyBonusPercent) / 100)
+      ),
+      unitHealth: Math.round(
+        (g2Ranged.customHealth || g2Ranged.baseHealth) *
+          (1 + (profile.academyBonus?.guardsmenHealth || 25.5) / 100)
+      ),
+    });
+  }
+
+  if (g2Melee && g2MeleeRec > 0) {
+    dispatchedTroopsList.push({
+      id: g2Melee.id,
+      name: g2Melee.name,
+      tier: 2,
+      troopClass: 'melee',
+      isMercenary: false,
+      count: g2MeleeRec,
+      unitAttack: Math.round(
+        (g2Melee.customAttack || g2Melee.baseAttack) *
+          (1 + (captainBonusPercent + dragonBonusPercent + academyBonusPercent) / 100)
+      ),
+      unitHealth: Math.round(
+        (g2Melee.customHealth || g2Melee.baseHealth) *
+          (1 + (profile.academyBonus?.guardsmenHealth || 25.5) / 100)
+      ),
+    });
+  }
+
+  if (g1Ranged && g1RangedRec > 0) {
+    dispatchedTroopsList.push({
+      id: g1Ranged.id,
+      name: g1Ranged.name,
+      tier: 1,
+      troopClass: 'ranged',
+      isMercenary: false,
+      count: g1RangedRec,
+      unitAttack: Math.round(
+        (g1Ranged.customAttack || g1Ranged.baseAttack) *
+          (1 + (captainBonusPercent + dragonBonusPercent + academyBonusPercent) / 100)
+      ),
+      unitHealth: Math.round(
+        (g1Ranged.customHealth || g1Ranged.baseHealth) *
+          (1 + (profile.academyBonus?.guardsmenHealth || 25.5) / 100)
+      ),
+    });
+  }
+
+  if (g1Melee && g1MeleeRec > 0) {
+    dispatchedTroopsList.push({
+      id: g1Melee.id,
+      name: g1Melee.name,
+      tier: 1,
+      troopClass: 'melee',
+      isMercenary: false,
+      count: g1MeleeRec,
+      unitAttack: Math.round(
+        (g1Melee.customAttack || g1Melee.baseAttack) *
+          (1 + (captainBonusPercent + dragonBonusPercent + academyBonusPercent) / 100)
+      ),
+      unitHealth: Math.round(
+        (g1Melee.customHealth || g1Melee.baseHealth) *
+          (1 + (profile.academyBonus?.guardsmenHealth || 25.5) / 100)
+      ),
+    });
+  }
+
+  return dispatchedTroopsList;
+}
+
+/**
+ * Encontra o nível ótimo para farmar XP e subir de nível mais rápido:
+ * O nível mais alto do monstro que o exército atual do jogador vence com segurança (sem perdas nobres).
+ */
+export function findOptimalFarmLevel(
+  template: MonsterPresetTemplate,
+  troops: TroopUnit[],
+  profile: PlayerProfile,
+  captain: Captain,
+  sendDragon: boolean = true
+): {
+  optimalLevel: number;
+  optimalXp: number;
+  isSafe: boolean;
+  canBeatAnyLevel: boolean;
+} {
+  const levels = [...(template.availableLevels || [template.defaultLevel])].sort((a, b) => b - a);
+
+  let bestLevel = levels[levels.length - 1];
+  let bestXp = 0;
+  let foundSafe = false;
+
+  for (const lvl of levels) {
+    const target = buildMonsterTargetFromTemplate(template, lvl);
+    const dispatched = buildDispatchedTroops(troops, profile, target, captain, sendDragon);
+    const sim = simulateCombat(dispatched, target.enemySquads || []);
+
+    if (sim.outcome !== 'DEFEAT') {
+      bestLevel = lvl;
+      bestXp = target.xpReward || 0;
+      foundSafe = true;
+      break;
+    }
+  }
+
+  return {
+    optimalLevel: bestLevel,
+    optimalXp: bestXp,
+    isSafe: foundSafe,
+    canBeatAnyLevel: foundSafe,
+  };
+}
+

@@ -59,3 +59,37 @@ test('validar simulador de combate real com alerta de derrota certa para Tropa d
 
   console.log('Teste de validação do simulador e prévia de batalha concluído com sucesso!');
 });
+
+test('validar botão de recalcular marcha e opção de subir de nível rápido (XP Farm)', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto('http://localhost:5174', { waitUntil: 'networkidle' });
+
+  // 1. Ir para o Livro de Marcha
+  await page.click('button:has-text("Livro de Marcha")');
+  await page.waitForTimeout(600);
+
+  // 2. Verificar presença do Badge de Sincronização com Quartel
+  const syncBadge = page.locator('text=/Sincronizado com Quartel/i');
+  await expect(syncBadge).toBeVisible();
+
+  // 3. Verificar presença da opção "Subir de Nível Rápido (XP Farm)" acima do nível
+  const fastLevelingOption = page.locator('text=/Subir de Nível Rápido/i');
+  await expect(fastLevelingOption).toBeVisible();
+
+  // 4. Testar clique no botão "Recalcular Marcha"
+  const recalcBtn = page.locator('button:has-text("Recalcular Marcha")');
+  await expect(recalcBtn).toBeVisible();
+  await recalcBtn.click();
+
+  // 5. Validar que o toast de confirmação aparece
+  const toast = page.locator('text=/Marcha e simulação recalculadas com sucesso/i');
+  await expect(toast).toBeVisible();
+
+  // 6. Tirar screenshot da tela comprovando o botão de recalcular, o badge e a opção de nível rápido
+  await page.screenshot({
+    path: 'C:/Users/celso/.gemini/antigravity/brain/b0b3a8ca-247a-4157-b90e-34924956138c/recalculate_and_fast_leveling.png',
+  });
+
+  console.log('Teste de validação do Recalcular e Subir de Nível Rápido concluído com sucesso!');
+});
+

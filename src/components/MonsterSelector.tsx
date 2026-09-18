@@ -1,18 +1,28 @@
 import React, { useState } from 'react';
-import { MonsterTarget, TroopClass, AttackMode, EnemySquadUnit } from '../types';
+import { MonsterTarget, TroopClass, AttackMode, EnemySquadUnit, TroopUnit, PlayerProfile, Captain } from '../types';
 import { MONSTER_PRESET_TEMPLATES, buildMonsterTargetFromTemplate, updateMonsterSquads } from '../data/monsters';
+import { findOptimalFarmLevel } from '../utils/combatSimulator';
+import { DEFAULT_CAPTAINS } from '../data/captains';
 import { EditSquadsModal } from './EditSquadsModal';
-import { Skull, Swords, Crown, Flame, Edit3 } from 'lucide-react';
+import { Skull, Swords, Crown, Flame, Edit3, Zap } from 'lucide-react';
 
 interface MonsterSelectorProps {
   selectedMonster: MonsterTarget;
   onSelectMonster: (monster: MonsterTarget) => void;
   compact?: boolean;
+  troops?: TroopUnit[];
+  profile?: PlayerProfile;
+  captain?: Captain;
+  sendDragon?: boolean;
 }
 
 export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
   selectedMonster,
   onSelectMonster,
+  troops,
+  profile,
+  captain,
+  sendDragon,
 }) => {
   const [activeAttackMode, setActiveAttackMode] = useState<AttackMode>(
     selectedMonster.attackMode || 'common'
@@ -30,6 +40,13 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
     filteredTemplates.find((t) => t.id === selectedTemplateId) ||
     filteredTemplates[0] ||
     MONSTER_PRESET_TEMPLATES[0];
+
+  const fallbackCaptain: Captain = captain || DEFAULT_CAPTAINS[0];
+
+  const optimalFarm =
+    troops && profile
+      ? findOptimalFarmLevel(currentTemplate, troops, profile, fallbackCaptain, sendDragon ?? true)
+      : null;
 
   const handleModeChange = (mode: AttackMode) => {
     setActiveAttackMode(mode);
@@ -162,7 +179,39 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
         </div>
 
         {/* Level Input & Quick Pills (5 cols) */}
-        <div className="sm:col-span-5 space-y-1.5 bg-[#0b0f19] p-3 rounded-xl border border-slate-700 shadow-inner">
+        <div className="sm:col-span-5 space-y-2 bg-[#0b0f19] p-3 rounded-xl border border-slate-700 shadow-inner">
+          {/* OPÇÃO LOGO ACIMA DO NÍVEL INDICADO: SUBIR DE NÍVEL RÁPIDO */}
+          {optimalFarm && (
+            <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-800">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0 animate-pulse" />
+                <span className="text-2xs sm:text-xs font-black uppercase tracking-wider text-amber-300 truncate">
+                  Subir de Nível Rápido (XP Farm):
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleLevelChange(optimalFarm.optimalLevel)}
+                className={`text-2xs font-black px-2.5 py-0.5 rounded-lg border transition-all flex items-center gap-1.5 shrink-0 shadow ${
+                  monsterLevel === optimalFarm.optimalLevel
+                    ? 'bg-emerald-500 text-slate-950 border-emerald-300 ring-1 ring-emerald-400 font-black'
+                    : 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border-amber-500/60 hover:from-amber-500 hover:to-yellow-500 hover:text-slate-950'
+                }`}
+                title="Clique para selecionar o maior nível que seu exército vence sem perdas nobres"
+              >
+                <span>🎯 Nv {optimalFarm.optimalLevel}</span>
+                {monsterLevel !== optimalFarm.optimalLevel ? (
+                  <span className="bg-amber-500 text-slate-950 text-3xs px-1 rounded font-black">
+                    Aplicar
+                  </span>
+                ) : (
+                  <span className="text-3xs text-slate-950 font-black">✓ Ativo</span>
+                )}
+              </button>
+            </div>
+          )}
+
           <div className="flex justify-between items-center text-xs">
             <span className="font-bold text-slate-300">Nível do Monstro:</span>
             <span className="font-black text-amber-300 text-sm">Nv {monsterLevel}</span>
@@ -194,6 +243,13 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
               ))}
             </div>
           </div>
+
+          {/* Dica contextual de Nível Seguro para XP */}
+          {optimalFarm && monsterLevel > optimalFarm.optimalLevel && (
+            <div className="text-2xs font-bold text-rose-300 bg-rose-950/70 border border-rose-800/80 p-1.5 rounded-lg flex items-center gap-1.5">
+              <span>⚠️ Nv {monsterLevel} é derrota! Use Nv {optimalFarm.optimalLevel} para farmar sem perder tropas.</span>
+            </div>
+          )}
         </div>
       </div>
 
