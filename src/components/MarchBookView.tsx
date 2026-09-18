@@ -1,9 +1,25 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { TroopUnit, Captain, MonsterTarget, PlayerProfile, EnemySquadUnit } from '../types';
 import { TroopAvatar } from './TroopAvatar';
 import { EditSquadsModal } from './EditSquadsModal';
 import { updateMonsterSquads } from '../data/monsters';
-import { Copy, Check, ChevronRight, Zap, Flame, ShieldAlert, Sparkles, UserCheck, Shield, CheckCircle2, Edit3 } from 'lucide-react';
+import {
+  Copy,
+  Check,
+  Zap,
+  Flame,
+  ShieldAlert,
+  Sparkles,
+  Shield,
+  CheckCircle2,
+  Edit3,
+  ChevronDown,
+  ChevronUp,
+  Crown,
+  Swords,
+  Crosshair,
+  AlertTriangle
+} from 'lucide-react';
 
 interface MarchBookViewProps {
   profile: PlayerProfile;
@@ -26,6 +42,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [sendDragon, setSendDragon] = useState(true);
+  const [showEnemyDetails, setShowEnemyDetails] = useState(false);
   const [isEditingSquads, setIsEditingSquads] = useState(false);
 
   const isRare = targetMonster.attackMode === 'rare';
@@ -54,7 +71,11 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   // 1. Mercenários: Titãs M5
   const titanM5 = troops.find((t) => t.id === 'm5_titan' || t.id === 'merc_titan_v');
   const titanRecommended = Math.min(titanM5?.ownedCount || 81, maxMercs);
-  const titanDamage = Math.round((titanM5?.baseAttack || 4600) * titanRecommended * (1 + (dragonBonusPercent + (profile.academyBonus?.monstersAttack || 20)) / 100));
+  const titanDamage = Math.round(
+    (titanM5?.baseAttack || 4600) *
+      titanRecommended *
+      (1 + (dragonBonusPercent + (profile.academyBonus?.monstersAttack || 20)) / 100)
+  );
 
   // 2. Dano necessário para abater o monstro
   const enemyHealth = targetMonster.totalHealth;
@@ -64,7 +85,6 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   const weakness = targetMonster.weaknessClasses || ['ranged'];
   const prefersRanged = weakness.includes('ranged');
   const prefersMelee = weakness.includes('melee');
-  const prefersMounted = weakness.includes('mounted');
 
   const g2Ranged = troops.find((t) => t.id === 'g2_ranged');
   const g1Ranged = troops.find((t) => t.id === 'g1_ranged');
@@ -156,7 +176,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   );
   const projectedTar = targetMonster.tarReward || Math.round(targetMonster.level * 14000);
 
-  // Lista de capitães disponíveis para exibição nos slots
+  // Lista de capitães para seleção rápida
   const displayedCaptains = (profile.selectedCaptainIds || ['farhad', 'aurora', 'xi_guiying'])
     .map((id) => captains.find((c) => c.id === id))
     .filter(Boolean) as Captain[];
@@ -164,21 +184,22 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   const handleCopy = () => {
     const leaderText = isRare
       ? `👑 Líder: Herói ${profile.heroName || 'Araning'} (Nv ${profile.heroLevel || 18})`
-      : `👑 Capitão Ativo: ${activeCaptain.name} (Nv ${activeCaptainLevel} - +${captainBonusPercent}% Bônus)`;
+      : `👑 Capitão: ${activeCaptain.name} (Nv ${activeCaptainLevel} - +${captainBonusPercent}% Bônus)`;
 
-    const text = `📜 GUIA DE MARCHA TOTAL BATTLE - DESTINO: ${targetMonster.coordinates || '(K:310 X:924 Y:264)'}\n` +
-      `🎯 Alvo: ${targetMonster.name} [${isRare ? 'ATAQUE RARO' : isCommon ? 'ATAQUE COMUM' : 'ÉPICO'}]\n` +
+    const text =
+      `📜 ORDEM DE MARCHA TOTAL BATTLE\n` +
+      `🎯 Alvo: ${targetMonster.name} ${targetMonster.coordinates || ''}\n` +
       `${leaderText}\n` +
       `🐉 Dragão: ${sendDragon ? 'Sim (⚡ 50 Energia)' : 'Não'}\n\n` +
       `🔥 MERCENÁRIOS:\n` +
-      `• Titã de Fogo / Berserker (M5): ${titanRecommended} un.\n\n` +
-      `⚔️ EXÉRCITO (Total: ${allocatedGuards.toLocaleString('pt-BR')} / ${maxGuards.toLocaleString('pt-BR')}):\n` +
-      (g2RangedRec > 0 ? `• [II] Arqueiro de Linha: ${g2RangedRec.toLocaleString('pt-BR')}x\n` : '') +
-      (g1RangedRec > 0 ? `• [I] Arqueiro Recruta: ${g1RangedRec.toLocaleString('pt-BR')}x\n` : '') +
-      (g1MeleeRec > 0 ? `• [I] Espadachim (Bucha): ${g1MeleeRec.toLocaleString('pt-BR')}x\n` : '') +
-      (g2MeleeRec > 0 ? `• [II] Guerreiro Veterano: ${g2MeleeRec.toLocaleString('pt-BR')}x\n` : '') +
-      (g2MountedRec > 0 ? `• [II] Cavaleiro: ${g2MountedRec.toLocaleString('pt-BR')}x\n` : '') +
-      `\n🏆 Recompensas: +${projectedVP.toLocaleString('pt-BR')} VP | +${projectedXP.toLocaleString('pt-BR')} XP | 0 Baixas Pesadas`;
+      `• Titã M5: ${titanRecommended} un.\n\n` +
+      `⚔️ EXÉRCITO (${allocatedGuards.toLocaleString('pt-BR')} / ${maxGuards.toLocaleString('pt-BR')}):\n` +
+      (g2RangedRec > 0 ? `• [II] Arqueiro de Linha: ${g2RangedRec.toLocaleString('pt-BR')} un. (Dano Principal)\n` : '') +
+      (g1RangedRec > 0 ? `• [I] Arqueiro Recruta: ${g1RangedRec.toLocaleString('pt-BR')} un.\n` : '') +
+      (g1MeleeRec > 0 ? `• [I] Espadachim (Bucha): ${g1MeleeRec.toLocaleString('pt-BR')} un. (Absorção de Baixas)\n` : '') +
+      (g2MeleeRec > 0 ? `• [II] Guerreiro Veterano: ${g2MeleeRec.toLocaleString('pt-BR')} un.\n` : '') +
+      (g2MountedRec > 0 ? `• [II] Cavaleiro: ${g2MountedRec.toLocaleString('pt-BR')} un.\n` : '') +
+      `\n✅ Resultado Previsto: 0 Baixas em Tropas Pesadas | +${projectedVP.toLocaleString('pt-BR')} VP | +${projectedXP.toLocaleString('pt-BR')} XP`;
 
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -186,494 +207,421 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   };
 
   return (
-    <div className="bg-[#e9dfcb] text-[#2c2214] rounded-2xl p-4 sm:p-6 shadow-2xl border-4 border-[#b49053] font-serif space-y-5">
-      {/* Top Header Row */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-[#caa568] pb-3 gap-3">
-        <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-          <span className="bg-[#caa568]/40 px-2.5 py-1 rounded-md border border-[#9b783c]">
-            Iniciar: Sua Cidade
+    <div className="bg-[#1e140d] text-[#f4ebd9] rounded-2xl p-4 sm:p-6 shadow-2xl border-2 border-[#caa568] font-serif space-y-5">
+      
+      {/* 1. Header: Target Badge + Copy Action Button */}
+      <div className="bg-gradient-to-r from-[#2e1d12] via-[#24160d] to-[#1a0f08] border border-[#caa568]/60 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`px-2.5 py-0.5 rounded text-xs font-bold font-sans ${
+              isRare ? 'bg-purple-900 text-purple-200 border border-purple-500' : isCommon ? 'bg-red-900 text-red-200 border border-red-500' : 'bg-amber-900 text-amber-200 border border-amber-500'
+            }`}>
+              {isRare ? '👑 ATAQUE RARO' : isCommon ? '⚔️ ATAQUE COMUM' : '🐉 MONSTRO ÉPICO'}
+            </span>
+            <span className="text-xs font-bold text-[#caa568] font-sans">
+              Nível {targetMonster.level}
+            </span>
+            {targetMonster.coordinates && (
+              <span className="text-xs text-[#caa568]/80 font-sans">
+                • {targetMonster.coordinates}
+              </span>
+            )}
+          </div>
+          <h2 className="text-lg sm:text-xl font-black text-[#fef08a] font-fantasy tracking-wide">
+            {targetMonster.name}
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setShowEnemyDetails(!showEnemyDetails)}
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#2a1a10] hover:bg-[#382316] text-[#caa568] hover:text-[#fef08a] border border-[#5a3e22] text-xs font-sans font-bold transition-all"
+          >
+            <ShieldAlert className="w-4 h-4 text-amber-400" />
+            <span>{showEnemyDetails ? 'Ocultar Inimigos' : 'Ver Inimigos'}</span>
+            {showEnemyDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopy}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-sans font-black text-xs shadow-lg transition-all ${
+              copied
+                ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
+                : 'bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-600 hover:brightness-110 text-[#1a1006] ring-2 ring-amber-400/80'
+            }`}
+          >
+            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            <span>{copied ? 'Copiado para o Jogo!' : '📋 Copiar para o Jogo'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Collapsible Enemy Squads Drawer (Optional) */}
+      {showEnemyDetails && (
+        <div className="bg-[#140d08] p-4 rounded-xl border border-[#caa568]/40 space-y-3 animate-fadeIn">
+          <div className="flex items-center justify-between border-b border-[#5a3e22] pb-2">
+            <span className="text-xs font-bold text-[#caa568] flex items-center gap-1.5 font-serif">
+              <ShieldAlert className="w-4 h-4 text-amber-400" />
+              Esquadrões Inimigos ({targetMonster.enemySquads?.length || 0} tipos) • HP Total: <strong className="text-red-400 font-sans">{targetMonster.totalHealth.toLocaleString('pt-BR')}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsEditingSquads(true)}
+              className="flex items-center gap-1 text-xs font-bold text-amber-300 bg-amber-950/80 hover:bg-amber-900 px-2.5 py-1 rounded border border-amber-600 transition-all font-sans"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>✏️ Ajustar Esquadrões</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 font-sans">
+            {targetMonster.enemySquads?.map((sq) => {
+              const tierRoman = ['I', 'II', 'III', 'IV', 'V'][sq.tier - 1] || `${sq.tier}`;
+              return (
+                <div
+                  key={sq.id}
+                  onClick={() => setIsEditingSquads(true)}
+                  className="bg-[#241912] p-2.5 rounded-lg border border-[#5a3e22] hover:border-[#caa568] cursor-pointer space-y-1.5 transition-colors group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#fef08a] flex items-center gap-1 truncate group-hover:text-amber-300">
+                      <span className="px-1.5 py-0.2 rounded text-[10px] bg-amber-900 text-amber-200 border border-amber-600 font-serif">
+                        {tierRoman}
+                      </span>
+                      {sq.name}
+                    </span>
+                    <span className="text-xs font-black text-red-300 bg-red-950/80 px-2 py-0.5 rounded border border-red-900">
+                      {sq.count.toLocaleString('pt-BR')} un.
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 text-[10px] text-slate-400 bg-[#120b07] p-1.5 rounded">
+                    <div>Força: <strong className="text-amber-300 font-sans">{sq.unitAttack.toLocaleString('pt-BR')}</strong></div>
+                    <div>Saúde: <strong className="text-red-400 font-sans">{sq.unitHealth.toLocaleString('pt-BR')}</strong></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 3. STEP 1: LIDERANÇA & DRAGÃO (Clean & Direct) */}
+      <div className="bg-[#140d08] p-4 rounded-xl border border-[#5a3e22] space-y-3">
+        <div className="flex items-center justify-between border-b border-[#5a3e22]/80 pb-1.5">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#caa568] flex items-center gap-1.5">
+            <span className="w-5 h-5 rounded-full bg-amber-900 text-amber-200 border border-amber-500 flex items-center justify-center text-xs font-black">1</span>
+            {isRare ? 'Comandante da Marcha (Herói)' : 'Capitão da Marcha'}
           </span>
-          <ChevronRight className="w-4 h-4 text-[#9b783c] flex-shrink-0" />
-          <span className="bg-[#caa568]/40 px-2.5 py-1 rounded-md border border-[#9b783c]">
-            Destino: {targetMonster.coordinates || '(K:310 X:924 Y:264)'}
-          </span>
-          <span className={`px-2.5 py-1 rounded-md font-sans text-xs ${
-            isRare ? 'bg-purple-800 text-purple-100' : isCommon ? 'bg-red-800 text-red-100' : 'bg-amber-800 text-amber-100'
-          }`}>
-            {isRare ? '👑 Ataque Raro' : isCommon ? '⚔️ Ataque Comum' : '🐉 Monstro Épico'}
+          <span className="text-[11px] font-sans font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">
+            {isRare ? `👑 Herói Ativo (Nv ${profile.heroLevel || 18})` : `👑 Líder: ${activeCaptain.name} (+${captainBonusPercent}%)`}
           </span>
         </div>
 
-        <button
-          onClick={handleCopy}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-sans font-bold text-xs shadow-md transition-all flex-shrink-0 ${
-            copied ? 'bg-emerald-700 text-white' : 'bg-gradient-to-r from-[#9b783c] to-[#7c5f2b] text-white hover:brightness-110'
-          }`}
-        >
-          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          {copied ? 'Copiado para o Jogo!' : 'Copiar Quantidades para o Jogo'}
-        </button>
-      </div>
-
-      {/* Main 2-Page Book Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        
-        {/* Left Page (7 Cols): March Leadership, Dragon, Mercenaries, Army */}
-        <div className="lg:col-span-7 bg-[#f6efe2] p-4 rounded-xl border border-[#d6c39f] shadow-inner space-y-4">
-          
-          {/* Section: LIDERANÇA DA MARCHA */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between border-b border-[#d6c39f] pb-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#7c5f2b]">
-                ♦ {isRare ? 'Herói da Marcha' : 'Capitães da Marcha'} ♦
-              </span>
-              <span className="text-[11px] font-sans text-emerald-800 font-bold bg-emerald-100 px-2 py-0.5 rounded">
-                {isRare ? 'Herói Líder' : `Líder Ativo: ${activeCaptain.name} (+${captainBonusPercent}%)`}
-              </span>
-            </div>
-
-            {/* Ataque Raro: Herói como Líder Exclusivo */}
-            {isRare && (
-              <div className="flex items-center gap-3 bg-gradient-to-r from-purple-100/70 to-white p-3 rounded-xl border-2 border-purple-400">
-                <div className="w-13 h-13 rounded-lg border-2 border-[#caa568] bg-[#3a2214] flex items-center justify-center overflow-hidden flex-shrink-0">
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+          {/* Left: Captains or Hero (8 cols) */}
+          <div className="sm:col-span-8">
+            {isRare ? (
+              <div className="flex items-center gap-3 bg-[#241912] p-2.5 rounded-xl border border-purple-500/60">
+                <div className="w-11 h-11 rounded-lg border border-[#caa568] bg-[#3a2214] flex items-center justify-center overflow-hidden flex-shrink-0">
                   <img
                     src={profile.heroId === 'julia' ? '/assets/troops/julia.png' : '/assets/troops/garvel.png'}
                     alt="Herói"
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-sm font-bold text-purple-950 truncate">
-                    {profile.heroName || 'Araning'} ({profile.heroId === 'julia' ? 'Julia' : 'Garvel'})
+                <div className="min-w-0">
+                  <h4 className="text-sm font-bold text-[#fef08a] truncate">
+                    Herói {profile.heroName || 'Araning'} ({profile.heroId === 'julia' ? 'Julia' : 'Garvel'})
                   </h4>
-                  <span className="text-xs text-purple-800 font-sans font-bold block">
-                    Nível {profile.heroLevel || 18} • Comandante Oficial de Ataques Raros
-                  </span>
-                  <span className="text-[11px] text-slate-600 block">
-                    Capacidade de Guardas expandida para {maxGuards.toLocaleString('pt-BR')} soldados.
-                  </span>
+                  <p className="text-[11px] text-purple-300 font-sans">
+                    Nível {profile.heroLevel || 18} • Comandante Oficial para Ataques Raros
+                  </p>
                 </div>
               </div>
-            )}
-
-            {/* Ataque Comum: Seleção Dinâmica do Capitão Líder com Bônus recalculados */}
-            {isCommon && (
-              <div className="space-y-1.5">
-                <p className="text-[11px] text-slate-600 font-sans">
-                  Clique no capitão para ativá-lo como <strong>Líder da Marcha</strong> e recalcular os bônus:
-                </p>
-                <div className="grid grid-cols-3 gap-2">
-                  {displayedCaptains.slice(0, 3).map((cap) => {
-                    const lvl = profile.captainLevels[cap.id] || cap.level || 1;
-                    const isActive = cap.id === activeCaptain.id;
-                    const bonus = Math.round((cap.monsterAttackBonusPercent || 20) + (lvl * 1.2));
-
-                    return (
-                      <div
-                        key={cap.id}
-                        onClick={() => onSelectCaptain(cap.id)}
-                        className={`p-2.5 rounded-xl border-2 text-center transition-all cursor-pointer relative flex flex-col items-center justify-between ${
-                          isActive
-                            ? 'bg-gradient-to-b from-amber-100 via-amber-50 to-white border-amber-600 shadow-md ring-2 ring-amber-500/50'
-                            : 'bg-white/80 border-[#caa568]/60 hover:bg-amber-50/50 hover:border-amber-500'
-                        }`}
-                      >
-                        <div className="relative inline-block mb-1">
-                          <TroopAvatar id={cap.id} tier={lvl} size="md" />
-                          {isActive && (
-                            <span className="absolute -top-1 -right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow">
-                              <Check className="w-3 h-3" />
-                            </span>
-                          )}
-                        </div>
-
-                        <span className="text-xs font-bold text-[#2c2214] block truncate w-full">
-                          {cap.name}
-                        </span>
-
-                        <span className="text-[10px] text-amber-900 font-sans font-bold block">
-                          Nv {lvl} (+{bonus}%)
-                        </span>
-
-                        {isActive && (
-                          <span className="mt-1 text-[9px] font-sans font-black uppercase tracking-wider bg-amber-600 text-white px-1.5 py-0.2 rounded">
-                            Líder Ativo
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Ataque Épico: 1 Herói + até 3 Capitães */}
-            {isEpic && (
-              <div className="grid grid-cols-4 gap-2">
-                <div className="p-2 rounded-lg border-2 bg-amber-100 border-[#9b783c] flex flex-col items-center text-center">
-                  <div className="w-10 h-10 rounded border border-[#caa568] bg-[#3a2214] overflow-hidden mb-1">
-                    <img
-                      src={profile.heroId === 'julia' ? '/assets/troops/julia.png' : '/assets/troops/garvel.png'}
-                      alt="Herói"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <span className="text-[11px] font-bold truncate w-full">{profile.heroName || 'Araning'}</span>
-                  <span className="text-[9px] text-amber-900 font-sans font-bold">Nv {profile.heroLevel || 18}</span>
-                </div>
-
-                {displayedCaptains.slice(0, 3).map((cap) => {
-                  const lvl = profile.captainLevels[cap.id] || cap.level || 1;
-                  const isActive = cap.id === activeCaptain.id;
+            ) : (
+              <div className="grid grid-cols-3 gap-2 font-sans">
+                {displayedCaptains.map((cap) => {
+                  const isSelected = cap.id === activeCapId;
+                  const level = profile.captainLevels[cap.id] || cap.level || 1;
+                  const bonus = Math.round((cap.monsterAttackBonusPercent || 20) + (level * 1.2));
                   return (
-                    <div
+                    <button
                       key={cap.id}
+                      type="button"
                       onClick={() => onSelectCaptain(cap.id)}
-                      className={`p-2 rounded-lg border-2 flex flex-col items-center text-center cursor-pointer ${
-                        isActive ? 'bg-amber-100 border-amber-600 shadow' : 'bg-white border-[#caa568]/60'
+                      className={`p-2 rounded-xl border text-left transition-all flex items-center gap-2 ${
+                        isSelected
+                          ? 'bg-gradient-to-r from-amber-950 to-[#241912] border-[#eab308] ring-1 ring-[#eab308] shadow-md'
+                          : 'bg-[#241912] border-[#5a3e22] hover:border-[#caa568] opacity-75 hover:opacity-100'
                       }`}
                     >
-                      <TroopAvatar id={cap.id} tier={lvl} size="sm" />
-                      <span className="text-[11px] font-bold truncate w-full mt-1">{cap.name}</span>
-                      <span className="text-[9px] text-emerald-800 font-sans font-bold">Nv {lvl}</span>
-                    </div>
+                      <div className="w-9 h-9 rounded-lg border border-[#caa568]/60 bg-[#140d08] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <img src={cap.avatarIcon} alt={cap.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-bold text-[#fef08a] block truncate font-serif">
+                          {cap.name}
+                        </span>
+                        <span className="text-[10px] font-extrabold text-emerald-400 block">
+                          +{bonus}% Atk
+                        </span>
+                      </div>
+                    </button>
                   );
                 })}
               </div>
             )}
           </div>
 
-          {/* Section: DRAGÃO (Layout Limpo sem Sobreposição) */}
-          <div className="space-y-1.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#7c5f2b] block border-b border-[#d6c39f] pb-1">
-              🐉 Dragão
-            </span>
-
-            <div className="bg-white p-3 rounded-xl border border-[#d6c39f] space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-11 h-11 rounded-lg border-2 border-amber-600 bg-gradient-to-b from-red-800 to-amber-950 flex items-center justify-center relative overflow-hidden flex-shrink-0 shadow-inner">
-                    <span className="text-xl">🐉</span>
-                    <span className="absolute bottom-0 right-0 bg-amber-600 text-amber-950 font-bold text-[8px] px-1 rounded-tl font-sans">
-                      Nv 15
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-[#2c2214] block font-sans">
-                      Dragão Guardião da Cidade
-                    </span>
-                    <div className="flex items-center gap-2 text-xs font-sans mt-0.5">
-                      <span className="text-amber-900 font-bold bg-amber-100 px-2 py-0.2 rounded border border-amber-300">
-                        ⚡ Custo: 50 Energia
-                      </span>
-                      <span className="text-slate-600">
-                        Saldo: <strong className="text-amber-800">⚡ 750</strong>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <span className={`text-[10px] font-sans font-bold px-2 py-1 rounded flex-shrink-0 ${
-                  sendDragon ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-100 text-slate-500'
-                }`}>
-                  {sendDragon ? 'Ativo na Marcha' : 'No Ninho'}
+          {/* Right: Dragon Checkbox (4 cols) */}
+          <div className="sm:col-span-4">
+            <label
+              className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                sendDragon
+                  ? 'bg-[#241912] border-emerald-500/70 text-emerald-300'
+                  : 'bg-[#180f0a] border-[#5a3e22] text-slate-400'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={sendDragon}
+                onChange={(e) => setSendDragon(e.target.checked)}
+                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 bg-[#100a06] border-[#5a3e22]"
+              />
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-[#fef08a] block font-serif">
+                  🐉 Dragão (+15% Dano)
+                </span>
+                <span className="text-[10px] font-sans block text-slate-400">
+                  ⚡ 50 / 750 de Energia
                 </span>
               </div>
-
-              <div className="pt-1.5 border-t border-slate-100">
-                <label className="flex items-center gap-2 cursor-pointer font-sans">
-                  <input
-                    type="checkbox"
-                    checked={sendDragon}
-                    onChange={(e) => setSendDragon(e.target.checked)}
-                    className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
-                  />
-                  <span className="text-xs font-bold text-[#2c2214]">
-                    Enviar Dragão no Ataque (+15% de Dano em todas as tropas)
-                  </span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Section: MERCENÁRIOS */}
-          <div className="space-y-1.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#7c5f2b] block border-b border-[#d6c39f] pb-1">
-              🦅 Mercenários
-            </span>
-
-            <div className="bg-white p-3 rounded-xl border border-[#d6c39f] flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <TroopAvatar id="m5_titan" tier={5} size="md" />
-                <div className="min-w-0">
-                  <h4 className="text-xs sm:text-sm font-bold text-[#2c2214] truncate">
-                    Titã de Fogo / Berserker (M5)
-                  </h4>
-                  <span className="text-[11px] font-sans text-slate-600 block">
-                    Estoque no Quartel: <strong className="text-[#2c2214]">81 unidades</strong>
-                  </span>
-                </div>
-              </div>
-
-              <div className="text-right font-sans flex-shrink-0">
-                <span className="text-[10px] text-slate-500 uppercase block font-bold">DIGITAR NO JOGO:</span>
-                <span className="text-lg font-black text-amber-800 bg-amber-100 px-3 py-0.5 rounded-md border border-amber-300">
-                  {titanRecommended}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Section: EXÉRCITO / TROPAS */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between border-b border-[#d6c39f] pb-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#7c5f2b]">
-                🛡️ Exército Recomendado
-              </span>
-              <span className="text-xs font-sans font-bold text-amber-900">
-                Capacidade: {allocatedGuards.toLocaleString('pt-BR')} / {maxGuards.toLocaleString('pt-BR')}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 font-sans">
-              {/* Arqueiros G2 */}
-              {g2RangedRec > 0 && (
-                <div className="bg-gradient-to-r from-emerald-50 to-white p-2.5 rounded-xl border-2 border-emerald-500 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <TroopAvatar id="g2_ranged" tier={2} size="sm" />
-                    <div className="min-w-0">
-                      <span className="text-xs font-bold text-emerald-950 block truncate">Arqueiro de Linha</span>
-                      <span className="text-[10px] text-slate-500 block">Estoque: {g2Ranged?.ownedCount || 1797}</span>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <span className="text-[10px] text-emerald-800 font-bold block">COLOCAR:</span>
-                    <span className="text-base font-black text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-md border border-emerald-400">
-                      {g2RangedRec.toLocaleString('pt-BR')}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Arqueiros G1 */}
-              {g1RangedRec > 0 && (
-                <div className="bg-gradient-to-r from-emerald-50 to-white p-2.5 rounded-xl border-2 border-emerald-500 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <TroopAvatar id="g1_ranged" tier={1} size="sm" />
-                    <div className="min-w-0">
-                      <span className="text-xs font-bold text-emerald-950 block truncate">Arqueiro Recruta</span>
-                      <span className="text-[10px] text-slate-500 block">Estoque: {g1Ranged?.ownedCount || 580}</span>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <span className="text-[10px] text-emerald-800 font-bold block">COLOCAR:</span>
-                    <span className="text-base font-black text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-md border border-emerald-400">
-                      {g1RangedRec.toLocaleString('pt-BR')}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Espadachins G1 (Bucha) */}
-              {g1MeleeRec > 0 && (
-                <div className="bg-gradient-to-r from-amber-50 to-white p-2.5 rounded-xl border-2 border-amber-500 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <TroopAvatar id="g1_melee" tier={1} size="sm" />
-                    <div className="min-w-0">
-                      <span className="text-xs font-bold text-amber-950 block truncate">Espadachim (Bucha)</span>
-                      <span className="text-[10px] text-slate-500 block">Estoque: {g1Melee?.ownedCount || 1369}</span>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <span className="text-[10px] text-amber-800 font-bold block">COLOCAR:</span>
-                    <span className="text-base font-black text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-md border border-amber-400">
-                      {g1MeleeRec.toLocaleString('pt-BR')}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Guerreiro Veterano G2 */}
-              {g2MeleeRec > 0 && (
-                <div className="bg-gradient-to-r from-red-50 to-white p-2.5 rounded-xl border-2 border-red-500 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <TroopAvatar id="g2_melee" tier={2} size="sm" />
-                    <div className="min-w-0">
-                      <span className="text-xs font-bold text-red-950 block truncate">Guerreiro Veterano</span>
-                      <span className="text-[10px] text-slate-500 block">Estoque: {g2Melee?.ownedCount || 1799}</span>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <span className="text-[10px] text-red-800 font-bold block">COLOCAR:</span>
-                    <span className="text-base font-black text-red-800 bg-red-100 px-2.5 py-0.5 rounded-md border border-red-400">
-                      {g2MeleeRec.toLocaleString('pt-BR')}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Cavaleiro G2 */}
-              {g2MountedRec > 0 && (
-                <div className="bg-gradient-to-r from-amber-50 to-white p-2.5 rounded-xl border-2 border-amber-600 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <TroopAvatar id="g2_mounted" tier={2} size="sm" />
-                    <div className="min-w-0">
-                      <span className="text-xs font-bold text-amber-950 block truncate">Cavaleiro Veterano</span>
-                      <span className="text-[10px] text-slate-500 block">Estoque: {g2Mounted?.ownedCount || 523}</span>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <span className="text-[10px] text-amber-800 font-bold block">COLOCAR:</span>
-                    <span className="text-base font-black text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-md border border-amber-400">
-                      {g2MountedRec.toLocaleString('pt-BR')}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Bottom Bar: Capacidades & Status de Baixas */}
-          <div className="bg-[#eedec5] p-3 rounded-xl border border-[#caa568] flex flex-wrap items-center justify-between gap-3 font-sans text-xs font-bold">
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-red-900">
-                🛡️ Guardas: <strong>{allocatedGuards.toLocaleString('pt-BR')} / {maxGuards.toLocaleString('pt-BR')}</strong>
-              </span>
-              <span className="text-amber-900">
-                🦅 Mercs: <strong>{titanRecommended} / {maxMercs.toLocaleString('pt-BR')}</strong>
-              </span>
-              <span className="text-purple-900">
-                🦁 Monstros: <strong>0 / {maxMonsters.toLocaleString('pt-BR')}</strong>
-              </span>
-            </div>
-
-            <span className={`px-3 py-1 rounded-md shadow-sm ${
-              heavyLosses === 0 ? 'bg-emerald-700 text-white' : 'bg-red-700 text-white'
-            }`}>
-              {heavyLosses === 0
-                ? (fodderLosses > 0 ? `✅ 0 Baixas Pesadas (~${fodderLosses} Buchas)` : '✅ 0 Baixas em Combate')
-                : `⚠️ ${heavyLosses} Baixas Estimadas`}
-            </span>
-          </div>
-        </div>
-
-        {/* Right Page (5 Cols): Enemy Troops & Strategy */}
-        <div className="lg:col-span-5 bg-[#f6efe2] p-4 rounded-xl border border-[#d6c39f] shadow-inner space-y-4">
-          <div className="flex items-center justify-between border-b border-[#d6c39f] pb-2 gap-2 flex-wrap">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#7c5f2b]">
-              ♦ Tropas Inimigas no Destino ♦
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black text-red-800 font-sans bg-red-100 px-2 py-0.5 rounded border border-red-300">
-                Nível {targetMonster.level}
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsEditingSquads(true)}
-                className="flex items-center gap-1 text-[11px] font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-300 px-2 py-0.5 rounded border border-amber-500 shadow-sm transition-all"
-                title="Editar quantidade ou atributos dos esquadrões inimigos"
-              >
-                <Edit3 className="w-3 h-3 text-amber-800" />
-                <span>✏️ Ajustar</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Enemy Squads Display */}
-          <div className="space-y-3">
-            {targetMonster.enemySquads && targetMonster.enemySquads.length > 0 ? (
-              targetMonster.enemySquads.map((sq) => {
-                const tierRoman = ['I', 'II', 'III', 'IV', 'V'][sq.tier - 1] || `${sq.tier}`;
-                return (
-                  <div
-                    key={sq.id}
-                    onClick={() => setIsEditingSquads(true)}
-                    className="bg-white p-3 rounded-xl border-2 border-red-500/60 shadow-sm space-y-2 cursor-pointer hover:border-red-600 transition-all group"
-                    title="Clique para editar este esquadrão"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="px-2 py-0.5 rounded text-xs bg-amber-900 text-amber-100 border border-amber-600 font-serif font-bold flex-shrink-0">
-                          {tierRoman}
-                        </span>
-                        <div className="min-w-0">
-                          <h4 className="text-sm font-bold text-red-950 font-serif truncate leading-tight group-hover:text-amber-900 transition-colors">
-                            {sq.name}
-                          </h4>
-                          <span className="text-[10px] text-slate-500 font-sans block truncate">
-                            {sq.subType}
-                          </span>
-                        </div>
-                      </div>
-
-                      <span className="text-xs font-black text-red-800 bg-red-100 px-2.5 py-1 rounded-md border border-red-300 font-sans flex-shrink-0">
-                        {sq.count.toLocaleString('pt-BR')} un.
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-1.5 text-[11px] font-sans bg-[#fbf7ee] p-2 rounded-lg border border-[#d6c39f]">
-                      <div>
-                        <span className="text-slate-500 block text-[10px]">Força Unitária:</span>
-                        <span className="font-bold text-amber-800">{sq.unitAttack.toLocaleString('pt-BR')}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block text-[10px]">Saúde Unitária:</span>
-                        <span className="font-bold text-red-800">{sq.unitHealth.toLocaleString('pt-BR')}</span>
-                      </div>
-                    </div>
-
-                    {sq.aspects?.description && (
-                      <div className="text-[10px] text-red-900 bg-red-50 p-1.5 rounded-md border border-red-200 font-sans leading-tight">
-                        ⚠️ <strong>{sq.aspects.description}</strong>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            ) : (
-              <div className="bg-white p-4 rounded-xl border border-red-300 text-center">
-                <span className="text-sm font-bold text-red-950 block">{targetMonster.name}</span>
-                <span className="text-xs text-slate-600">Total HP: {targetMonster.totalHealth.toLocaleString('pt-BR')}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Tactical Strategy */}
-          <div className="bg-gradient-to-r from-amber-100 to-emerald-50 border border-amber-300 rounded-xl p-3.5 space-y-2 text-xs font-sans text-slate-800">
-            <span className="font-black text-amber-900 flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-amber-700" />
-              Estratégia Vitoriosa com 0 Baixas Caras:
-            </span>
-            <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-700 leading-relaxed">
-              {prefersRanged && (
-                <li>
-                  <strong>Arqueiros G2 & G1</strong> atacam primeiro à distância com bônus de <strong>+{captainBonusPercent}%</strong> de {activeCaptain.name}.
-                </li>
-              )}
-              <li>
-                <strong>{titanRecommended} Titãs M5</strong> aplicam {titanDamage.toLocaleString('pt-BR')} de dano frontal esmagador.
-              </li>
-              {g1MeleeRec > 0 && (
-                <li>
-                  <strong>{g1MeleeRec.toLocaleString('pt-BR')} Espadachins G1</strong> servem de blindagem sacrificial para absorver o contra-ataque.
-                </li>
-              )}
-            </ul>
-          </div>
-
-          {/* Rewards Badge */}
-          <div className="bg-[#eedec5] p-3 rounded-xl border border-[#caa568] flex items-center justify-between gap-2 text-xs font-sans font-bold">
-            <span className="text-blue-900">
-              🏆 Bravura: +{projectedVP.toLocaleString('pt-BR')} VP
-            </span>
-            <span className="text-emerald-900">
-              ⚡ XP: +{projectedXP.toLocaleString('pt-BR')} XP
-            </span>
+            </label>
           </div>
         </div>
       </div>
 
-      {/* Edit Squads Modal for MarchBookView */}
+      {/* 4. STEP 2: O QUE COLOCAR NO JOGO (Main Focus / Army Selection Cards) */}
+      <div className="bg-[#140d08] p-4 sm:p-5 rounded-xl border-2 border-[#caa568] space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#5a3e22] pb-2 gap-2">
+          <span className="text-xs font-black uppercase tracking-wider text-[#fef08a] flex items-center gap-2 font-serif">
+            <span className="w-5 h-5 rounded-full bg-amber-900 text-amber-200 border border-amber-500 flex items-center justify-center text-xs font-black">2</span>
+            Composição Exata para Digitar no Jogo (Ordem de Marcha)
+          </span>
+          <span className="text-xs font-sans font-bold text-[#caa568]">
+            Capacidade de Guardas: <strong className="text-[#fef08a]">{allocatedGuards.toLocaleString('pt-BR')}</strong> / {maxGuards.toLocaleString('pt-BR')}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 font-sans">
+          
+          {/* Card 1: Mercenários Titãs M5 */}
+          {titanRecommended > 0 && (
+            <div className="bg-gradient-to-b from-[#2a170e] to-[#1e110a] p-3 rounded-xl border-2 border-amber-500/80 flex items-center justify-between shadow-md">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-12 h-12 rounded-lg border-2 border-amber-500 bg-[#3a1d0e] flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img src="/assets/troops/m5_titan.png" alt="Titã M5" className="w-full h-full object-cover" onError={(e)=>{(e.target as any).src='/assets/troops/default.png'}} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-[#fef08a] block truncate font-serif">
+                    Titã de Fogo (M5)
+                  </span>
+                  <span className="text-[10px] text-amber-300 font-bold block">
+                    Mercenário de Ataque
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">
+                    Estoque: {titanM5?.ownedCount || 81}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0 pl-2">
+                <span className="text-[10px] text-amber-400 font-black block tracking-wider">COLOCAR:</span>
+                <span className="text-lg font-black text-amber-200 bg-amber-950/90 px-3 py-0.5 rounded-lg border-2 border-amber-500 shadow-inner">
+                  {titanRecommended}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Card 2: Arqueiros G2 (Dano Principal) */}
+          {g2RangedRec > 0 && (
+            <div className="bg-gradient-to-b from-[#102418] to-[#0c1a11] p-3 rounded-xl border-2 border-emerald-500/80 flex items-center justify-between shadow-md">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-12 h-12 rounded-lg border-2 border-emerald-500 bg-[#0d2816] flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img src="/assets/troops/g2_ranged.png" alt="Arqueiro G2" className="w-full h-full object-cover" onError={(e)=>{(e.target as any).src='/assets/troops/default.png'}} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-emerald-200 block truncate font-serif">
+                    Arqueiro de Linha (G2)
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-bold block">
+                    Dano Principal Seguro
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">
+                    Estoque: {g2Ranged?.ownedCount || 1797}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0 pl-2">
+                <span className="text-[10px] text-emerald-400 font-black block tracking-wider">COLOCAR:</span>
+                <span className="text-lg font-black text-emerald-200 bg-emerald-950/90 px-3 py-0.5 rounded-lg border-2 border-emerald-500 shadow-inner">
+                  {g2RangedRec.toLocaleString('pt-BR')}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Card 3: Arqueiros G1 (Dano Complementar) */}
+          {g1RangedRec > 0 && (
+            <div className="bg-gradient-to-b from-[#102418] to-[#0c1a11] p-3 rounded-xl border-2 border-emerald-600/70 flex items-center justify-between shadow-md">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-12 h-12 rounded-lg border-2 border-emerald-600 bg-[#0d2816] flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img src="/assets/troops/g1_ranged.png" alt="Arqueiro G1" className="w-full h-full object-cover" onError={(e)=>{(e.target as any).src='/assets/troops/default.png'}} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-emerald-200 block truncate font-serif">
+                    Arqueiro Recruta (G1)
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-bold block">
+                    Dano Suporte
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">
+                    Estoque: {g1Ranged?.ownedCount || 580}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0 pl-2">
+                <span className="text-[10px] text-emerald-400 font-black block tracking-wider">COLOCAR:</span>
+                <span className="text-lg font-black text-emerald-200 bg-emerald-950/90 px-3 py-0.5 rounded-lg border-2 border-emerald-500 shadow-inner">
+                  {g1RangedRec.toLocaleString('pt-BR')}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Card 4: Espadachins G1 (Bucha / Absorção de Baixas) */}
+          {g1MeleeRec > 0 && (
+            <div className="bg-gradient-to-b from-[#2a1a10] to-[#1a0f08] p-3 rounded-xl border-2 border-amber-600/80 flex items-center justify-between shadow-md">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-12 h-12 rounded-lg border-2 border-amber-600 bg-[#351e11] flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img src="/assets/troops/g1_melee.png" alt="Espadachim G1" className="w-full h-full object-cover" onError={(e)=>{(e.target as any).src='/assets/troops/default.png'}} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-amber-200 block truncate font-serif">
+                    Espadachim (G1)
+                  </span>
+                  <span className="text-[10px] text-amber-400 font-bold block">
+                    🛡️ Bucha de Absorção
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">
+                    Estoque: {g1Melee?.ownedCount || 1369}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0 pl-2">
+                <span className="text-[10px] text-amber-400 font-black block tracking-wider">COLOCAR:</span>
+                <span className="text-lg font-black text-amber-200 bg-amber-950/90 px-3 py-0.5 rounded-lg border-2 border-amber-500 shadow-inner">
+                  {g1MeleeRec.toLocaleString('pt-BR')}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Card 5: Guerreiro G2 (Se Melee) */}
+          {g2MeleeRec > 0 && (
+            <div className="bg-gradient-to-b from-[#2a1010] to-[#1a0808] p-3 rounded-xl border-2 border-red-500/80 flex items-center justify-between shadow-md">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-12 h-12 rounded-lg border-2 border-red-500 bg-[#381010] flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img src="/assets/troops/g2_melee.png" alt="Guerreiro G2" className="w-full h-full object-cover" onError={(e)=>{(e.target as any).src='/assets/troops/default.png'}} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-red-200 block truncate font-serif">
+                    Guerreiro Veterano (G2)
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">
+                    Estoque: {g2Melee?.ownedCount || 1799}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0 pl-2">
+                <span className="text-[10px] text-red-400 font-black block tracking-wider">COLOCAR:</span>
+                <span className="text-lg font-black text-red-200 bg-red-950/90 px-3 py-0.5 rounded-lg border-2 border-red-500 shadow-inner">
+                  {g2MeleeRec.toLocaleString('pt-BR')}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Card 6: Cavaleiro G2 (Se Montada) */}
+          {g2MountedRec > 0 && (
+            <div className="bg-gradient-to-b from-[#2a1a10] to-[#1a0f08] p-3 rounded-xl border-2 border-amber-600/80 flex items-center justify-between shadow-md">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-12 h-12 rounded-lg border-2 border-amber-600 bg-[#351e11] flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img src="/assets/troops/g2_mounted.png" alt="Cavaleiro G2" className="w-full h-full object-cover" onError={(e)=>{(e.target as any).src='/assets/troops/default.png'}} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-amber-200 block truncate font-serif">
+                    Cavaleiro Veterano (G2)
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">
+                    Estoque: {g2Mounted?.ownedCount || 523}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0 pl-2">
+                <span className="text-[10px] text-amber-400 font-black block tracking-wider">COLOCAR:</span>
+                <span className="text-lg font-black text-amber-200 bg-amber-950/90 px-3 py-0.5 rounded-lg border-2 border-amber-500 shadow-inner">
+                  {g2MountedRec.toLocaleString('pt-BR')}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 5. STEP 3: RESULTADO PREVISTO, BAIXAS & RECOMPENSAS */}
+      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+        {/* Casualties / Safety Verdict (7 cols) */}
+        <div className="sm:col-span-7 bg-[#140d08] p-3.5 rounded-xl border border-[#5a3e22] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl flex items-center justify-center ${
+              heavyLosses === 0 ? 'bg-emerald-950 text-emerald-400 border border-emerald-600' : 'bg-red-950 text-red-400 border border-red-600'
+            }`}>
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-xs font-black text-[#fef08a] block font-serif">
+                {heavyLosses === 0 ? '✅ VITÓRIA GARANTIDA • ZERO BAIXAS PESADAS' : '⚠️ ALERTA DE BAIXAS'}
+              </span>
+              <p className="text-[11px] text-slate-300 font-sans">
+                {heavyLosses === 0
+                  ? `Seus Titãs M5 e Arqueiros G2 voltam 100% vivos. ~${fodderLosses} Espadachins G1 absorvem o dano.`
+                  : `${heavyLosses} baixas estimadas nas tropas principais.`}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Rewards Summary (5 cols) */}
+        <div className="sm:col-span-5 bg-[#140d08] p-3 rounded-xl border border-[#5a3e22] grid grid-cols-3 gap-1.5 text-center font-sans">
+          <div className="bg-[#1c120a] p-1.5 rounded border border-[#5a3e22]/60">
+            <span className="text-[10px] text-slate-400 block">Bravura (VP):</span>
+            <span className="font-extrabold text-blue-400 text-xs">+{projectedVP.toLocaleString('pt-BR')}</span>
+          </div>
+          <div className="bg-[#1c120a] p-1.5 rounded border border-[#5a3e22]/60">
+            <span className="text-[10px] text-slate-400 block">XP Capitão:</span>
+            <span className="font-extrabold text-emerald-400 text-xs">+{projectedXP.toLocaleString('pt-BR')}</span>
+          </div>
+          <div className="bg-[#1c120a] p-1.5 rounded border border-[#5a3e22]/60">
+            <span className="text-[10px] text-slate-400 block">Tar:</span>
+            <span className="font-extrabold text-purple-400 text-xs">+{projectedTar.toLocaleString('pt-BR')}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit Squads Modal */}
       {isEditingSquads && onUpdateMonsterTarget && (
         <EditSquadsModal
           isOpen={isEditingSquads}
