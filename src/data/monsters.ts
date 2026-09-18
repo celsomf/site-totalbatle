@@ -21,7 +21,7 @@ export interface MonsterUnitDefinition {
   };
 }
 
-// 1. Unidades Oficiais de Monstros do Jogo (Catalogadas dos prints e do banco do jogo)
+// 1. Catálogo Completo de Monstros do Total Battle
 export const MONSTER_UNITS_CATALOG: MonsterUnitDefinition[] = [
   // --- INFERNO / DEMÔNIOS ---
   {
@@ -86,6 +86,22 @@ export const MONSTER_UNITS_CATALOG: MonsterUnitDefinition[] = [
     aspects: {
       bonusVsMeleePercent: 60,
       description: 'Força contra unidades corpo a corpo: +60%',
+    },
+  },
+  {
+    id: 'senhor_inferno',
+    name: 'Senhor do Abismo',
+    tier: 5,
+    family: 'inferno',
+    subType: 'Demônio Colossal, Unidade corpo a corpo',
+    troopClass: 'melee',
+    unitAttack: 24000,
+    unitHealth: 72000,
+    leadership: 60,
+    initiative: 10,
+    aspects: {
+      bonusVsMountedPercent: 60,
+      description: 'Força contra unidades montadas: +60%',
     },
   },
 
@@ -155,6 +171,22 @@ export const MONSTER_UNITS_CATALOG: MonsterUnitDefinition[] = [
       description: 'Força contra unidades corpo a corpo: +60% | Força contra elementais: +40%',
     },
   },
+  {
+    id: 'rei_amaldicoado',
+    name: 'Rei Amaldiçoado',
+    tier: 5,
+    family: 'cursed',
+    subType: 'Amaldiçoado Supremo, Unidade montada',
+    troopClass: 'mounted',
+    unitAttack: 23500,
+    unitHealth: 70500,
+    leadership: 55,
+    initiative: 10,
+    aspects: {
+      bonusVsRangedPercent: 65,
+      description: 'Força contra unidades de longo alcance: +65%',
+    },
+  },
 
   // --- MORTOS-VIVOS (UNDEAD) ---
   {
@@ -218,7 +250,23 @@ export const MONSTER_UNITS_CATALOG: MonsterUnitDefinition[] = [
     initiative: 10,
     aspects: {
       bonusVsMeleePercent: 55,
-      description: 'Dano sombrio em área',
+      description: 'Dano sombrio em área: +55%',
+    },
+  },
+  {
+    id: 'dracolich',
+    name: 'Dracolich Titânico',
+    tier: 5,
+    family: 'undead',
+    subType: 'Morto-Vivo, Dragão Esqueleto',
+    troopClass: 'flying',
+    unitAttack: 25000,
+    unitHealth: 75000,
+    leadership: 65,
+    initiative: 10,
+    aspects: {
+      bonusVsMeleePercent: 65,
+      description: 'Baforada espectral corrosiva: +65%',
     },
   },
 
@@ -271,11 +319,125 @@ export const MONSTER_UNITS_CATALOG: MonsterUnitDefinition[] = [
       description: 'Força contra unidades de longo alcance: +50%',
     },
   },
+  {
+    id: 'berserker_colossal',
+    name: 'Berserker Colossal',
+    tier: 4,
+    family: 'barbarian',
+    subType: 'Bárbaro Furioso, Unidade corpo a corpo',
+    troopClass: 'melee',
+    unitAttack: 10500,
+    unitHealth: 31500,
+    leadership: 35,
+    initiative: 10,
+    aspects: {
+      bonusVsMountedPercent: 60,
+      description: 'Fúria sangrenta: +60% vs montaria',
+    },
+  },
+  {
+    id: 'chefe_guerra_barbaro',
+    name: 'Chefe de Guerra Bárbaro',
+    tier: 5,
+    family: 'barbarian',
+    subType: 'Bárbaro Supremo, Unidade montada',
+    troopClass: 'mounted',
+    unitAttack: 24500,
+    unitHealth: 73500,
+    leadership: 60,
+    initiative: 10,
+    aspects: {
+      bonusVsRangedPercent: 60,
+      description: 'Impacto devastador: +60%',
+    },
+  },
 
-  // --- ÉPICOS ---
+  // --- ÉLFICOS & ELEMENTAIS (ELVES & ELEMENTALS) ---
+  {
+    id: 'patrulheiro_elfo',
+    name: 'Patrulheiro Élfico',
+    tier: 1,
+    family: 'elemental',
+    subType: 'Élfico, Unidade de longo alcance',
+    troopClass: 'ranged',
+    unitAttack: 160,
+    unitHealth: 480,
+    leadership: 3,
+    initiative: 11,
+    aspects: {
+      bonusVsMeleePercent: 30,
+      description: 'Flechas precisas: +30% vs corpo a corpo',
+    },
+  },
+  {
+    id: 'guardiao_pedra',
+    name: 'Guardião de Pedra',
+    tier: 2,
+    family: 'elemental',
+    subType: 'Elemental, Unidade corpo a corpo',
+    troopClass: 'melee',
+    unitAttack: 750,
+    unitHealth: 2250,
+    leadership: 8,
+    initiative: 9,
+    aspects: {
+      bonusVsMountedPercent: 35,
+      description: 'Pele rochosa: +35% vs montadas',
+    },
+  },
+  {
+    id: 'cavaleiro_grifo',
+    name: 'Cavaleiro de Grifo',
+    tier: 3,
+    family: 'elemental',
+    subType: 'Élfico / Fera, Unidade voadora',
+    troopClass: 'flying',
+    unitAttack: 4200,
+    unitHealth: 12600,
+    leadership: 26,
+    initiative: 12,
+    aspects: {
+      bonusVsMeleePercent: 45,
+      description: 'Mergulho aéreo: +45%',
+    },
+  },
+  {
+    id: 'elemental_fogo',
+    name: 'Elemental de Fogo Primordial',
+    tier: 4,
+    family: 'elemental',
+    subType: 'Elemental, Unidade de longo alcance',
+    troopClass: 'ranged',
+    unitAttack: 10600,
+    unitHealth: 31800,
+    leadership: 36,
+    initiative: 10,
+    aspects: {
+      bonusVsMeleePercent: 60,
+      description: 'Chamas consumidoras: +60%',
+    },
+  },
+  {
+    id: 'anciao_floresta',
+    name: 'Ancião Guardião da Floresta',
+    tier: 5,
+    family: 'elemental',
+    subType: 'Elemental Titânico, Unidade corpo a corpo',
+    troopClass: 'melee',
+    unitAttack: 25000,
+    unitHealth: 75000,
+    leadership: 65,
+    initiative: 9,
+    aspects: {
+      bonusVsMountedPercent: 65,
+      description: 'Raízes esmagadoras: +65%',
+    },
+  },
+
+  // --- CHEFES ÉPICOS ---
   {
     id: 'tinman_unit',
-    name: 'Homem de Lata Ancestral',
+    name: 'Homem de Lata Ancestral (Tinman)',
     tier: 5,
     family: 'epic',
     subType: 'Colossal Mecânico Épico',
@@ -318,6 +480,66 @@ export const MONSTER_UNITS_CATALOG: MonsterUnitDefinition[] = [
       description: 'Veneno corrosivo que causa dano contínuo em todas as tropas.',
     },
   },
+  {
+    id: 'arachne_unit',
+    name: 'Aracne Tecedora das Sombras',
+    tier: 5,
+    family: 'epic',
+    subType: 'Fera Aracnídea Épica',
+    troopClass: 'ranged',
+    unitAttack: 1400,
+    unitHealth: 21000,
+    leadership: 110,
+    initiative: 11,
+    aspects: {
+      description: 'Teia imobilizadora que reduz a iniciativa das tropas inimigas.',
+    },
+  },
+  {
+    id: 'cerberus_unit',
+    name: 'Cérbero Guardião do Submundo',
+    tier: 5,
+    family: 'epic',
+    subType: 'Fera Demoníaca Épica',
+    troopClass: 'melee',
+    unitAttack: 1550,
+    unitHealth: 23000,
+    leadership: 115,
+    initiative: 10,
+    aspects: {
+      description: 'Tríplice mordida que atinge 3 esquadrões simultaneamente.',
+    },
+  },
+  {
+    id: 'phoenix_unit',
+    name: 'Fênix Solar Ancestral',
+    tier: 5,
+    family: 'epic',
+    subType: 'Fera Solar Sagrada',
+    troopClass: 'flying',
+    unitAttack: 1700,
+    unitHealth: 26000,
+    leadership: 125,
+    initiative: 12,
+    aspects: {
+      description: 'Explosão de cinzas flamejantes ao receber dano letal.',
+    },
+  },
+  {
+    id: 'ancient_terror_unit',
+    name: 'Terror Ancestral / Juízo Final',
+    tier: 5,
+    family: 'epic',
+    subType: 'Titã Supremo do Juízo Final',
+    troopClass: 'melee',
+    unitAttack: 2100,
+    unitHealth: 32000,
+    leadership: 150,
+    initiative: 10,
+    aspects: {
+      description: 'Golpe cataclísmico que causa dano massivo em linha.',
+    },
+  },
 ];
 
 export function getMonsterUnit(id: string): MonsterUnitDefinition {
@@ -331,7 +553,7 @@ export function getMonsterUnit(id: string): MonsterUnitDefinition {
 export interface MonsterPresetTemplate {
   id: string;
   name: string;
-  faction: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'epic';
+  faction: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'elemental' | 'epic';
   attackMode: AttackMode;
   targetType: TargetType;
   defaultLevel: number;
@@ -342,74 +564,29 @@ export interface MonsterPresetTemplate {
   description: string;
 }
 
+// 2. Templates de Monstros: 5 Famílias (Comum + Raro) + 7 Chefes Épicos
 export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
-  // 1. TROPA DO INFERNO COMUM (Ataque Comum - Capitão)
+  // ==========================================
+  // ATAQUE COMUM (CAPITÃO) - 5 FAMÍLIAS
+  // ==========================================
+
+  // 1. Tropa do Inferno Comum
   {
     id: 'tropa_inferno_comum',
-    name: 'Tropa do Inferno Comum',
+    name: '🔥 Tropa do Inferno Comum',
     faction: 'inferno',
     attackMode: 'common',
     targetType: 'common_monster',
     defaultLevel: 17,
-    availableLevels: [5, 10, 12, 15, 17, 20, 22, 25, 30],
-    description: 'Tropa de monstros demoníacos liderados por Cavalgantes de Fogo e Demônios com Chifres.',
+    availableLevels: [5, 10, 12, 15, 17, 20, 22, 25, 30, 35, 40],
+    description: 'Demônios de ataque comum liderados por Cavalgantes de Fogo e Demônios com Chifres.',
     generateSquads: (lvl: number): EnemySquadUnit[] => {
       const cavalgante = getMonsterUnit('cavalgante_fogo');
       const demonio = getMonsterUnit('demonio_chifres');
-
-      if (lvl <= 10) {
-        const magogue = getMonsterUnit('magogue');
-        return [
-          {
-            id: magogue.id,
-            name: magogue.name,
-            tier: magogue.tier,
-            troopClass: magogue.troopClass,
-            family: magogue.family,
-            subType: magogue.subType,
-            unitAttack: magogue.unitAttack,
-            unitHealth: magogue.unitHealth,
-            leadership: magogue.leadership,
-            initiative: magogue.initiative,
-            count: Math.round(230 * lvl),
-            aspects: magogue.aspects,
-          },
-        ];
-      }
-
       const scale = lvl / 17;
-      const countCav = Math.max(10, Math.round(260 * scale));
-      const countDem = Math.max(20, Math.round(640 * scale));
-
       return [
-        {
-          id: cavalgante.id,
-          name: cavalgante.name,
-          tier: cavalgante.tier,
-          troopClass: cavalgante.troopClass,
-          family: cavalgante.family,
-          subType: cavalgante.subType,
-          unitAttack: cavalgante.unitAttack,
-          unitHealth: cavalgante.unitHealth,
-          leadership: cavalgante.leadership,
-          initiative: cavalgante.initiative,
-          count: countCav,
-          aspects: cavalgante.aspects,
-        },
-        {
-          id: demonio.id,
-          name: demonio.name,
-          tier: demonio.tier,
-          troopClass: demonio.troopClass,
-          family: demonio.family,
-          subType: demonio.subType,
-          unitAttack: demonio.unitAttack,
-          unitHealth: demonio.unitHealth,
-          leadership: demonio.leadership,
-          initiative: demonio.initiative,
-          count: countDem,
-          aspects: demonio.aspects,
-        },
+        { ...cavalgante, id: `${cavalgante.id}_${lvl}`, count: Math.max(10, Math.round(260 * scale)) },
+        { ...demonio, id: `${demonio.id}_${lvl}`, count: Math.max(20, Math.round(640 * scale)) },
       ];
     },
     calculateRewards: (lvl: number) => ({
@@ -418,134 +595,54 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
       tar: Math.round(lvl * 14764),
       chest: Math.round(lvl * 2.5),
     }),
-    marchCapacities: () => ({
-      guards: 2000,
-      mercenaries: 1000,
-      monsters: 500,
-    }),
+    marchCapacities: () => ({ guards: 2000, mercenaries: 1000, monsters: 500 }),
   },
 
-  // 2. TROPA DE AMALDIÇOADOS RARA (Ataque Raro - Herói)
+  // 2. Tropa de Amaldiçoados Comum
   {
-    id: 'tropa_amaldicoados_rara',
-    name: 'Tropa de Amaldiçoados Rara',
+    id: 'tropa_amaldicoados_comum',
+    name: '💀 Tropa de Amaldiçoados Comum',
     faction: 'cursed',
-    attackMode: 'rare',
+    attackMode: 'common',
     targetType: 'common_monster',
-    defaultLevel: 21,
-    availableLevels: [10, 15, 18, 20, 21, 25, 28, 30, 35],
-    description: 'Tropa rara de alto poder liderada por Vampiros voadores, Cavalgantes de Jaguar e Feiticeiros.',
+    defaultLevel: 16,
+    availableLevels: [5, 10, 12, 15, 16, 20, 25, 30, 35, 40],
+    description: 'Amaldiçoados comuns liderados por Guerreiros de Ossos e Feiticeiros.',
     generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const vampiro = getMonsterUnit('vampiro');
-      const jaguar = getMonsterUnit('cavalgante_jaguar');
+      const ossos = getMonsterUnit('guerreiro_ossos');
       const feiticeiro = getMonsterUnit('feiticeiro');
-
-      const scale = lvl / 21;
-      const countVamp = Math.max(10, Math.round(630 * scale));
-      const countJag = Math.max(500, Math.round(17000 * scale));
-      const countFeit = Math.max(1000, Math.round(31000 * scale));
-
+      const scale = lvl / 16;
       return [
-        {
-          id: vampiro.id,
-          name: vampiro.name,
-          tier: vampiro.tier,
-          troopClass: vampiro.troopClass,
-          family: vampiro.family,
-          subType: vampiro.subType,
-          unitAttack: vampiro.unitAttack,
-          unitHealth: vampiro.unitHealth,
-          leadership: vampiro.leadership,
-          initiative: vampiro.initiative,
-          count: countVamp,
-          aspects: vampiro.aspects,
-        },
-        {
-          id: jaguar.id,
-          name: jaguar.name,
-          tier: jaguar.tier,
-          troopClass: jaguar.troopClass,
-          family: jaguar.family,
-          subType: jaguar.subType,
-          unitAttack: jaguar.unitAttack,
-          unitHealth: jaguar.unitHealth,
-          leadership: jaguar.leadership,
-          initiative: jaguar.initiative,
-          count: countJag,
-          aspects: jaguar.aspects,
-        },
-        {
-          id: feiticeiro.id,
-          name: feiticeiro.name,
-          tier: feiticeiro.tier,
-          troopClass: feiticeiro.troopClass,
-          family: feiticeiro.family,
-          subType: feiticeiro.subType,
-          unitAttack: feiticeiro.unitAttack,
-          unitHealth: feiticeiro.unitHealth,
-          leadership: feiticeiro.leadership,
-          initiative: feiticeiro.initiative,
-          count: countFeit,
-          aspects: feiticeiro.aspects,
-        },
+        { ...ossos, id: `${ossos.id}_${lvl}`, count: Math.max(20, Math.round(320 * scale)) },
+        { ...feiticeiro, id: `${feiticeiro.id}_${lvl}`, count: Math.max(100, Math.round(3500 * scale)) },
       ];
     },
     calculateRewards: (lvl: number) => ({
-      xp: Math.round(lvl * 199000),
-      vp: Math.round(lvl * 99500),
-      tar: Math.round(lvl * 149500),
-      chest: Math.round(lvl * 5),
+      xp: Math.round(lvl * 18500),
+      vp: Math.round(lvl * 9200),
+      tar: Math.round(lvl * 14000),
+      chest: Math.round(lvl * 2.5),
     }),
-    marchCapacities: () => ({
-      guards: 5250,
-      mercenaries: 2520,
-      monsters: 1260,
-    }),
+    marchCapacities: () => ({ guards: 2000, mercenaries: 1000, monsters: 500 }),
   },
 
-  // 3. TROPA DE MORTOS-VIVOS COMUM
+  // 3. Tropa de Mortos-Vivos Comum
   {
     id: 'tropa_undead_comum',
-    name: 'Tropa de Mortos-Vivos Comum',
+    name: '🧟 Tropa de Mortos-Vivos Comum',
     faction: 'undead',
     attackMode: 'common',
     targetType: 'common_monster',
     defaultLevel: 15,
-    availableLevels: [5, 10, 15, 18, 20, 25],
+    availableLevels: [5, 10, 15, 18, 20, 25, 30, 35, 40],
     description: 'Hordas de esqueletos e cavaleiros da morte assombrando as florestas.',
     generateSquads: (lvl: number): EnemySquadUnit[] => {
       const cavaleiro = getMonsterUnit('cavaleiro_morte');
       const esqueleto = getMonsterUnit('esqueleto_arqueiro');
       const scale = lvl / 15;
       return [
-        {
-          id: cavaleiro.id,
-          name: cavaleiro.name,
-          tier: cavaleiro.tier,
-          troopClass: cavaleiro.troopClass,
-          family: cavaleiro.family,
-          subType: cavaleiro.subType,
-          unitAttack: cavaleiro.unitAttack,
-          unitHealth: cavaleiro.unitHealth,
-          leadership: cavaleiro.leadership,
-          initiative: cavaleiro.initiative,
-          count: Math.round(180 * scale),
-          aspects: cavaleiro.aspects,
-        },
-        {
-          id: esqueleto.id,
-          name: esqueleto.name,
-          tier: esqueleto.tier,
-          troopClass: esqueleto.troopClass,
-          family: esqueleto.family,
-          subType: esqueleto.subType,
-          unitAttack: esqueleto.unitAttack,
-          unitHealth: esqueleto.unitHealth,
-          leadership: esqueleto.leadership,
-          initiative: esqueleto.initiative,
-          count: Math.round(550 * scale),
-          aspects: esqueleto.aspects,
-        },
+        { ...cavaleiro, id: `${cavaleiro.id}_${lvl}`, count: Math.max(15, Math.round(180 * scale)) },
+        { ...esqueleto, id: `${esqueleto.id}_${lvl}`, count: Math.max(50, Math.round(550 * scale)) },
       ];
     },
     calculateRewards: (lvl: number) => ({
@@ -554,71 +651,178 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
       tar: Math.round(lvl * 13500),
       chest: Math.round(lvl * 2.5),
     }),
-    marchCapacities: () => ({
-      guards: 2000,
-      mercenaries: 1000,
-      monsters: 500,
-    }),
+    marchCapacities: () => ({ guards: 2000, mercenaries: 1000, monsters: 500 }),
   },
 
-  // 4. TROPA DE BÁRBAROS RARA
+  // 4. Tropa de Bárbaros Comum
+  {
+    id: 'tropa_barbaros_comum',
+    name: '🪓 Tropa de Bárbaros Comum',
+    faction: 'barbarian',
+    attackMode: 'common',
+    targetType: 'common_monster',
+    defaultLevel: 15,
+    availableLevels: [5, 10, 15, 20, 25, 30, 35, 40],
+    description: 'Bárbaros saqueadores das montanhas liderados por Caçadores e Salteadores.',
+    generateSquads: (lvl: number): EnemySquadUnit[] => {
+      const cacador = getMonsterUnit('cacador_estepes');
+      const machado = getMonsterUnit('salteador_machado');
+      const scale = lvl / 15;
+      return [
+        { ...cacador, id: `${cacador.id}_${lvl}`, count: Math.max(30, Math.round(420 * scale)) },
+        { ...machado, id: `${machado.id}_${lvl}`, count: Math.max(100, Math.round(2800 * scale)) },
+      ];
+    },
+    calculateRewards: (lvl: number) => ({
+      xp: Math.round(lvl * 17800),
+      vp: Math.round(lvl * 8900),
+      tar: Math.round(lvl * 13000),
+      chest: Math.round(lvl * 2.5),
+    }),
+    marchCapacities: () => ({ guards: 2000, mercenaries: 1000, monsters: 500 }),
+  },
+
+  // 5. Tropa Élfica & Elemental Comum
+  {
+    id: 'tropa_elfos_comum',
+    name: '🍃 Tropa Élfica & Elemental Comum',
+    faction: 'elemental',
+    attackMode: 'common',
+    targetType: 'common_monster',
+    defaultLevel: 15,
+    availableLevels: [5, 10, 15, 20, 25, 30, 35, 40],
+    description: 'Guardiões das florestas sagradas e elementais de pedra.',
+    generateSquads: (lvl: number): EnemySquadUnit[] => {
+      const guardiao = getMonsterUnit('guardiao_pedra');
+      const elfo = getMonsterUnit('patrulheiro_elfo');
+      const scale = lvl / 15;
+      return [
+        { ...guardiao, id: `${guardiao.id}_${lvl}`, count: Math.max(25, Math.round(380 * scale)) },
+        { ...elfo, id: `${elfo.id}_${lvl}`, count: Math.max(80, Math.round(2200 * scale)) },
+      ];
+    },
+    calculateRewards: (lvl: number) => ({
+      xp: Math.round(lvl * 18200),
+      vp: Math.round(lvl * 9100),
+      tar: Math.round(lvl * 13800),
+      chest: Math.round(lvl * 2.5),
+    }),
+    marchCapacities: () => ({ guards: 2000, mercenaries: 1000, monsters: 500 }),
+  },
+
+  // ==========================================
+  // ATAQUE RARO (HERÓI) - 5 FAMÍLIAS
+  // ==========================================
+
+  // 6. Tropa de Amaldiçoados Rara
+  {
+    id: 'tropa_amaldicoados_rara',
+    name: '💀 Tropa de Amaldiçoados Rara',
+    faction: 'cursed',
+    attackMode: 'rare',
+    targetType: 'common_monster',
+    defaultLevel: 21,
+    availableLevels: [10, 15, 18, 20, 21, 25, 28, 30, 35, 40, 45],
+    description: 'Tropa rara de alto poder liderada por Vampiros voadores, Cavalgantes de Jaguar e Feiticeiros.',
+    generateSquads: (lvl: number): EnemySquadUnit[] => {
+      const vampiro = getMonsterUnit('vampiro');
+      const jaguar = getMonsterUnit('cavalgante_jaguar');
+      const feiticeiro = getMonsterUnit('feiticeiro');
+      const scale = lvl / 21;
+      return [
+        { ...vampiro, id: `${vampiro.id}_${lvl}`, count: Math.max(10, Math.round(630 * scale)) },
+        { ...jaguar, id: `${jaguar.id}_${lvl}`, count: Math.max(500, Math.round(17000 * scale)) },
+        { ...feiticeiro, id: `${feiticeiro.id}_${lvl}`, count: Math.max(1000, Math.round(31000 * scale)) },
+      ];
+    },
+    calculateRewards: (lvl: number) => ({
+      xp: Math.round(lvl * 199000),
+      vp: Math.round(lvl * 99500),
+      tar: Math.round(lvl * 149500),
+      chest: Math.round(lvl * 5),
+    }),
+    marchCapacities: () => ({ guards: 5250, mercenaries: 2520, monsters: 1260 }),
+  },
+
+  // 7. Tropa do Inferno Rara
+  {
+    id: 'tropa_inferno_rara',
+    name: '🔥 Tropa do Inferno Rara',
+    faction: 'inferno',
+    attackMode: 'rare',
+    targetType: 'common_monster',
+    defaultLevel: 22,
+    availableLevels: [10, 15, 20, 22, 25, 28, 30, 35, 40, 45],
+    description: 'Pitonisas de Fogo, Cavalgantes e hordas demoníacas raras de elite.',
+    generateSquads: (lvl: number): EnemySquadUnit[] => {
+      const pitonisa = getMonsterUnit('pitonisa_fogo');
+      const cavalgante = getMonsterUnit('cavalgante_fogo');
+      const magogue = getMonsterUnit('magogue');
+      const scale = lvl / 22;
+      return [
+        { ...pitonisa, id: `${pitonisa.id}_${lvl}`, count: Math.max(10, Math.round(550 * scale)) },
+        { ...cavalgante, id: `${cavalgante.id}_${lvl}`, count: Math.max(400, Math.round(14000 * scale)) },
+        { ...magogue, id: `${magogue.id}_${lvl}`, count: Math.max(1000, Math.round(28000 * scale)) },
+      ];
+    },
+    calculateRewards: (lvl: number) => ({
+      xp: Math.round(lvl * 205000),
+      vp: Math.round(lvl * 102500),
+      tar: Math.round(lvl * 153000),
+      chest: Math.round(lvl * 5),
+    }),
+    marchCapacities: () => ({ guards: 5250, mercenaries: 2520, monsters: 1260 }),
+  },
+
+  // 8. Tropa de Mortos-Vivos Rara
+  {
+    id: 'tropa_undead_rara',
+    name: '🧟 Tropa de Mortos-Vivos Rara',
+    faction: 'undead',
+    attackMode: 'rare',
+    targetType: 'common_monster',
+    defaultLevel: 20,
+    availableLevels: [10, 15, 20, 25, 30, 35, 40, 45],
+    description: 'Liches Ancestrais e Cavaleiros da Morte em marcha de destruição.',
+    generateSquads: (lvl: number): EnemySquadUnit[] => {
+      const lich = getMonsterUnit('lich_ancestral');
+      const cavaleiro = getMonsterUnit('cavaleiro_morte');
+      const esqueleto = getMonsterUnit('esqueleto_guerreiro');
+      const scale = lvl / 20;
+      return [
+        { ...lich, id: `${lich.id}_${lvl}`, count: Math.max(10, Math.round(480 * scale)) },
+        { ...cavaleiro, id: `${cavaleiro.id}_${lvl}`, count: Math.max(350, Math.round(12500 * scale)) },
+        { ...esqueleto, id: `${esqueleto.id}_${lvl}`, count: Math.max(1000, Math.round(25000 * scale)) },
+      ];
+    },
+    calculateRewards: (lvl: number) => ({
+      xp: Math.round(lvl * 195000),
+      vp: Math.round(lvl * 97500),
+      tar: Math.round(lvl * 146000),
+      chest: Math.round(lvl * 5),
+    }),
+    marchCapacities: () => ({ guards: 5250, mercenaries: 2520, monsters: 1260 }),
+  },
+
+  // 9. Tropa de Bárbaros Rara
   {
     id: 'tropa_barbaros_rara',
-    name: 'Tropa de Bárbaros Rara',
+    name: '🪓 Tropa de Bárbaros Rara',
     faction: 'barbarian',
     attackMode: 'rare',
     targetType: 'common_monster',
     defaultLevel: 20,
-    availableLevels: [10, 15, 20, 25, 30],
-    description: 'Salteadores selvagens das montanhas montados em lobos ferozes.',
+    availableLevels: [10, 15, 20, 25, 30, 35, 40, 45],
+    description: 'Salteadores selvagens das montanhas montados em lobos ferozes e Berserkers.',
     generateSquads: (lvl: number): EnemySquadUnit[] => {
+      const berserker = getMonsterUnit('berserker_colossal');
       const lobo = getMonsterUnit('cavaleiro_lobo');
-      const cacador = getMonsterUnit('cacador_estepes');
       const machado = getMonsterUnit('salteador_machado');
       const scale = lvl / 20;
       return [
-        {
-          id: lobo.id,
-          name: lobo.name,
-          tier: lobo.tier,
-          troopClass: lobo.troopClass,
-          family: lobo.family,
-          subType: lobo.subType,
-          unitAttack: lobo.unitAttack,
-          unitHealth: lobo.unitHealth,
-          leadership: lobo.leadership,
-          initiative: lobo.initiative,
-          count: Math.round(450 * scale),
-          aspects: lobo.aspects,
-        },
-        {
-          id: cacador.id,
-          name: cacador.name,
-          tier: cacador.tier,
-          troopClass: cacador.troopClass,
-          family: cacador.family,
-          subType: cacador.subType,
-          unitAttack: cacador.unitAttack,
-          unitHealth: cacador.unitHealth,
-          leadership: cacador.leadership,
-          initiative: cacador.initiative,
-          count: Math.round(12000 * scale),
-          aspects: cacador.aspects,
-        },
-        {
-          id: machado.id,
-          name: machado.name,
-          tier: machado.tier,
-          troopClass: machado.troopClass,
-          family: machado.family,
-          subType: machado.subType,
-          unitAttack: machado.unitAttack,
-          unitHealth: machado.unitHealth,
-          leadership: machado.leadership,
-          initiative: machado.initiative,
-          count: Math.round(25000 * scale),
-          aspects: machado.aspects,
-        },
+        { ...berserker, id: `${berserker.id}_${lvl}`, count: Math.max(10, Math.round(500 * scale)) },
+        { ...lobo, id: `${lobo.id}_${lvl}`, count: Math.max(450, Math.round(13500 * scale)) },
+        { ...machado, id: `${machado.id}_${lvl}`, count: Math.max(1000, Math.round(27000 * scale)) },
       ];
     },
     calculateRewards: (lvl: number) => ({
@@ -627,17 +831,47 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
       tar: Math.round(lvl * 140000),
       chest: Math.round(lvl * 5),
     }),
-    marchCapacities: () => ({
-      guards: 5250,
-      mercenaries: 2520,
-      monsters: 1260,
-    }),
+    marchCapacities: () => ({ guards: 5250, mercenaries: 2520, monsters: 1260 }),
   },
 
-  // 5. MONSTROS ÉPICOS (CLÃ & TORNEIOS)
+  // 10. Tropa Élfica & Elemental Rara
+  {
+    id: 'tropa_elfos_rara',
+    name: '🍃 Tropa Élfica & Elemental Rara',
+    faction: 'elemental',
+    attackMode: 'rare',
+    targetType: 'common_monster',
+    defaultLevel: 22,
+    availableLevels: [10, 15, 20, 22, 25, 30, 35, 40, 45],
+    description: 'Elementais de Fogo Primordiais, Cavaleiros de Grifo e Patrulheiros.',
+    generateSquads: (lvl: number): EnemySquadUnit[] => {
+      const fogo = getMonsterUnit('elemental_fogo');
+      const grifo = getMonsterUnit('cavaleiro_grifo');
+      const elfo = getMonsterUnit('patrulheiro_elfo');
+      const scale = lvl / 22;
+      return [
+        { ...fogo, id: `${fogo.id}_${lvl}`, count: Math.max(10, Math.round(520 * scale)) },
+        { ...grifo, id: `${grifo.id}_${lvl}`, count: Math.max(400, Math.round(14000 * scale)) },
+        { ...elfo, id: `${elfo.id}_${lvl}`, count: Math.max(1000, Math.round(26000 * scale)) },
+      ];
+    },
+    calculateRewards: (lvl: number) => ({
+      xp: Math.round(lvl * 200000),
+      vp: Math.round(lvl * 100000),
+      tar: Math.round(lvl * 150000),
+      chest: Math.round(lvl * 5),
+    }),
+    marchCapacities: () => ({ guards: 5250, mercenaries: 2520, monsters: 1260 }),
+  },
+
+  // ==========================================
+  // MONSTROS ÉPICOS (CLÃ & TORNEIOS) - 7 CHEFES
+  // ==========================================
+
+  // 11. Homem de Lata Ancestral (Tinman)
   {
     id: 'tinman',
-    name: 'Homem de Lata Ancestral (Tinman)',
+    name: '🤖 Homem de Lata Ancestral (Tinman)',
     faction: 'epic',
     attackMode: 'epic',
     targetType: 'epic_monster',
@@ -648,18 +882,10 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
       const u = getMonsterUnit('tinman_unit');
       return [
         {
-          id: u.id,
-          name: u.name,
-          tier: 5,
-          troopClass: u.troopClass,
-          family: u.family,
-          subType: u.subType,
+          ...u,
           unitAttack: Math.round(u.unitAttack * Math.pow(lvl, 1.45)),
           unitHealth: Math.round(u.unitHealth * Math.pow(lvl, 1.65)),
-          leadership: 100,
-          initiative: 10,
           count: 1,
-          aspects: u.aspects,
         },
       ];
     },
@@ -668,37 +894,27 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
       vp: Math.round(lvl * lvl * 320 + 8000),
       chest: Math.round(lvl * 12 + 40),
     }),
-    marchCapacities: () => ({
-      guards: 3125,
-      mercenaries: 1540,
-      monsters: 770,
-    }),
+    marchCapacities: () => ({ guards: 3125, mercenaries: 1540, monsters: 770 }),
   },
+
+  // 12. Lobo Fenrir Destruidor
   {
     id: 'fenrir',
-    name: 'Lobo Fenrir Destruidor',
+    name: '🐺 Lobo Fenrir Destruidor',
     faction: 'epic',
     attackMode: 'epic',
     targetType: 'epic_monster',
     defaultLevel: 20,
-    availableLevels: [10, 15, 20, 25, 30, 35],
+    availableLevels: [10, 15, 20, 25, 30, 35, 40],
     description: 'Fera colossal de gelo e fúria.',
     generateSquads: (lvl: number): EnemySquadUnit[] => {
       const u = getMonsterUnit('fenrir_unit');
       return [
         {
-          id: u.id,
-          name: u.name,
-          tier: 5,
-          troopClass: u.troopClass,
-          family: u.family,
-          subType: u.subType,
+          ...u,
           unitAttack: Math.round(u.unitAttack * Math.pow(lvl, 1.45)),
           unitHealth: Math.round(u.unitHealth * Math.pow(lvl, 1.65)),
-          leadership: 100,
-          initiative: 10,
           count: 1,
-          aspects: u.aspects,
         },
       ];
     },
@@ -707,37 +923,27 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
       vp: Math.round(lvl * lvl * 350 + 9000),
       chest: Math.round(lvl * 15 + 50),
     }),
-    marchCapacities: () => ({
-      guards: 3125,
-      mercenaries: 1540,
-      monsters: 770,
-    }),
+    marchCapacities: () => ({ guards: 3125, mercenaries: 1540, monsters: 770 }),
   },
+
+  // 13. Serpente do Mundo (Jörmungandr)
   {
     id: 'jormungandr',
-    name: 'Serpente do Mundo (Jörmungandr)',
+    name: '🐍 Serpente do Mundo (Jörmungandr)',
     faction: 'epic',
     attackMode: 'epic',
     targetType: 'epic_monster',
     defaultLevel: 25,
     availableLevels: [15, 20, 25, 30, 35, 40],
-    description: 'Chefe titânico de torneio.',
+    description: 'Chefe titânico de torneio marítimo.',
     generateSquads: (lvl: number): EnemySquadUnit[] => {
       const u = getMonsterUnit('jormungandr_unit');
       return [
         {
-          id: u.id,
-          name: u.name,
-          tier: 5,
-          troopClass: u.troopClass,
-          family: u.family,
-          subType: u.subType,
+          ...u,
           unitAttack: Math.round(u.unitAttack * Math.pow(lvl, 1.45)),
           unitHealth: Math.round(u.unitHealth * Math.pow(lvl, 1.65)),
-          leadership: 120,
-          initiative: 10,
           count: 1,
-          aspects: u.aspects,
         },
       ];
     },
@@ -746,11 +952,123 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
       vp: Math.round(lvl * lvl * 400 + 12000),
       chest: Math.round(lvl * 20 + 60),
     }),
-    marchCapacities: () => ({
-      guards: 3125,
-      mercenaries: 1540,
-      monsters: 770,
+    marchCapacities: () => ({ guards: 3125, mercenaries: 1540, monsters: 770 }),
+  },
+
+  // 14. Aracne Tecedora (Arachne)
+  {
+    id: 'arachne',
+    name: '🕷️ Aracne Tecedora (Arachne)',
+    faction: 'epic',
+    attackMode: 'epic',
+    targetType: 'epic_monster',
+    defaultLevel: 20,
+    availableLevels: [10, 15, 20, 25, 30, 35, 40],
+    description: 'Rainha das aranhas sombrias. Dispara teias paralisantes.',
+    generateSquads: (lvl: number): EnemySquadUnit[] => {
+      const u = getMonsterUnit('arachne_unit');
+      return [
+        {
+          ...u,
+          unitAttack: Math.round(u.unitAttack * Math.pow(lvl, 1.45)),
+          unitHealth: Math.round(u.unitHealth * Math.pow(lvl, 1.65)),
+          count: 1,
+        },
+      ];
+    },
+    calculateRewards: (lvl: number) => ({
+      xp: Math.round(lvl * lvl * 720 + 19000),
+      vp: Math.round(lvl * lvl * 360 + 9500),
+      chest: Math.round(lvl * 16 + 55),
     }),
+    marchCapacities: () => ({ guards: 3125, mercenaries: 1540, monsters: 770 }),
+  },
+
+  // 15. Cérbero das Profundezas (Cerberus)
+  {
+    id: 'cerberus',
+    name: '🐕 Cérbero das Profundezas (Cerberus)',
+    faction: 'epic',
+    attackMode: 'epic',
+    targetType: 'epic_monster',
+    defaultLevel: 22,
+    availableLevels: [10, 15, 20, 22, 25, 30, 35, 40],
+    description: 'Guardião de 3 cabeças do inferno. Golpe triplo em linha.',
+    generateSquads: (lvl: number): EnemySquadUnit[] => {
+      const u = getMonsterUnit('cerberus_unit');
+      return [
+        {
+          ...u,
+          unitAttack: Math.round(u.unitAttack * Math.pow(lvl, 1.45)),
+          unitHealth: Math.round(u.unitHealth * Math.pow(lvl, 1.65)),
+          count: 1,
+        },
+      ];
+    },
+    calculateRewards: (lvl: number) => ({
+      xp: Math.round(lvl * lvl * 750 + 20000),
+      vp: Math.round(lvl * lvl * 370 + 10000),
+      chest: Math.round(lvl * 17 + 55),
+    }),
+    marchCapacities: () => ({ guards: 3125, mercenaries: 1540, monsters: 770 }),
+  },
+
+  // 16. Fênix Solar Ardente (Phoenix)
+  {
+    id: 'phoenix',
+    name: '🔥 Fênix Solar Ardente (Phoenix)',
+    faction: 'epic',
+    attackMode: 'epic',
+    targetType: 'epic_monster',
+    defaultLevel: 25,
+    availableLevels: [15, 20, 25, 30, 35, 40],
+    description: 'Pássaro mítico solar de destruição em área.',
+    generateSquads: (lvl: number): EnemySquadUnit[] => {
+      const u = getMonsterUnit('phoenix_unit');
+      return [
+        {
+          ...u,
+          unitAttack: Math.round(u.unitAttack * Math.pow(lvl, 1.45)),
+          unitHealth: Math.round(u.unitHealth * Math.pow(lvl, 1.65)),
+          count: 1,
+        },
+      ];
+    },
+    calculateRewards: (lvl: number) => ({
+      xp: Math.round(lvl * lvl * 820 + 26000),
+      vp: Math.round(lvl * lvl * 410 + 13000),
+      chest: Math.round(lvl * 20 + 65),
+    }),
+    marchCapacities: () => ({ guards: 3125, mercenaries: 1540, monsters: 770 }),
+  },
+
+  // 17. Terror Ancestral / Juízo Final (Ancient / Doomsday)
+  {
+    id: 'ancient_terror',
+    name: '⏳ Terror Ancestral (Juízo Final)',
+    faction: 'epic',
+    attackMode: 'epic',
+    targetType: 'epic_monster',
+    defaultLevel: 30,
+    availableLevels: [20, 25, 30, 35, 40, 45],
+    description: 'Chefe supremo de clã. Dano cataclísmico em todas as linhas.',
+    generateSquads: (lvl: number): EnemySquadUnit[] => {
+      const u = getMonsterUnit('ancient_terror_unit');
+      return [
+        {
+          ...u,
+          unitAttack: Math.round(u.unitAttack * Math.pow(lvl, 1.45)),
+          unitHealth: Math.round(u.unitHealth * Math.pow(lvl, 1.65)),
+          count: 1,
+        },
+      ];
+    },
+    calculateRewards: (lvl: number) => ({
+      xp: Math.round(lvl * lvl * 900 + 30000),
+      vp: Math.round(lvl * lvl * 450 + 15000),
+      chest: Math.round(lvl * 25 + 80),
+    }),
+    marchCapacities: () => ({ guards: 3125, mercenaries: 1540, monsters: 770 }),
   },
 ];
 
@@ -763,8 +1081,8 @@ export function buildMonsterTargetFromTemplate(
   const rewards = template.calculateRewards(validLevel);
   const caps = template.marchCapacities(validLevel, template.attackMode);
 
-  const totalHealth = squads.reduce((sum, s) => sum + (s.unitHealth * s.count), 0);
-  const baseAttack = squads.reduce((sum, s) => sum + (s.unitAttack * s.count), 0);
+  const totalHealth = squads.reduce((sum, s) => sum + s.unitHealth * s.count, 0);
+  const baseAttack = squads.reduce((sum, s) => sum + s.unitAttack * s.count, 0);
 
   const classesPresent = squads.map((s) => s.troopClass);
   const weaknessClasses: TroopClass[] = [];
@@ -775,11 +1093,12 @@ export function buildMonsterTargetFromTemplate(
 
   const uniqueWeaknesses = Array.from(new Set(weaknessClasses));
 
-  const coords = template.id === 'tropa_amaldicoados_rara'
-    ? '(K:310 X:917 Y:253)'
-    : template.id === 'tropa_inferno_comum'
-    ? '(K:310 X:924 Y:264)'
-    : '(K:310 X:922 Y:258)';
+  const coords =
+    template.attackMode === 'rare'
+      ? '(K:310 X:917 Y:253)'
+      : template.attackMode === 'common'
+      ? '(K:310 X:924 Y:264)'
+      : '(K:310 X:922 Y:258)';
 
   return {
     id: `${template.id}_lvl_${validLevel}`,
@@ -835,8 +1154,8 @@ export function updateMonsterSquads(
   monster: MonsterTarget,
   newSquads: EnemySquadUnit[]
 ): MonsterTarget {
-  const totalHealth = newSquads.reduce((sum, s) => sum + (s.unitHealth * s.count), 0);
-  const baseAttack = newSquads.reduce((sum, s) => sum + (s.unitAttack * s.count), 0);
+  const totalHealth = newSquads.reduce((sum, s) => sum + s.unitHealth * s.count, 0);
+  const baseAttack = newSquads.reduce((sum, s) => sum + s.unitAttack * s.count, 0);
 
   const classesPresent = newSquads.map((s) => s.troopClass);
   const weaknessClasses: TroopClass[] = [];
@@ -856,4 +1175,3 @@ export function updateMonsterSquads(
     enemySquads: newSquads,
   };
 }
-
