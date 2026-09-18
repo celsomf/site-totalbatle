@@ -94,6 +94,42 @@ const REAL_TROOP_IMAGES: Record<string, string> = {
   g8_mounted: '/assets/troops/triturador_I.png',
   g9_mounted: '/assets/troops/triturador_II.png',
 
+  // Especialistas Mapeados
+  deadshot_I: '/assets/troops/archer_I.png',
+  deadshot_II: '/assets/troops/archer_II.png',
+  deadshot_III: '/assets/troops/archer_III.png',
+  deadshot_IV: '/assets/troops/archer_IV.png',
+  deadshot_V: '/assets/troops/deadshot_V.png',
+  deadshot_VI: '/assets/troops/deadshot_VI.png',
+  deadshot_VII: '/assets/troops/deadshot_VII.png',
+  legitimist_I: '/assets/troops/legitimist_I.png',
+  legitimist_II: '/assets/troops/legitimist_II.png',
+
+  heavy_knight_VI: '/assets/troops/heavy_knight_VI.png',
+  heavy_knight_VII: '/assets/troops/heavy_knight_VII.png',
+  duelist_I: '/assets/troops/duelist_I.png',
+  duelist_II: '/assets/troops/duelist_II.png',
+
+  lion_rider_I: '/assets/troops/rider_I.png',
+  lion_rider_II: '/assets/troops/rider_II.png',
+  lion_rider_III: '/assets/troops/rider_IIII.png',
+  lion_rider_IV: '/assets/troops/rider_IV.png',
+  lion_rider_V: '/assets/troops/lion_rider_V.png',
+  lion_rider_VI: '/assets/troops/lion_rider_VI.png',
+  lion_rider_VII: '/assets/troops/lion_rider_VII.png',
+  whitemane_I: '/assets/troops/whitemane_I.png',
+  whitemane_II: '/assets/troops/whitemane_II.png',
+
+  vulture_V: '/assets/troops/vulture_V.png',
+  vulture_VI: '/assets/troops/vulture_VI.png',
+  vulture_VII: '/assets/troops/vulture_VII.png',
+  royal_lion_I: '/assets/troops/royal_lion_I.png',
+  royal_lion_II: '/assets/troops/royal_lion_II.png',
+
+  swift_jaeger_VI: '/assets/troops/swift_jaeger_VI.png',
+  swift_jaeger_VII: '/assets/troops/swift_jaeger_VII.png',
+  panoptic_I: '/assets/troops/panoptic_I.png',
+
   // Monstros & Mercenários
   m3_golem: '/assets/troops/m3_golem.png',
   m3_specter: '/assets/troops/m3_specter.png',

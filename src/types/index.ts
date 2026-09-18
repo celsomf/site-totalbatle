@@ -9,6 +9,8 @@ export interface TroopAspects {
   bonusVsSiegePercent?: number;
   bonusVsBeastsPercent?: number;
   bonusVsFortificationsPercent?: number;
+  bonusVsHumanPercent?: number;
+  isPvpDoubled?: boolean;
   nativeCriticalPercent?: number;
 }
 

@@ -171,10 +171,13 @@ export function usePlayerProfile() {
     }));
   };
 
-  const addCustomTroop = (newTroop: TroopUnit) => {
+  const addTroop = (newTroop: TroopUnit) => {
     setProfile((prev) => {
-      const existingCustom = prev.customTroops || [];
-      const updatedCustom = [...existingCustom.filter((t) => t.id !== newTroop.id), newTroop];
+      const isCustom = newTroop.id.startsWith('custom_');
+      let updatedCustom = prev.customTroops || [];
+      if (isCustom) {
+        updatedCustom = [...updatedCustom.filter((t) => t.id !== newTroop.id), newTroop];
+      }
       const updatedOwned = { ...prev.ownedTroopCounts, [newTroop.id]: newTroop.ownedCount };
       const updatedUnlocked = prev.unlockedTroopIds.includes(newTroop.id)
         ? prev.unlockedTroopIds
@@ -188,9 +191,12 @@ export function usePlayerProfile() {
     });
   };
 
-  const removeCustomTroop = (troopId: string) => {
+  const removeTroop = (troopId: string) => {
     setProfile((prev) => {
-      const updatedCustom = (prev.customTroops || []).filter((t) => t.id !== troopId);
+      const isCustom = troopId.startsWith('custom_');
+      const updatedCustom = isCustom
+        ? (prev.customTroops || []).filter((t) => t.id !== troopId)
+        : prev.customTroops;
       const { [troopId]: _, ...remainingOwned } = prev.ownedTroopCounts;
       const updatedUnlocked = prev.unlockedTroopIds.filter((id) => id !== troopId);
       return {
@@ -260,8 +266,10 @@ export function usePlayerProfile() {
     updateTroopOwnedCount,
     updateTroopCustomStat,
     getHydratedTroops,
-    addCustomTroop,
-    removeCustomTroop,
+    addCustomTroop: addTroop,
+    removeCustomTroop: removeTroop,
+    addTroop,
+    removeTroop,
     resetToDefaults,
   };
 }
