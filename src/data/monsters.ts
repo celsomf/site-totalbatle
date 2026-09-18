@@ -4,7 +4,7 @@ export interface MonsterUnitDefinition {
   id: string;
   name: string;
   tier: number;
-  family: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'elemental' | 'epic';
+  family: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'elemental' | 'epic' | 'elfos';
   subType: string;
   troopClass: TroopClass;
   unitAttack: number;
@@ -540,6 +540,40 @@ export const MONSTER_UNITS_CATALOG: MonsterUnitDefinition[] = [
       description: 'Golpe cataclísmico que causa dano massivo em linha.',
     },
   },
+
+  // --- ELFOS (FLORESTA / NATUREZA) ---
+  {
+    id: 'druida',
+    name: 'Druida',
+    tier: 2,
+    family: 'elfos',
+    subType: 'Elfos, Unidade de longo alcance',
+    troopClass: 'ranged',
+    unitAttack: 900,
+    unitHealth: 2700,
+    leadership: 10,
+    initiative: 10,
+    aspects: {
+      bonusVsMeleePercent: 25,
+      description: 'Força contra unidades corpo a corpo: +25%',
+    },
+  },
+  {
+    id: 'anao',
+    name: 'Anão',
+    tier: 1,
+    family: 'elfos',
+    subType: 'Elfos, Unidade corpo a corpo',
+    troopClass: 'melee',
+    unitAttack: 28,
+    unitHealth: 84,
+    leadership: 1,
+    initiative: 10,
+    aspects: {
+      bonusVsMountedPercent: 10,
+      description: 'Força contra unidades montadas: +10%',
+    },
+  },
 ];
 
 export function getMonsterUnit(id: string): MonsterUnitDefinition {
@@ -553,7 +587,7 @@ export function getMonsterUnit(id: string): MonsterUnitDefinition {
 export interface MonsterPresetTemplate {
   id: string;
   name: string;
-  faction: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'elemental' | 'epic';
+  faction: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'elemental' | 'epic' | 'elfos';
   attackMode: AttackMode;
   targetType: TargetType;
   defaultLevel: number;
@@ -708,6 +742,34 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
       chest: Math.round(lvl * 2.5),
     }),
     marchCapacities: () => ({ guards: 2000, mercenaries: 1000, monsters: 500 }),
+  },
+
+  // 6. Tropa de Elfos Comum (Dados Reais de Batalha: K:310 X:915 Y:233)
+  {
+    id: 'tropa_elfos_comum',
+    name: '🌿 Tropa de Elfos Comum',
+    faction: 'elfos',
+    attackMode: 'common',
+    targetType: 'common_monster',
+    defaultLevel: 14,
+    availableLevels: [5, 8, 10, 12, 14, 16, 18, 20, 25, 30],
+    description: 'Elfos do mapa de batalha liderados por Druidas de longo alcance e infantaria de Anões guerreiros.',
+    generateSquads: (lvl: number): EnemySquadUnit[] => {
+      const druida = getMonsterUnit('druida');
+      const anao = getMonsterUnit('anao');
+      const scale = lvl / 14;
+      return [
+        { ...druida, id: `${druida.id}_${lvl}`, count: Math.max(10, Math.round(370 * scale)) },
+        { ...anao, id: `${anao.id}_${lvl}`, count: Math.max(50, Math.round(5100 * scale)) },
+      ];
+    },
+    calculateRewards: (lvl: number) => ({
+      xp: Math.round(lvl * 22300),
+      vp: Math.round(lvl * 10465),
+      tar: Math.round(lvl * 15000),
+      chest: Math.round(lvl * 2.5),
+    }),
+    marchCapacities: () => ({ guards: 2350, mercenaries: 1140, monsters: 570 }),
   },
 
   // ==========================================
@@ -1094,7 +1156,9 @@ export function buildMonsterTargetFromTemplate(
   const uniqueWeaknesses = Array.from(new Set(weaknessClasses));
 
   const coords =
-    template.attackMode === 'rare'
+    template.id === 'tropa_elfos_comum'
+      ? '(K:310 X:915 Y:233)'
+      : template.attackMode === 'rare'
       ? '(K:310 X:917 Y:253)'
       : template.attackMode === 'common'
       ? '(K:310 X:924 Y:264)'

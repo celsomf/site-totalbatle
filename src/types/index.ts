@@ -59,8 +59,8 @@ export interface EnemySquadUnit {
   name: string;
   tier: number;
   troopClass: TroopClass;
-  family: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'elemental' | 'epic';
-  subType?: string; // Ex: 'Demônio, Unidade montada' ou 'Fera, Amaldiçoado, Unidade voadora'
+  family: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'elemental' | 'epic' | 'elfos';
+  subType?: string; // Ex: 'Elfos, Unidade de longo alcance' ou 'Demônio, Unidade montada'
   unitAttack: number;
   unitHealth: number;
   leadership: number;
@@ -75,6 +75,49 @@ export interface EnemySquadUnit {
     description?: string;
   };
   avatarUrl?: string;
+}
+
+export interface CombatRoundStep {
+  step: number;
+  attackerName: string;
+  attackerTier: number;
+  attackerCount: number;
+  defenderName: string;
+  defenderTier: number;
+  damageDealt: number;
+  casualties: number;
+  defenderRemainingCount: number;
+  isEnemyAttacking: boolean;
+  bonusText?: string;
+}
+
+export interface SquadCasualty {
+  id: string;
+  name: string;
+  tier: number;
+  isMercenary?: boolean;
+  initialCount: number;
+  lostCount: number;
+  survivingCount: number;
+}
+
+export interface CombatSimulationResult {
+  outcome: 'VICTORY' | 'DEFEAT';
+  safetyLevel: 'CLEAN_VICTORY' | 'PROTECTED_VICTORY' | 'COSTLY_VICTORY' | 'DEFEAT';
+  totalPlayerDamage: number;
+  totalEnemyDamage: number;
+  initialEnemyHp: number;
+  remainingEnemyHp: number;
+  playerCasualties: SquadCasualty[];
+  enemyCasualties: SquadCasualty[];
+  rounds: CombatRoundStep[];
+  deficitDamage?: number;
+  deficitTroopsText?: string;
+  recommendedTroopsNeeded?: {
+    troopId: string;
+    troopName: string;
+    countNeeded: number;
+  }[];
 }
 
 export interface MonsterTarget {
