@@ -7,6 +7,12 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        serif: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+        fantasy: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+        heading: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+      },
       colors: {
         tb: {
           bg: '#0c0f17',
@@ -22,7 +28,7 @@ export default {
           slateText: '#94a3b8'
         }
       }
-    },
+    }
   },
   plugins: [],
 }
