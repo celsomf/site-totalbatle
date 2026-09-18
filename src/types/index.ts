@@ -52,16 +52,52 @@ export interface Captain {
 }
 
 export type TargetType = 'common_monster' | 'epic_monster' | 'crypt';
+export type AttackMode = 'common' | 'rare' | 'epic';
+
+export interface EnemySquadUnit {
+  id: string;
+  name: string;
+  tier: number;
+  troopClass: TroopClass;
+  family: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'elemental' | 'epic';
+  subType?: string; // Ex: 'Demônio, Unidade montada' ou 'Fera, Amaldiçoado, Unidade voadora'
+  unitAttack: number;
+  unitHealth: number;
+  leadership: number;
+  initiative: number;
+  count: number;
+  aspects?: {
+    bonusVsMeleePercent?: number;
+    bonusVsRangedPercent?: number;
+    bonusVsMountedPercent?: number;
+    bonusVsFlyingPercent?: number;
+    bonusVsElementalsPercent?: number;
+    description?: string;
+  };
+  avatarUrl?: string;
+}
 
 export interface MonsterTarget {
   id: string;
   name: string;
   type: TargetType;
+  attackMode?: AttackMode;
+  faction?: string;
   level: number;
   totalHealth: number;
   baseAttack: number;
   squadCount: number;
   weaknessClasses: TroopClass[];
+  enemySquads?: EnemySquadUnit[];
+  coordinates?: string;
+  xpReward?: number;
+  valorReward?: number;
+  tarReward?: number;
+  marchCapacities?: {
+    guards: number;
+    mercenaries: number;
+    monsters: number;
+  };
   customHealthOverride?: number;
   customAttackOverride?: number;
   estimatedValorPoints: number;

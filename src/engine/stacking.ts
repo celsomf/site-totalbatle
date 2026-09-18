@@ -62,7 +62,7 @@ export function allocateMarchSquads(
   const totalFodderCount = fodderSquads.reduce((sum, s) => sum + s.count, 0);
 
   // Remaining capacity for primary & secondary damage dealers
-  const maxCapacity = profile.maxMarchCapacity || 10000;
+  const maxCapacity = target.marchCapacities?.guards || profile.maxMarchCapacity || 3125;
   const availableDamageCapacity = Math.max(0, maxCapacity - totalFodderCount);
 
   // Find best damage units matching weakness or highest tier with stock
