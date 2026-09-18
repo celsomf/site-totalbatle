@@ -1,11 +1,12 @@
-import React, { useState, useMemo } from 'react';
-import { TroopUnit, TroopCategory } from '../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { TroopUnit, TroopCategory, TroopClass } from '../types';
 import { DEFAULT_TROOPS } from '../data/troops';
 import { TroopAvatar } from './TroopAvatar';
-import { X, Plus, Swords, Heart, Users, Shield, Zap, Crosshair } from 'lucide-react';
+import { X, Plus, Swords, Heart, Users, Shield, Zap, Crosshair, Filter } from 'lucide-react';
 
 interface AddTroopModalProps {
   isOpen: boolean;
+  initialCategory?: TroopCategory;
   currentTroops?: TroopUnit[];
   onClose: () => void;
   onAddTroop: (troop: TroopUnit) => void;
@@ -13,24 +14,64 @@ interface AddTroopModalProps {
 
 export const AddTroopModal: React.FC<AddTroopModalProps> = ({
   isOpen,
+  initialCategory = 'guardsman',
   currentTroops = [],
   onClose,
   onAddTroop,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<TroopCategory>('guardsman');
+  const [selectedCategory, setSelectedCategory] = useState<TroopCategory>(initialCategory);
+  const [selectedClass, setSelectedClass] = useState<TroopClass | 'all'>('all');
   const [selectedTroopId, setSelectedTroopId] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(500);
 
-  // Filter available troops in the selected category
-  const availableTroopsInCategory = useMemo(() => {
-    return DEFAULT_TROOPS.filter((t) => t.category === selectedCategory);
-  }, [selectedCategory]);
+  // Sync initialCategory when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedCategory(initialCategory);
+      setSelectedClass('all');
+      const firstInCat = DEFAULT_TROOPS.find((t) => t.category === initialCategory);
+      if (firstInCat) {
+        setSelectedTroopId(firstInCat.id);
+      }
+    }
+  }, [isOpen, initialCategory]);
 
-  // Set default selected troop when category changes
+  // Filter available troops STRICTLY by selected category and optional class filter
+  const availableTroopsInCategory = useMemo(() => {
+    return DEFAULT_TROOPS.filter((t) => {
+      if (t.category !== selectedCategory) return false;
+      if (selectedClass !== 'all' && t.troopClass !== selectedClass) return false;
+      return true;
+    });
+  }, [selectedCategory, selectedClass]);
+
+  // Ensure activeTroop is always from the filtered list
   const activeTroop = useMemo(() => {
     const found = availableTroopsInCategory.find((t) => t.id === selectedTroopId);
-    return found || availableTroopsInCategory[0] || DEFAULT_TROOPS[0];
+    return found || availableTroopsInCategory[0] || null;
   }, [availableTroopsInCategory, selectedTroopId]);
+
+  // When category changes, auto-select the first unit in that category
+  const handleCategorySelect = (cat: TroopCategory) => {
+    setSelectedCategory(cat);
+    setSelectedClass('all');
+    const first = DEFAULT_TROOPS.find((t) => t.category === cat);
+    if (first) {
+      setSelectedTroopId(first.id);
+    }
+  };
+
+  const handleClassSelect = (cls: TroopClass | 'all') => {
+    setSelectedClass(cls);
+    const filtered = DEFAULT_TROOPS.filter((t) => {
+      if (t.category !== selectedCategory) return false;
+      if (cls !== 'all' && t.troopClass !== cls) return false;
+      return true;
+    });
+    if (filtered.length > 0) {
+      setSelectedTroopId(filtered[0].id);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -91,11 +132,7 @@ export const AddTroopModal: React.FC<AddTroopModalProps> = ({
                   <button
                     key={cat.id}
                     type="button"
-                    onClick={() => {
-                      setSelectedCategory(cat.id as TroopCategory);
-                      const firstInCat = DEFAULT_TROOPS.find((t) => t.category === cat.id);
-                      if (firstInCat) setSelectedTroopId(firstInCat.id);
-                    }}
+                    onClick={() => handleCategorySelect(cat.id as TroopCategory)}
                     className={`py-2 text-[11px] font-bold rounded-lg transition-all ${
                       isActive
                         ? 'bg-gradient-to-r from-[#991b1b] to-[#7f1d1d] text-[#fef08a] border border-[#f59e0b] shadow-md'
@@ -109,10 +146,43 @@ export const AddTroopModal: React.FC<AddTroopModalProps> = ({
             </div>
           </div>
 
-          {/* Passo 2: Seleção da Tropa */}
+          {/* Sub-filtro de Classe Tática */}
+          <div className="flex flex-wrap items-center gap-1 text-[10px]">
+            <span className="text-[#caa568] font-bold mr-1 flex items-center gap-1">
+              <Filter className="w-3 h-3 text-amber-400" /> Classe:
+            </span>
+            {[
+              { id: 'all', label: 'Todas' },
+              { id: 'ranged', label: '🏹 Longo Alcance' },
+              { id: 'melee', label: '⚔️ Corpo a Corpo' },
+              { id: 'mounted', label: '🐎 Montadas' },
+              { id: 'flying', label: '🦅 Voadores' },
+              { id: 'siege', label: '🛡️ Cerco' },
+            ].map((cls) => (
+              <button
+                key={cls.id}
+                type="button"
+                onClick={() => handleClassSelect(cls.id as any)}
+                className={`px-2 py-0.5 rounded transition-all font-sans font-semibold ${
+                  selectedClass === cls.id
+                    ? 'bg-[#caa568] text-[#1a110b] font-bold'
+                    : 'bg-[#140e0a] text-[#caa568]/70 hover:text-[#fef08a] border border-[#5a3e22]'
+                }`}
+              >
+                {cls.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Passo 2: Seleção da Tropa (Filtrado estritamente pela categoria) */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#caa568] flex items-center gap-1">
-              <Users className="w-3.5 h-3.5 text-amber-400" /> 2. Tipo de Tropa / Soldado:
+            <label className="text-xs font-bold text-[#caa568] flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <Users className="w-3.5 h-3.5 text-amber-400" /> 2. Tipo de Tropa / Soldado ({availableTroopsInCategory.length} disponíveis):
+              </span>
+              <span className="text-[10px] text-amber-300 font-sans">
+                Filtrado por: {selectedCategory === 'guardsman' ? 'Guardas' : selectedCategory === 'specialist' ? 'Especialistas' : selectedCategory === 'monster' ? 'Monstros' : 'Mercenários'}
+              </span>
             </label>
             <select
               value={activeTroop?.id || ''}
@@ -121,7 +191,7 @@ export const AddTroopModal: React.FC<AddTroopModalProps> = ({
             >
               {availableTroopsInCategory.map((t) => (
                 <option key={t.id} value={t.id}>
-                  Tier {t.tier} • {t.name} (⚔ {t.baseAttack} | 💖 {t.baseHealth})
+                  Tier {t.tier} • {t.name} (⚔ {t.baseAttack.toLocaleString()} | 💖 {t.baseHealth.toLocaleString()})
                 </option>
               ))}
             </select>

@@ -245,6 +245,7 @@ export const TroopCustomizer: React.FC<TroopCustomizerProps> = ({
       {onAddTroop && (
         <AddTroopModal
           isOpen={isAddModalOpen}
+          initialCategory={selectedCategory === 'all' ? 'guardsman' : selectedCategory}
           currentTroops={troops}
           onClose={() => setIsAddModalOpen(false)}
           onAddTroop={(newTroop) => {
