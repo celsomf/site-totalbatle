@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MonsterTarget, TroopClass, AttackMode, EnemySquadUnit, TroopUnit, PlayerProfile, Captain } from '../types';
 import { MONSTER_PRESET_TEMPLATES, buildMonsterTargetFromTemplate, updateMonsterSquads } from '../data/monsters';
-import { findOptimalFarmLevel } from '../utils/combatSimulator';
+import { findOptimalFarmLevel, buildDispatchedTroops, simulateCombat } from '../utils/combatSimulator';
 import { DEFAULT_CAPTAINS } from '../data/captains';
 import { EditSquadsModal } from './EditSquadsModal';
 import { Skull, Swords, Crown, Flame, Edit3, Zap } from 'lucide-react';
@@ -47,6 +47,26 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
     troops && profile
       ? findOptimalFarmLevel(currentTemplate, troops, profile, fallbackCaptain, sendDragon ?? true)
       : null;
+
+  const currentDispatched =
+    troops && profile
+      ? buildDispatchedTroops(troops, profile, selectedMonster, fallbackCaptain, sendDragon ?? true)
+      : [];
+
+  const currentSim =
+    currentDispatched.length > 0
+      ? simulateCombat(currentDispatched, selectedMonster.enemySquads || [])
+      : null;
+
+  const isCurrentLevelDefeat = currentSim?.outcome === 'DEFEAT';
+
+  const quickLevels = Array.from(
+    new Set([
+      ...currentTemplate.availableLevels.slice(0, 5),
+      ...(optimalFarm ? [optimalFarm.optimalLevel] : []),
+      monsterLevel,
+    ])
+  ).sort((a, b) => a - b);
 
   const handleModeChange = (mode: AttackMode) => {
     setActiveAttackMode(mode);
@@ -227,28 +247,58 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
             />
             {/* Quick Level Pills */}
             <div className="flex flex-wrap gap-1.5 flex-1">
-              {currentTemplate.availableLevels.slice(0, 5).map((lvl) => (
-                <button
-                  key={lvl}
-                  type="button"
-                  onClick={() => handleLevelChange(lvl)}
-                  className={`text-xs px-2.5 py-1 rounded-lg font-extrabold transition-all ${
-                    monsterLevel === lvl
-                      ? 'bg-amber-400 text-slate-950 shadow'
-                      : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
-                  }`}
-                >
-                  {lvl}
-                </button>
-              ))}
+              {quickLevels.map((lvl) => {
+                const isOptimal = optimalFarm && lvl === optimalFarm.optimalLevel;
+                return (
+                  <button
+                    key={lvl}
+                    type="button"
+                    onClick={() => handleLevelChange(lvl)}
+                    className={`text-xs px-2 py-1 rounded-lg font-extrabold transition-all flex items-center gap-1 ${
+                      monsterLevel === lvl
+                        ? 'bg-amber-400 text-slate-950 shadow'
+                        : isOptimal
+                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/60 hover:bg-emerald-900'
+                        : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+                    }`}
+                  >
+                    <span>{lvl}</span>
+                    {isOptimal && monsterLevel !== lvl && <span className="text-3xs">⭐</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Dica contextual de Nível Seguro para XP */}
-          {optimalFarm && monsterLevel > optimalFarm.optimalLevel && (
-            <div className="text-2xs font-bold text-rose-300 bg-rose-950/70 border border-rose-800/80 p-1.5 rounded-lg flex items-center gap-1.5">
-              <span>⚠️ Nv {monsterLevel} é derrota! Use Nv {optimalFarm.optimalLevel} para farmar sem perder tropas.</span>
-            </div>
+          {/* Dica contextual de Nível Seguro para XP baseada na simulação real */}
+          {optimalFarm && (
+            isCurrentLevelDefeat ? (
+              <div className="text-2xs font-bold text-rose-300 bg-rose-950/80 border border-rose-800 p-2 rounded-lg flex items-center justify-between gap-2 shadow-sm animate-fadeIn">
+                <span>⚠️ Nv {monsterLevel} causa derrota certa! Recomendado: use Nv {optimalFarm.optimalLevel} para vencer sem perder tropas.</span>
+                <button
+                  type="button"
+                  onClick={() => handleLevelChange(optimalFarm.optimalLevel)}
+                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded text-3xs shadow shrink-0 active:scale-95"
+                >
+                  Mudar para Nv {optimalFarm.optimalLevel}
+                </button>
+              </div>
+            ) : monsterLevel < optimalFarm.optimalLevel ? (
+              <div className="text-2xs font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-800/80 p-2 rounded-lg flex items-center justify-between gap-2 shadow-sm animate-fadeIn">
+                <span>✓ Nv {monsterLevel} é vitória segura! Seu exército aguenta até o Nv {optimalFarm.optimalLevel} para ganhar mais XP.</span>
+                <button
+                  type="button"
+                  onClick={() => handleLevelChange(optimalFarm.optimalLevel)}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-2 py-0.5 rounded text-3xs shadow shrink-0 active:scale-95"
+                >
+                  Mudar para Nv {optimalFarm.optimalLevel}
+                </button>
+              </div>
+            ) : (
+              <div className="text-2xs font-bold text-amber-300 bg-amber-950/70 border border-amber-800/80 p-2 rounded-lg flex items-center gap-1.5 shadow-sm animate-fadeIn">
+                <span>🎯 Nv {monsterLevel} é o nível máximo recomendado para farmar XP com 0 perdas nobres!</span>
+              </div>
+            )
           )}
         </div>
       </div>

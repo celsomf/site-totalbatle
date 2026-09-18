@@ -110,3 +110,42 @@ test('validar botão de recalcular marcha e opção de subir de nível rápido (
   console.log('Teste de validação do Recalcular e Subir de Nível Rápido concluído com sucesso!');
 });
 
+test('validar assertividade das sugestões: Tropa de Mortos-Vivos Nv 6 não deve acusar derrota quando for vitória', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto('http://localhost:5174', { waitUntil: 'networkidle' });
+
+  // 1. Ir para Livro de Marcha
+  await page.click('button:has-text("Livro de Marcha")');
+  await page.waitForTimeout(600);
+
+  // 2. Selecionar Tropa de Mortos-Vivos Comum
+  const templateSelect = page.locator('select').first();
+  await templateSelect.selectOption({ label: '🧟 Tropa de Mortos-Vivos Comum' });
+  await page.waitForTimeout(600);
+
+  // 3. Ajustar nível para 6
+  const levelInput = page.locator('input[type="number"]').first();
+  await levelInput.fill('6');
+  await page.waitForTimeout(600);
+
+  // 4. Validar que NÃO acusa derrota no Nv 6
+  const defeatWarning = page.locator('text=/Nv 6 é derrota/i');
+  await expect(defeatWarning).toHaveCount(0);
+
+  // 5. Validar que informa que Nv 6 é vitória segura ou nível máximo recomendado
+  const positiveNotice = page.locator('text=/Nv 6 é o nível máximo recomendado|Nv 6 é vitória segura/i');
+  await expect(positiveNotice).toBeVisible();
+
+  // 6. Validar que o parecer do Livro de Marcha abaixo está em harmonia (Vitória)
+  const victoryBanner = page.locator('text=/VITÓRIA/i').first();
+  await expect(victoryBanner).toBeVisible();
+
+  // 7. Tirar screenshot comprovando a coerência assertiva
+  await page.screenshot({
+    path: 'C:/Users/celso/.gemini/antigravity/brain/b0b3a8ca-247a-4157-b90e-34924956138c/assertive_suggestions_validated.png',
+  });
+
+  console.log('Teste de assertividade e coerência das sugestões concluído com sucesso!');
+});
+
+

@@ -448,15 +448,18 @@ export function findOptimalFarmLevel(
   isSafe: boolean;
   canBeatAnyLevel: boolean;
 } {
-  const levels = [...(template.availableLevels || [template.defaultLevel])].sort((a, b) => b - a);
+  const maxAvailable = Math.max(...(template.availableLevels || [template.defaultLevel]), template.defaultLevel);
+  const maxLevelToTest = Math.min(45, Math.max(30, maxAvailable));
 
-  let bestLevel = levels[levels.length - 1];
+  let bestLevel = 1;
   let bestXp = 0;
   let foundSafe = false;
 
-  for (const lvl of levels) {
+  for (let lvl = maxLevelToTest; lvl >= 1; lvl--) {
     const target = buildMonsterTargetFromTemplate(template, lvl);
     const dispatched = buildDispatchedTroops(troops, profile, target, captain, sendDragon);
+    if (dispatched.length === 0) continue;
+
     const sim = simulateCombat(dispatched, target.enemySquads || []);
 
     if (sim.outcome !== 'DEFEAT') {
