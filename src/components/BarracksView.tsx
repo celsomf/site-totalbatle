@@ -3,7 +3,7 @@ import { TroopUnit, PlayerProfile } from '../types';
 import { TroopAvatar } from './TroopAvatar';
 import { AddTroopModal } from './AddTroopModal';
 import { TroopDetailModal } from './TroopDetailModal';
-import { Shield, Swords, Heart, Users, Plus, Search, RefreshCw } from 'lucide-react';
+import { Shield, Swords, Heart, Users, Plus, Search, RefreshCw, Edit3, Trash2 } from 'lucide-react';
 
 interface BarracksViewProps {
   troops: TroopUnit[];
@@ -21,6 +21,7 @@ export const BarracksView: React.FC<BarracksViewProps> = ({
   profile,
   onToggleUnlocked,
   onUpdateOwnedCount,
+  onUpdateCustomStat,
   onAddTroop,
   onRemoveCustomTroop,
   onResetDefaults,
@@ -51,6 +52,17 @@ export const BarracksView: React.FC<BarracksViewProps> = ({
   const handleAdjustCount = (troopId: string, currentCount: number, delta: number, e: React.MouseEvent) => {
     e.stopPropagation();
     onUpdateOwnedCount(troopId, Math.max(0, currentCount + delta));
+  };
+
+  const handleRemoveTroop = (troop: TroopUnit, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm(`Deseja remover ${troop.name} do Quartel ativo?`)) {
+      if (onRemoveCustomTroop) {
+        onRemoveCustomTroop(troop.id);
+      } else {
+        onToggleUnlocked(troop.id);
+      }
+    }
   };
 
   return (
@@ -123,9 +135,9 @@ export const BarracksView: React.FC<BarracksViewProps> = ({
           </div>
 
           <div className="bg-[#0b0f19] border border-slate-700/80 p-3.5 rounded-xl shadow-inner">
-            <span className="text-xs font-semibold text-slate-400 block">Titãs de Choque (M5)</span>
+            <span className="text-xs font-semibold text-slate-400 block">Mercenários Épicos (V)</span>
             <div className="text-lg sm:text-xl font-mono font-black text-purple-300 mt-0.5">
-              {(troops.find((t) => t.id === 'm5_titan')?.ownedCount || 0).toLocaleString('pt-BR')}
+              {(troops.find((t) => t.id === 'epic_monster_hunter_v')?.ownedCount || 0).toLocaleString('pt-BR')} <span className="text-xs font-sans text-slate-400 font-normal">un.</span>
             </div>
           </div>
         </div>
@@ -180,9 +192,9 @@ export const BarracksView: React.FC<BarracksViewProps> = ({
             <div
               key={troop.id}
               onClick={() => setSelectedTroopForDetail(troop)}
-              className="bg-[#111827] hover:bg-[#162032] border border-slate-700/80 hover:border-amber-400/80 rounded-2xl p-4 transition-all shadow-xl hover:shadow-2xl flex flex-col justify-between gap-3 group cursor-pointer"
+              className="bg-[#111827] hover:bg-[#162032] border border-slate-700/80 hover:border-amber-400/80 rounded-2xl p-4 transition-all shadow-xl hover:shadow-2xl flex flex-col justify-between gap-3 group cursor-pointer overflow-hidden"
             >
-              {/* Top row: Avatar, Name, Tier, Type Badge */}
+              {/* Top row: Avatar, Name, Tier, Type Badge, Quick Actions */}
               <div className="flex items-start gap-3.5">
                 <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#0b0f19] border border-slate-700 group-hover:border-amber-400/80 flex items-center justify-center flex-shrink-0 shadow-md group-hover:scale-105 transition-all">
                   <TroopAvatar id={troop.avatarIcon || troop.id} tier={troop.tier} size="lg" />
@@ -190,58 +202,77 @@ export const BarracksView: React.FC<BarracksViewProps> = ({
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-2xs font-black px-2 py-0.5 rounded-md bg-slate-800 text-amber-300 border border-slate-600">
-                      Tier {troop.tier}
-                    </span>
-                    <span className="text-2xs font-extrabold uppercase px-2 py-0.5 rounded-md bg-[#0b0f19] text-sky-300 border border-slate-700">
-                      {troop.troopClass}
-                    </span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-2xs font-black px-2 py-0.5 rounded-md bg-slate-800 text-amber-300 border border-slate-600 shrink-0">
+                        Tier {troop.tier}
+                      </span>
+                      <span className="text-2xs font-extrabold uppercase px-2 py-0.5 rounded-md bg-[#0b0f19] text-sky-300 border border-slate-700 shrink-0 truncate">
+                        {troop.troopClass}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => setSelectedTroopForDetail(troop)}
+                        className="p-1 rounded-md bg-slate-800 hover:bg-amber-500/20 text-slate-400 hover:text-amber-300 border border-slate-700 hover:border-amber-400/60 transition-all"
+                        title="Editar tropa"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => handleRemoveTroop(troop, e)}
+                        className="p-1 rounded-md bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-500/60 transition-all"
+                        title="Remover do quartel"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   <h3 className="text-sm font-black text-white truncate mt-1 group-hover:text-amber-300">
                     {troop.name}
                   </h3>
 
-                  <div className="flex items-center gap-3 text-2xs text-slate-300 font-semibold mt-1">
-                    <span className="flex items-center gap-1 text-rose-300">
-                      <Swords className="w-3 h-3 text-rose-400" />
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-slate-300 font-semibold mt-1 min-w-0">
+                    <span className="flex items-center gap-1 text-rose-300 whitespace-nowrap shrink-0">
+                      <Swords className="w-3 h-3 text-rose-400 shrink-0" />
                       {(troop.customAttack || troop.baseAttack).toLocaleString('pt-BR')} Atq
                     </span>
-                    <span className="flex items-center gap-1 text-emerald-300">
-                      <Heart className="w-3 h-3 text-emerald-400" />
+                    <span className="flex items-center gap-1 text-emerald-300 whitespace-nowrap shrink-0">
+                      <Heart className="w-3 h-3 text-emerald-400 shrink-0" />
                       {(troop.customHealth || troop.baseHealth).toLocaleString('pt-BR')} Vida
                     </span>
-                    <span className="flex items-center gap-1 text-sky-300">
-                      <Users className="w-3 h-3 text-sky-400" />
+                    <span className="flex items-center gap-1 text-sky-300 whitespace-nowrap shrink-0">
+                      <Users className="w-3 h-3 text-sky-400 shrink-0" />
                       {troop.leadershipCost} Lid
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Bottom row: Stock Counter Controls */}
+              {/* Bottom row: Stock Counter Controls (2-row responsive design to avoid div leakage) */}
               <div
-                className="bg-[#0b0f19] border border-slate-700/80 p-2.5 rounded-xl flex items-center justify-between gap-2"
+                className="bg-[#0b0f19] border border-slate-700/80 p-2.5 rounded-xl space-y-2"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex flex-col">
-                  <span className="text-2xs font-semibold text-slate-400">Estoque:</span>
-                  <span className="text-base font-mono font-black text-amber-300">
-                    {troop.ownedCount.toLocaleString('pt-BR')}
+                <div className="flex items-center justify-between">
+                  <span className="text-2xs font-semibold text-slate-400">Estoque no Quartel:</span>
+                  <span className="text-sm font-mono font-black text-amber-300">
+                    {troop.ownedCount.toLocaleString('pt-BR')} <span className="text-2xs font-sans text-slate-400 font-normal">un.</span>
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                   <button
                     onClick={(e) => handleAdjustCount(troop.id, troop.ownedCount, -1000, e)}
-                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white rounded-lg text-2xs font-bold"
+                    className="flex-1 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white rounded-lg text-2xs font-bold transition-colors"
                     title="-1000"
                   >
                     -1k
                   </button>
                   <button
                     onClick={(e) => handleAdjustCount(troop.id, troop.ownedCount, -100, e)}
-                    className="px-1.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white rounded-lg text-2xs font-bold"
+                    className="flex-1 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white rounded-lg text-2xs font-bold transition-colors"
                     title="-100"
                   >
                     -100
@@ -255,19 +286,19 @@ export const BarracksView: React.FC<BarracksViewProps> = ({
                       const val = parseInt(e.target.value, 10);
                       onUpdateOwnedCount(troop.id, isNaN(val) ? 0 : val);
                     }}
-                    className="w-20 bg-[#111827] border border-amber-500/50 text-amber-300 text-center font-mono text-xs font-black py-1 px-1 rounded-lg outline-none focus:border-amber-400"
+                    className="w-16 sm:w-20 bg-[#111827] border border-amber-500/50 text-amber-300 text-center font-mono text-xs font-black py-1 px-1 rounded-lg outline-none focus:border-amber-400 shadow-inner"
                   />
 
                   <button
                     onClick={(e) => handleAdjustCount(troop.id, troop.ownedCount, +100, e)}
-                    className="px-1.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white rounded-lg text-2xs font-bold"
+                    className="flex-1 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white rounded-lg text-2xs font-bold transition-colors"
                     title="+100"
                   >
                     +100
                   </button>
                   <button
                     onClick={(e) => handleAdjustCount(troop.id, troop.ownedCount, +1000, e)}
-                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white rounded-lg text-2xs font-bold"
+                    className="flex-1 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white rounded-lg text-2xs font-bold transition-colors"
                     title="+1000"
                   >
                     +1k
@@ -309,6 +340,16 @@ export const BarracksView: React.FC<BarracksViewProps> = ({
           troop={selectedTroopForDetail}
           profile={profile}
           onClose={() => setSelectedTroopForDetail(null)}
+          onUpdateCustomStat={onUpdateCustomStat}
+          onUpdateOwnedCount={onUpdateOwnedCount}
+          onRemoveTroop={(troopId) => {
+            if (onRemoveCustomTroop) {
+              onRemoveCustomTroop(troopId);
+            } else {
+              onToggleUnlocked(troopId);
+            }
+            setSelectedTroopForDetail(null);
+          }}
         />
       )}
     </div>

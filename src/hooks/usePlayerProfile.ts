@@ -39,8 +39,7 @@ const DEFAULT_PROFILE: PlayerProfile = {
     s1_assassin: 3,
     m3_golem: 5,
     m3_specter: 104,
-    m3_beast: 12,
-    m5_titan: 81,
+    epic_monster_hunter_v: 72,
   },
   customTroopStats: {},
   academyBonus: {

@@ -64,18 +64,26 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   const maxGuards = targetMonster.marchCapacities?.guards || (isRare ? 5250 : isCommon ? 2000 : profile.maxMarchCapacity || 3125);
   const maxMercs = targetMonster.marchCapacities?.mercenaries || (isRare ? 2520 : isCommon ? 1000 : profile.mercenaryCapacity || 1540);
 
-  // 1. Mercenários: Titãs M5
-  const titanM5 = troops.find((t) => t.id === 'm5_titan' || t.id === 'berserker');
-  const titanRecommended = Math.min(titanM5?.ownedCount || 81, maxMercs);
-  const titanDamage = Math.round(
-    (titanM5?.baseAttack || 4600) *
-      titanRecommended *
-      (1 + (dragonBonusPercent + (profile.academyBonus?.monstersAttack || 20)) / 100)
-  );
+  // 1. Mercenários Reais em Estoque (Caçador de Monstros Épico V ou similar)
+  const activeMercenary = troops.find(
+    (t) => t.category === 'mercenary' && t.isUnlocked && t.ownedCount > 0
+  ) || troops.find((t) => t.id === 'epic_monster_hunter_v');
+
+  const mercRecommended = activeMercenary
+    ? Math.min(activeMercenary.ownedCount, maxMercs)
+    : 0;
+
+  const mercDamage = activeMercenary && mercRecommended > 0
+    ? Math.round(
+        (activeMercenary.customAttack || activeMercenary.baseAttack) *
+          mercRecommended *
+          (1 + (dragonBonusPercent + (profile.academyBonus?.monstersAttack || 20)) / 100)
+      )
+    : 0;
 
   // 2. Dano necessário para abater o monstro
   const enemyHealth = targetMonster.totalHealth;
-  const remainingHealthAfterMercs = Math.max(0, enemyHealth - titanDamage);
+  const remainingHealthAfterMercs = Math.max(0, enemyHealth - mercDamage);
 
   // 3. Alocação Inteligente de Tropas baseada nas Fraquezas e Bônus do Capitão Ativo
   const weakness = targetMonster.weaknessClasses || ['ranged'];
@@ -107,7 +115,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
       allocatedGuards += g1RangedRec;
     }
 
-    // Bucha de absorção (Espadachins G1)
+    // Bucha de absorção (Lanceiros / Espadachins G1)
     g1MeleeRec = Math.min(g1Melee?.ownedCount || 1369, maxGuards - allocatedGuards);
     allocatedGuards += g1MeleeRec;
   } else if (prefersMelee) {
@@ -149,12 +157,11 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
       `🎯 Alvo: ${targetMonster.name} ${targetMonster.coordinates || ''}\n` +
       `${leaderText}\n` +
       `🐉 Dragão: ${sendDragon ? 'Sim (⚡ 50 Energia)' : 'Não'}\n\n` +
-      `🔥 MERCENÁRIOS:\n` +
-      `• Titã M5 / Berserker: ${titanRecommended} un.\n\n` +
+      (mercRecommended > 0 && activeMercenary ? `🔥 MERCENÁRIOS:\n• ${activeMercenary.name}: ${mercRecommended} un.\n\n` : '') +
       `⚔️ EXÉRCITO (${allocatedGuards.toLocaleString('pt-BR')} / ${maxGuards.toLocaleString('pt-BR')}):\n` +
       (g2RangedRec > 0 ? `• [II] Arqueiro de Linha: ${g2RangedRec.toLocaleString('pt-BR')} un. (Dano Principal)\n` : '') +
       (g1RangedRec > 0 ? `• [I] Arqueiro Recruta: ${g1RangedRec.toLocaleString('pt-BR')} un.\n` : '') +
-      (g1MeleeRec > 0 ? `• [I] Espadachim (Bucha): ${g1MeleeRec.toLocaleString('pt-BR')} un. (Absorção de Baixas)\n` : '') +
+      (g1MeleeRec > 0 ? `• [I] Lanceiro (Bucha): ${g1MeleeRec.toLocaleString('pt-BR')} un. (Absorção de Baixas)\n` : '') +
       (g2MeleeRec > 0 ? `• [II] Guerreiro Veterano: ${g2MeleeRec.toLocaleString('pt-BR')} un.\n` : '') +
       `\n✅ Resultado Previsto: 0 Baixas em Tropas Pesadas | +${projectedVP.toLocaleString('pt-BR')} VP | +${projectedXP.toLocaleString('pt-BR')} XP`;
 
@@ -171,17 +178,17 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
 
   // Troops to dispatch in clear order
   const marchSquadList = [
-    titanRecommended > 0 && {
-      id: 'm5_titan',
-      name: 'Titã de Fogo (M5)',
-      role: 'Mercenário de Choque',
+    mercRecommended > 0 && activeMercenary && {
+      id: activeMercenary.id,
+      name: activeMercenary.name,
+      role: 'Mercenário de Elite',
       roleColor: 'text-amber-400',
-      badge: 'M5 • Mercenário',
+      badge: `Tier ${activeMercenary.tier} • Mercenário`,
       badgeColor: 'bg-amber-950/80 text-amber-300 border-amber-500/40',
-      stock: titanM5?.ownedCount || 81,
-      count: titanRecommended,
-      key: 'm5',
-      image: '/assets/troops/berserker.png',
+      stock: activeMercenary.ownedCount,
+      count: mercRecommended,
+      key: 'merc',
+      image: '/assets/troops/epic_monter_hunter_V.png',
     },
     g2RangedRec > 0 && {
       id: 'g2_ranged',

@@ -1,20 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TroopUnit, PlayerProfile } from '../types';
 import { TroopAvatar } from './TroopAvatar';
-import { X, Swords, Heart, Coins, Crosshair, Sparkles, Zap, Shield, Target } from 'lucide-react';
+import { X, Swords, Heart, Coins, Crosshair, Sparkles, Trash2, Check, Edit3, Save } from 'lucide-react';
 
 interface TroopDetailModalProps {
   troop: TroopUnit | null;
   profile?: PlayerProfile;
   onClose: () => void;
+  onUpdateCustomStat?: (troopId: string, attack: number, health: number) => void;
+  onUpdateOwnedCount?: (troopId: string, count: number) => void;
+  onRemoveTroop?: (troopId: string) => void;
 }
 
 export const TroopDetailModal: React.FC<TroopDetailModalProps> = ({
   troop,
   profile,
   onClose,
+  onUpdateCustomStat,
+  onUpdateOwnedCount,
+  onRemoveTroop,
 }) => {
   if (!troop) return null;
+
+  // Local state for editing stats and count
+  const [editAttack, setEditAttack] = useState(troop.customAttack || troop.baseAttack);
+  const [editHealth, setEditHealth] = useState(troop.customHealth || troop.baseHealth);
+  const [editCount, setEditCount] = useState(troop.ownedCount);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    setEditAttack(troop.customAttack || troop.baseAttack);
+    setEditHealth(troop.customHealth || troop.baseHealth);
+    setEditCount(troop.ownedCount);
+    setSaveSuccess(false);
+  }, [troop]);
 
   // Exact account bonuses based on in-game screenshots and profile
   const getAccountBonuses = () => {
@@ -55,8 +74,30 @@ export const TroopDetailModal: React.FC<TroopDetailModalProps> = ({
   };
 
   const accountBonuses = getAccountBonuses();
-  const effectiveAttack = Math.round(troop.baseAttack * (1 + accountBonuses.strength / 100));
-  const effectiveHealth = Math.round(troop.baseHealth * (1 + accountBonuses.health / 100));
+  const effectiveAttack = Math.round(editAttack * (1 + accountBonuses.strength / 100));
+  const effectiveHealth = Math.round(editHealth * (1 + accountBonuses.health / 100));
+
+  const handleSave = () => {
+    if (onUpdateCustomStat) {
+      onUpdateCustomStat(troop.id, editAttack, editHealth);
+    }
+    if (onUpdateOwnedCount) {
+      onUpdateOwnedCount(troop.id, editCount);
+    }
+    setSaveSuccess(true);
+    setTimeout(() => {
+      setSaveSuccess(false);
+    }, 2500);
+  };
+
+  const handleRemove = () => {
+    if (window.confirm(`Tem certeza que deseja remover ${troop.name} do Quartel ativo?`)) {
+      if (onRemoveTroop) {
+        onRemoveTroop(troop.id);
+      }
+      onClose();
+    }
+  };
 
   const getCategoryLabel = (cat: string) => {
     switch (cat) {
@@ -105,6 +146,65 @@ export const TroopDetailModal: React.FC<TroopDetailModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-4 sm:p-5 space-y-4 overflow-y-auto">
+          {/* Quick Edit Section (Alterar Tropa) */}
+          <div className="bg-[#0b0f19] p-4 rounded-xl border border-amber-500/50 space-y-3 shadow-inner">
+            <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
+              <span className="text-xs font-black text-amber-300 uppercase tracking-wider flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-amber-400" />
+                Alterar Estatísticas & Quantidade
+              </span>
+              {saveSuccess && (
+                <span className="text-xs font-black text-emerald-400 flex items-center gap-1 animate-pulse">
+                  <Check className="w-3.5 h-3.5" /> Salvo!
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Owned Count */}
+              <div>
+                <label className="text-2xs font-bold text-slate-400 block mb-1">
+                  Estoque no Quartel:
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editCount}
+                  onChange={(e) => setEditCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  className="w-full bg-[#111827] border border-amber-500/50 focus:border-amber-400 text-amber-300 font-mono font-black text-sm px-3 py-1.5 rounded-xl outline-none shadow-inner"
+                />
+              </div>
+
+              {/* Base Attack */}
+              <div>
+                <label className="text-2xs font-bold text-slate-400 block mb-1">
+                  Força Base:
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={editAttack}
+                  onChange={(e) => setEditAttack(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  className="w-full bg-[#111827] border border-slate-700 focus:border-amber-400 text-rose-300 font-mono font-black text-sm px-3 py-1.5 rounded-xl outline-none shadow-inner"
+                />
+              </div>
+
+              {/* Base Health */}
+              <div>
+                <label className="text-2xs font-bold text-slate-400 block mb-1">
+                  Saúde Base:
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={editHealth}
+                  onChange={(e) => setEditHealth(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  className="w-full bg-[#111827] border border-slate-700 focus:border-amber-400 text-emerald-300 font-mono font-black text-sm px-3 py-1.5 rounded-xl outline-none shadow-inner"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Main Stats (Base & Buffed) */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-[#0b0f19] p-3.5 rounded-xl border border-slate-700/80 flex items-center gap-3">
@@ -114,7 +214,7 @@ export const TroopDetailModal: React.FC<TroopDetailModalProps> = ({
               <div>
                 <span className="text-2xs font-bold text-slate-400 block">Força Base / Com Bônus</span>
                 <div className="flex items-baseline gap-1.5 mt-0.5">
-                  <span className="text-base font-black text-white font-mono">{troop.baseAttack.toLocaleString('pt-BR')}</span>
+                  <span className="text-base font-black text-white font-mono">{editAttack.toLocaleString('pt-BR')}</span>
                   <span className="text-xs text-emerald-400 font-bold font-mono">({effectiveAttack.toLocaleString('pt-BR')})</span>
                 </div>
               </div>
@@ -127,7 +227,7 @@ export const TroopDetailModal: React.FC<TroopDetailModalProps> = ({
               <div>
                 <span className="text-2xs font-bold text-slate-400 block">Saúde Base / Com Bônus</span>
                 <div className="flex items-baseline gap-1.5 mt-0.5">
-                  <span className="text-base font-black text-white font-mono">{troop.baseHealth.toLocaleString('pt-BR')}</span>
+                  <span className="text-base font-black text-white font-mono">{editHealth.toLocaleString('pt-BR')}</span>
                   <span className="text-xs text-emerald-400 font-bold font-mono">({effectiveHealth.toLocaleString('pt-BR')})</span>
                 </div>
               </div>
@@ -165,7 +265,7 @@ export const TroopDetailModal: React.FC<TroopDetailModalProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Estoque no Quartel:</span>
-                <strong className="text-emerald-400 font-mono font-black">{troop.ownedCount.toLocaleString('pt-BR')}</strong>
+                <strong className="text-emerald-400 font-mono font-black">{editCount.toLocaleString('pt-BR')}</strong>
               </div>
             </div>
           </div>
@@ -291,14 +391,34 @@ export const TroopDetailModal: React.FC<TroopDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="bg-[#0b0f19] p-3.5 border-t border-slate-700/80 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-6 py-2 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-black rounded-xl text-xs shadow-lg transition-all"
-          >
-            Fechar
-          </button>
+        {/* Footer with Actions */}
+        <div className="bg-[#0b0f19] p-4 border-t border-slate-700/80 flex flex-wrap items-center justify-between gap-3">
+          {onRemoveTroop && (
+            <button
+              onClick={handleRemove}
+              className="px-4 py-2 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 hover:text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow"
+            >
+              <Trash2 className="w-4 h-4 text-rose-400" />
+              <span>Remover Tropa</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-2.5 ml-auto">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 hover:text-white font-bold rounded-xl text-xs transition-all"
+            >
+              Fechar
+            </button>
+
+            <button
+              onClick={handleSave}
+              className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-amber-600 hover:from-emerald-500 hover:to-amber-500 text-white font-black rounded-xl text-xs shadow-lg flex items-center gap-1.5 transition-all"
+            >
+              <Save className="w-4 h-4" />
+              <span>Salvar Alterações</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
