@@ -250,6 +250,19 @@ export function usePlayerProfile() {
     });
   };
 
+  const selectActiveCaptain = (captainId: string) => {
+    setProfile((prev) => {
+      const current = prev.selectedCaptainIds || [];
+      const without = current.filter((id) => id !== captainId);
+      const newSelected = [captainId, ...without].slice(0, 3);
+      return {
+        ...prev,
+        selectedCaptainId: captainId,
+        selectedCaptainIds: newSelected,
+      };
+    });
+  };
+
   const resetToDefaults = () => {
     setProfile(DEFAULT_PROFILE);
     localStorage.removeItem(STORAGE_KEY);
@@ -262,6 +275,7 @@ export function usePlayerProfile() {
     updateProfile,
     updateCaptainLevel,
     toggleSelectCaptain,
+    selectActiveCaptain,
     toggleTroopUnlocked,
     updateTroopOwnedCount,
     updateTroopCustomStat,

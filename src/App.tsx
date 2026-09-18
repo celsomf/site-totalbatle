@@ -22,6 +22,7 @@ export function App() {
     updateProfile,
     updateCaptainLevel,
     toggleSelectCaptain,
+    selectActiveCaptain,
     toggleTroopUnlocked,
     updateTroopOwnedCount,
     updateTroopCustomStat,
@@ -167,9 +168,9 @@ export function App() {
                     profile={profile}
                     troops={hydratedTroops}
                     captains={DEFAULT_CAPTAINS}
-                    selectedCaptainId={profile.selectedCaptainId}
+                    selectedCaptainId={profile.selectedCaptainId || profile.selectedCaptainIds?.[0] || 'farhad'}
                     onSelectCaptain={(id) => {
-                      toggleSelectCaptain(id);
+                      selectActiveCaptain(id);
                     }}
                     targetMonster={selectedMonster}
                   />
