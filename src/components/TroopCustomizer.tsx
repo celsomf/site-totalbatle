@@ -28,7 +28,6 @@ export const TroopCustomizer: React.FC<TroopCustomizerProps> = ({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedTroopForDetail, setSelectedTroopForDetail] = useState<TroopUnit | null>(null);
 
-  // Show only unlocked troops in the player's active Quartel
   const activeTroops = troops.filter((t) => t.isUnlocked);
   const filteredTroops = selectedCategory === 'all'
     ? activeTroops
@@ -52,19 +51,19 @@ export const TroopCustomizer: React.FC<TroopCustomizerProps> = ({
   };
 
   return (
-    <div className="bg-[#241912] border-2 border-[#5a3e22] rounded-xl p-3 sm:p-4 shadow-2xl space-y-3.5 font-serif">
+    <div className="bg-[#1c120a] border-2 border-[#5a3e22] rounded-xl p-4 sm:p-5 shadow-2xl space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#5a3e22] pb-3">
+      <div className="flex items-center justify-between border-b border-[#5a3e22] pb-3.5">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-lg bg-[#3d2917] border border-[#caa568]">
-            <Shield className="w-5 h-5 text-[#fef08a]" />
+          <div className="p-2 rounded-lg bg-[#3d2917] border border-[#caa568] shadow">
+            <Shield className="w-5 h-5 text-yellow-300" />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-black text-[#fef08a] font-fantasy tracking-wide">
+            <h2 className="text-base sm:text-lg font-black text-yellow-300 tracking-wide">
               Quartel & Tropas em Estoque
             </h2>
-            <p className="text-xs text-[#caa568]/80">
-              Ativas nesta aba: <strong className="text-[#fef08a]">{totalOwnedInView.toLocaleString('pt-BR')} tropas</strong> ({filteredTroops.length} tipos)
+            <p className="text-xs font-bold text-amber-200/90">
+              Ativas nesta aba: <strong className="text-yellow-300 font-black">{totalOwnedInView.toLocaleString('pt-BR')} tropas</strong> ({filteredTroops.length} tipos)
             </p>
           </div>
         </div>
@@ -73,38 +72,38 @@ export const TroopCustomizer: React.FC<TroopCustomizerProps> = ({
           {onAddTroop && (
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="tb-btn-gold text-[11px] px-2.5 sm:px-3 py-1.5 rounded-md flex items-center gap-1.5 shadow font-bold"
+              className="tb-btn-gold text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 shadow font-black"
             >
-              <Plus className="w-3.5 h-3.5" /> Adicionar Soldado
+              <Plus className="w-4 h-4" /> Adicionar Soldado
             </button>
           )}
 
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-xs font-bold text-[#caa568] hover:text-[#fef08a] transition-colors flex items-center gap-1"
+            className="text-xs font-bold text-amber-200 hover:text-white transition-colors flex items-center gap-1 p-1"
           >
-            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
-      {/* Quartel Tabs (Styled like in-game Quartel menu) */}
-      <div className="grid grid-cols-4 gap-1 p-1 rounded-lg bg-[#140c07] border border-[#5a3e22]">
+      {/* Quartel Tabs */}
+      <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-xl bg-[#120a06] border-2 border-[#5a3e22]">
         {[
-          { id: 'guardsman', label: 'Guardas' },
-          { id: 'specialist', label: 'Especialistas' },
-          { id: 'monster', label: 'Monstros' },
-          { id: 'mercenary', label: 'Mercenários' },
+          { id: 'guardsman', label: '🛡️ Guardas' },
+          { id: 'specialist', label: '⚔️ Especialistas' },
+          { id: 'monster', label: '🦁 Monstros' },
+          { id: 'mercenary', label: '🦅 Mercenários' },
         ].map((tab) => {
           const isActive = selectedCategory === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setSelectedCategory(tab.id as any)}
-              className={`py-2 text-[11px] font-bold rounded-md transition-all ${
+              className={`py-2 text-xs font-black rounded-lg transition-all ${
                 isActive
-                  ? 'bg-gradient-to-r from-[#991b1b] to-[#7f1d1d] text-[#fef08a] border border-[#f59e0b] shadow-md'
-                  : 'text-[#caa568]/70 hover:text-[#fef08a] hover:bg-[#20140d]'
+                  ? 'bg-gradient-to-r from-red-800 to-amber-800 text-yellow-200 border border-yellow-400 shadow-md'
+                  : 'text-amber-200/80 hover:text-white hover:bg-[#20140d]'
               }`}
             >
               {tab.label}
@@ -113,18 +112,18 @@ export const TroopCustomizer: React.FC<TroopCustomizerProps> = ({
         })}
       </div>
 
-      {/* Troop List Cards in clean 1-column layout */}
+      {/* Troop List Cards */}
       {isExpanded && (
-        <div className="space-y-2.5 max-h-[540px] overflow-y-auto pr-1">
+        <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
           {filteredTroops.length === 0 ? (
-            <div className="bg-[#140c07] p-6 rounded-xl border border-dashed border-[#5a3e22] text-center space-y-3">
-              <p className="text-xs text-[#caa568]">
+            <div className="bg-[#120a06] p-6 rounded-xl border-2 border-dashed border-[#5a3e22] text-center space-y-3">
+              <p className="text-xs sm:text-sm font-bold text-amber-200">
                 Nenhuma tropa desta categoria está no seu Quartel no momento.
               </p>
               {onAddTroop && (
                 <button
                   onClick={() => setIsAddModalOpen(true)}
-                  className="tb-btn-gold text-xs px-4 py-2 rounded-lg inline-flex items-center gap-1.5 font-bold shadow"
+                  className="tb-btn-gold text-xs px-4 py-2.5 rounded-lg inline-flex items-center gap-2 font-black shadow-lg"
                 >
                   <Plus className="w-4 h-4" /> Adicionar do Catálogo Oficial
                 </button>
@@ -138,90 +137,106 @@ export const TroopCustomizer: React.FC<TroopCustomizerProps> = ({
                 <div
                   key={troop.id}
                   onClick={() => setSelectedTroopForDetail(troop)}
-                  className={`p-3 rounded-xl border-2 transition-all cursor-pointer relative group hover:border-[#caa568] ${
+                  className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer relative group hover:border-yellow-400 ${
                     troop.ownedCount > 0
                       ? 'bg-[#1a110b] border-[#5a3e22] shadow-md'
-                      : 'bg-[#120a06]/80 border-[#3d2917] opacity-75 hover:opacity-100'
+                      : 'bg-[#120a06]/80 border-[#3d2917] opacity-80 hover:opacity-100'
                   }`}
                 >
                   {/* Top Row: Avatar + Name + Buttons */}
-                  <div className="flex items-start justify-between gap-2.5">
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="flex-shrink-0">
-                        <TroopAvatar id={troop.avatarIcon || troop.id} tier={troop.tier} size="sm" />
+                        <TroopAvatar id={troop.avatarIcon || troop.id} tier={troop.tier} size="md" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-xs sm:text-sm font-black text-[#fef08a] truncate font-serif leading-tight">
+                        <h3 className="text-sm sm:text-base font-black text-yellow-200 truncate leading-tight group-hover:text-yellow-300">
                           {troop.name}
                         </h3>
                         {/* Stats Badges */}
-                        <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px]">
-                          <span className="px-1.5 py-0.5 bg-[#2a1a0f] border border-[#5a3e22] rounded text-[#caa568] font-bold">
+                        <div className="flex flex-wrap items-center gap-2 mt-1 text-xs">
+                          <span className="px-2 py-0.5 bg-[#2a1a0f] border border-[#5a3e22] rounded text-amber-300 font-bold">
                             Tier {troop.tier}
                           </span>
-                          <span className="text-amber-300 font-bold flex items-center gap-0.5">
-                            <Swords className="w-3 h-3 text-amber-400" /> {troop.baseAttack.toLocaleString()}
+                          <span className="text-amber-200/90 font-bold">
+                            ⚔️ {troop.customAttack || troop.baseAttack} Atk
                           </span>
-                          <span className="text-red-300 font-bold flex items-center gap-0.5">
-                            <Heart className="w-3 h-3 text-red-400" /> {troop.baseHealth.toLocaleString()}
+                          <span className="text-red-300 font-bold">
+                            ❤️ {troop.customHealth || troop.baseHealth} HP
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedTroopForDetail(troop);
                         }}
-                        className="text-[#caa568] hover:text-[#fef08a] p-1.5 rounded-lg bg-[#24170e] border border-[#5a3e22] hover:bg-[#382315] transition-colors"
-                        title="Ver ficha técnica detalhada e bônus"
+                        className="p-1.5 rounded-lg bg-[#2a1a0f] hover:bg-[#3d2917] text-amber-300 border border-[#5a3e22] transition-colors"
+                        title="Ver detalhes da tropa"
                       >
-                        <Info className="w-3.5 h-3.5" />
+                        <Info className="w-4 h-4" />
                       </button>
 
                       <button
                         onClick={(e) => handleRemoveTroop(troop, e)}
-                        title={isCustom ? 'Excluir tropa personalizada' : 'Remover tropa do Quartel'}
-                        className="text-red-400 hover:text-white p-1.5 rounded-lg bg-[#290e0e]/80 border border-red-900/60 hover:bg-red-900 transition-colors"
+                        className="p-1.5 rounded-lg bg-[#2a1010] hover:bg-red-900 text-red-300 border border-red-800 transition-colors"
+                        title={isCustom ? 'Excluir esta tropa' : 'Remover do quartel ativo'}
                       >
-                        {isCustom ? <Trash2 className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
 
-                  {/* Bottom Row: Stock Controller */}
+                  {/* Quantity Control Row */}
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className="mt-2.5 bg-[#100a06] p-2 rounded-lg border border-[#5a3e22] flex items-center justify-between gap-2"
+                    className="mt-3 pt-2.5 border-t border-[#3d2917] flex items-center justify-between gap-3"
                   >
-                    <span className="text-[11px] text-[#caa568] font-bold flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-amber-400" /> Estoque no Quartel:
+                    <span className="text-xs font-bold text-slate-300">
+                      Tropas Prontas:
                     </span>
-                    
+
                     <div className="flex items-center gap-1.5">
                       <button
                         onClick={(e) => handleAdjustCount(troop.id, troop.ownedCount, -100, e)}
-                        title="Subtrair 100"
-                        className="w-6 h-6 rounded bg-[#24170e] hover:bg-[#3d2917] border border-[#5a3e22] text-[#caa568] hover:text-[#fef08a] text-xs font-bold flex items-center justify-center transition-colors"
+                        className="px-2 py-1 bg-[#241912] hover:bg-[#382316] text-amber-300 rounded border border-[#5a3e22] text-xs font-black transition-colors"
+                        title="-100"
                       >
-                        -
+                        -100
                       </button>
+                      <button
+                        onClick={(e) => handleAdjustCount(troop.id, troop.ownedCount, -10, e)}
+                        className="p-1 bg-[#241912] hover:bg-[#382316] text-amber-300 rounded border border-[#5a3e22] text-xs font-bold transition-colors"
+                        title="-10"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+
                       <input
                         type="number"
                         min="0"
                         value={troop.ownedCount}
-                        onChange={(e) => onUpdateOwnedCount(troop.id, Math.max(0, Number(e.target.value)))}
-                        className="w-24 bg-[#1a110b] border border-[#5a3e22] rounded px-2 py-0.5 text-xs text-[#fef08a] font-bold text-right focus:outline-none focus:border-[#caa568]"
+                        onChange={(e) => onUpdateOwnedCount(troop.id, Math.max(0, parseInt(e.target.value) || 0))}
+                        className="w-24 px-2 py-1 bg-[#080402] border-2 border-[#caa568] rounded-lg text-yellow-300 font-black text-center text-sm focus:outline-none focus:border-yellow-400 shadow-inner"
                       />
+
+                      <button
+                        onClick={(e) => handleAdjustCount(troop.id, troop.ownedCount, 10, e)}
+                        className="p-1 bg-[#241912] hover:bg-[#382316] text-amber-300 rounded border border-[#5a3e22] text-xs font-bold transition-colors"
+                        title="+10"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={(e) => handleAdjustCount(troop.id, troop.ownedCount, 100, e)}
-                        title="Adicionar 100"
-                        className="w-6 h-6 rounded bg-[#24170e] hover:bg-[#3d2917] border border-[#5a3e22] text-[#caa568] hover:text-[#fef08a] text-xs font-bold flex items-center justify-center transition-colors"
+                        className="px-2 py-1 bg-[#241912] hover:bg-[#382316] text-amber-300 rounded border border-[#5a3e22] text-xs font-black transition-colors"
+                        title="+100"
                       >
-                        +
+                        +100
                       </button>
                     </div>
                   </div>
@@ -232,7 +247,17 @@ export const TroopCustomizer: React.FC<TroopCustomizerProps> = ({
         </div>
       )}
 
-      {/* Troop Detail Modal */}
+      {/* Add Troop Modal */}
+      {isAddModalOpen && onAddTroop && (
+        <AddTroopModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onAddTroop={onAddTroop}
+          currentTroops={troops}
+        />
+      )}
+
+      {/* Detail Modal */}
       {selectedTroopForDetail && (
         <TroopDetailModal
           troop={selectedTroopForDetail}
@@ -240,20 +265,6 @@ export const TroopCustomizer: React.FC<TroopCustomizerProps> = ({
           onClose={() => setSelectedTroopForDetail(null)}
         />
       )}
-
-      {/* Add Troop Modal */}
-      {onAddTroop && (
-        <AddTroopModal
-          isOpen={isAddModalOpen}
-          initialCategory={selectedCategory === 'all' ? 'guardsman' : selectedCategory}
-          currentTroops={troops}
-          onClose={() => setIsAddModalOpen(false)}
-          onAddTroop={(newTroop) => {
-            onAddTroop(newTroop);
-          }}
-        />
-      )}
     </div>
   );
 };
-

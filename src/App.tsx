@@ -57,59 +57,59 @@ export function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
         
         {/* Navigation Tabs Styled like In-Game Ribbons */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#1d130c] p-2 rounded-xl border-2 border-[#5a3e22] shadow-2xl">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#1c120a] p-2.5 rounded-xl border-2 border-[#5a3e22] shadow-2xl">
           <div className="flex flex-wrap w-full sm:w-auto gap-2">
             <button
               onClick={() => setActiveTab('march_book')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold font-serif transition-all ${
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-black transition-all ${
                 activeTab === 'march_book'
-                  ? 'bg-gradient-to-r from-[#b91c1c] via-[#991b1b] to-[#7f1d1d] text-[#fef08a] border-2 border-[#f59e0b] shadow-lg shadow-red-950/60'
-                  : 'text-[#caa568]/80 hover:text-[#fef08a] hover:bg-[#2a1a10] border border-[#5a3e22]/60'
+                  ? 'bg-gradient-to-r from-red-800 via-red-700 to-amber-800 text-yellow-200 border-2 border-yellow-400 shadow-lg shadow-red-950/80 ring-1 ring-yellow-400/80'
+                  : 'text-amber-200/90 hover:text-white hover:bg-[#2a1a10] border border-[#5a3e22]'
               }`}
             >
-              <BookOpen className="w-4 h-4 text-[#fef08a]" />
+              <BookOpen className="w-4 h-4 text-yellow-300" />
               <span>Livro de Marcha (Oficial)</span>
             </button>
 
             <button
               onClick={() => setActiveTab('monsters')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold font-serif transition-all ${
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-black transition-all ${
                 activeTab === 'monsters'
-                  ? 'bg-gradient-to-r from-[#b91c1c] via-[#991b1b] to-[#7f1d1d] text-[#fef08a] border-2 border-[#f59e0b] shadow-lg shadow-red-950/60'
-                  : 'text-[#caa568]/80 hover:text-[#fef08a] hover:bg-[#2a1a10] border border-[#5a3e22]/60'
+                  ? 'bg-gradient-to-r from-red-800 via-red-700 to-amber-800 text-yellow-200 border-2 border-yellow-400 shadow-lg shadow-red-950/80 ring-1 ring-yellow-400/80'
+                  : 'text-amber-200/90 hover:text-white hover:bg-[#2a1a10] border border-[#5a3e22]'
               }`}
             >
-              <Swords className="w-4 h-4 text-[#fef08a]" />
+              <Swords className="w-4 h-4 text-yellow-300" />
               <span>Calculadora de Combate</span>
             </button>
 
             <button
               onClick={() => setActiveTab('crypts')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold font-serif transition-all ${
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-black transition-all ${
                 activeTab === 'crypts'
-                  ? 'bg-gradient-to-r from-[#b91c1c] via-[#991b1b] to-[#7f1d1d] text-[#fef08a] border-2 border-[#f59e0b] shadow-lg shadow-red-950/60'
-                  : 'text-[#caa568]/80 hover:text-[#fef08a] hover:bg-[#2a1a10] border border-[#5a3e22]/60'
+                  ? 'bg-gradient-to-r from-red-800 via-red-700 to-amber-800 text-yellow-200 border-2 border-yellow-400 shadow-lg shadow-red-950/80 ring-1 ring-yellow-400/80'
+                  : 'text-amber-200/90 hover:text-white hover:bg-[#2a1a10] border border-[#5a3e22]'
               }`}
             >
-              <Compass className="w-4 h-4 text-[#fef08a]" />
+              <Compass className="w-4 h-4 text-yellow-300" />
               <span>Explorador de Criptas</span>
             </button>
 
             <button
               onClick={() => setActiveTab('encyclopedia')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold font-serif transition-all ${
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-black transition-all ${
                 activeTab === 'encyclopedia'
-                  ? 'bg-gradient-to-r from-[#b91c1c] via-[#991b1b] to-[#7f1d1d] text-[#fef08a] border-2 border-[#f59e0b] shadow-lg shadow-red-950/60'
-                  : 'text-[#caa568]/80 hover:text-[#fef08a] hover:bg-[#2a1a10] border border-[#5a3e22]/60'
+                  ? 'bg-gradient-to-r from-red-800 via-red-700 to-amber-800 text-yellow-200 border-2 border-yellow-400 shadow-lg shadow-red-950/80 ring-1 ring-yellow-400/80'
+                  : 'text-amber-200/90 hover:text-white hover:bg-[#2a1a10] border border-[#5a3e22]'
               }`}
             >
-              <Library className="w-4 h-4 text-[#fef08a]" />
+              <Library className="w-4 h-4 text-yellow-300" />
               <span>Enciclopédia & Otimizador</span>
             </button>
           </div>
 
-          <div className="text-xs text-[#caa568] flex items-center gap-1.5 px-3 py-1 bg-[#100a06] rounded-lg border border-[#5a3e22] font-serif hidden md:flex">
-            <Sparkles className="w-3.5 h-3.5 text-[#fef08a]" />
+          <div className="text-xs text-amber-200 font-extrabold flex items-center gap-1.5 px-3 py-1.5 bg-[#120a06] rounded-lg border border-[#5a3e22] hidden md:flex shadow-inner">
+            <Sparkles className="w-4 h-4 text-yellow-400" />
             <span>Exército de Araning Carregado</span>
           </div>
         </div>

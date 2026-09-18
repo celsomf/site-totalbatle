@@ -46,39 +46,39 @@ export const CaptainSelector: React.FC<CaptainSelectorProps> = ({
   const heroImage = heroId === 'julia' ? '/assets/troops/julia.png' : '/assets/troops/garvel.png';
 
   return (
-    <div className="bg-[#241912] border-2 border-[#5a3e22] rounded-xl p-4 sm:p-5 shadow-2xl space-y-4">
+    <div className="bg-[#1c120a] border-2 border-[#5a3e22] rounded-xl p-4 sm:p-5 shadow-2xl space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#5a3e22] pb-3">
+      <div className="flex items-center justify-between border-b border-[#5a3e22] pb-3.5">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-lg bg-[#3d2917] border border-[#caa568]">
-            <Crown className="w-5 h-5 text-[#fef08a]" />
+          <div className="p-2 rounded-lg bg-[#3d2917] border border-[#caa568] shadow">
+            <Crown className="w-5 h-5 text-yellow-300" />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-black text-[#fef08a] font-fantasy tracking-wide">
+            <h2 className="text-base sm:text-lg font-black text-yellow-300 tracking-wide">
               Liderança da Marcha (1 Herói + 3 Capitães)
             </h2>
-            <p className="text-xs text-[#caa568]/80 font-serif">
+            <p className="text-xs font-bold text-amber-200/90">
               Selecione até 3 capitães para somar bônus de ataque e liderança
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs px-3 py-1 rounded font-bold font-serif bg-[#180f0a] text-[#fef08a] border border-[#caa568] shadow-inner">
+          <span className="text-xs px-3 py-1.5 rounded-lg font-black bg-[#120a06] text-yellow-300 border border-[#caa568] shadow-inner">
             {selectedCaptainIds.length}/3 Capitães
           </span>
           <button
             onClick={() => setIsRosterOpen((prev) => !prev)}
-            className="p-1.5 rounded-lg bg-[#3d2917] hover:bg-[#4d3420] border border-[#caa568] text-[#fef08a] transition-colors flex items-center gap-1 text-xs font-serif"
+            className="p-1.5 rounded-lg bg-[#3d2917] hover:bg-[#4d3420] border border-[#caa568] text-yellow-300 transition-colors flex items-center gap-1.5 text-xs font-bold"
             title={isRosterOpen ? 'Ocultar catálogo de capitães' : 'Expandir catálogo de capitães'}
           >
             {isRosterOpen ? (
               <>
-                <ChevronUp className="w-4 h-4 text-[#fef08a]" />
+                <ChevronUp className="w-4 h-4 text-yellow-300" />
                 <span className="hidden sm:inline">Recolher</span>
               </>
             ) : (
               <>
-                <ChevronDown className="w-4 h-4 text-[#fef08a]" />
+                <ChevronDown className="w-4 h-4 text-yellow-300" />
                 <span className="hidden sm:inline">Expandir</span>
               </>
             )}
@@ -86,19 +86,19 @@ export const CaptainSelector: React.FC<CaptainSelectorProps> = ({
         </div>
       </div>
 
-      {/* 1 Hero + 3 Captains Active Slots (Exact Total Battle Layout) */}
-      <div className="grid grid-cols-4 gap-2 font-serif">
+      {/* 1 Hero + 3 Captain Slots */}
+      <div className="grid grid-cols-4 gap-2.5">
         {/* Slot 0: Herói */}
         <div
           onClick={onToggleHero}
-          className={`p-2 rounded-lg border-2 text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+          className={`p-2.5 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
             includeHero
-              ? 'bg-gradient-to-b from-[#4a1818] to-[#290a0a] border-[#eab308] shadow-lg ring-2 ring-[#eab308]/60'
-              : 'bg-[#180f0a] border-[#5a3e22] opacity-60 hover:opacity-100'
+              ? 'bg-gradient-to-b from-[#4a1818] to-[#290a0a] border-yellow-400 shadow-lg ring-2 ring-yellow-400/70'
+              : 'bg-[#120a06] border-[#5a3e22] opacity-60 hover:opacity-100'
           }`}
         >
           <div className="relative">
-            <div className="w-11 h-11 rounded-lg border border-[#caa568] bg-[#3a2214] flex items-center justify-center overflow-hidden">
+            <div className="w-12 h-12 rounded-lg border-2 border-[#caa568] bg-[#3a2214] flex items-center justify-center overflow-hidden shadow">
               <img
                 src={heroImage}
                 alt={heroId === 'julia' ? 'Herói Julia' : 'Herói Garvel'}
@@ -106,15 +106,15 @@ export const CaptainSelector: React.FC<CaptainSelectorProps> = ({
               />
             </div>
             {includeHero && (
-              <span className="absolute -top-1 -right-1 bg-emerald-700 text-white rounded-full p-0.5 border border-emerald-300">
-                <Check className="w-2.5 h-2.5" />
+              <span className="absolute -top-1 -right-1 bg-emerald-600 text-white rounded-full p-0.5 border border-emerald-300 shadow">
+                <Check className="w-3 h-3" />
               </span>
             )}
           </div>
-          <span className="font-bold text-[11px] text-[#fef08a] block truncate w-full">
+          <span className="font-extrabold text-xs text-yellow-200 block truncate w-full">
             {heroName || 'Araning'} ({heroId === 'julia' ? 'Julia' : 'Garvel'})
           </span>
-          <span className="text-[10px] text-[#caa568]">Nv {heroLevel}</span>
+          <span className="text-xs font-bold text-amber-300">Nv {heroLevel}</span>
         </div>
 
         {/* 3 Captain Slots */}
@@ -128,13 +128,13 @@ export const CaptainSelector: React.FC<CaptainSelectorProps> = ({
             return (
               <div
                 key={`empty-slot-${slotIndex}`}
-                className="p-2 rounded-lg border-2 border-dashed border-[#5a3e22] bg-[#140e0a]/60 text-center flex flex-col items-center justify-center gap-1 text-[#caa568]/50"
+                className="p-2.5 rounded-xl border-2 border-dashed border-[#5a3e22] bg-[#120a06]/60 text-center flex flex-col items-center justify-center gap-1 text-slate-400"
               >
-                <div className="w-11 h-11 rounded-lg border border-[#5a3e22]/50 flex items-center justify-center">
-                  <UserCheck className="w-5 h-5 text-[#caa568]/40" />
+                <div className="w-12 h-12 rounded-lg border border-[#5a3e22] flex items-center justify-center">
+                  <UserCheck className="w-6 h-6 text-slate-500" />
                 </div>
-                <span className="text-[10px] font-bold">Slot {slotIndex + 1}</span>
-                <span className="text-[9px]">Vazio</span>
+                <span className="text-xs font-bold text-slate-400">Slot {slotIndex + 1}</span>
+                <span className="text-xs font-medium text-slate-500">Vazio</span>
               </div>
             );
           }
@@ -145,29 +145,29 @@ export const CaptainSelector: React.FC<CaptainSelectorProps> = ({
               onClick={() => {
                 setActiveEditingId(cap.id);
               }}
-              className={`p-2 rounded-lg border-2 text-center transition-all cursor-pointer flex flex-col items-center gap-1 relative ${
+              className={`p-2.5 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 relative ${
                 isEditing
-                  ? 'bg-gradient-to-b from-[#4a3018] to-[#29170a] border-[#caa568] shadow-lg ring-2 ring-[#fef08a]/80'
-                  : 'bg-[#180f0a] border-[#5a3e22] hover:border-[#caa568]'
+                  ? 'bg-gradient-to-b from-[#4a3018] to-[#29170a] border-yellow-400 shadow-lg ring-2 ring-yellow-400/80'
+                  : 'bg-[#120a06] border-[#5a3e22] hover:border-[#caa568]'
               }`}
             >
               <div className="relative">
-                <TroopAvatar id={cap.id} tier={lvl || cap.level} size="sm" />
+                <TroopAvatar id={cap.id} tier={lvl || cap.level} size="md" />
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onToggleSelectCaptain(cap.id);
                   }}
-                  className="absolute -top-1 -right-1 bg-emerald-700 hover:bg-red-700 text-white rounded-full p-0.5 border border-emerald-300 transition-colors"
+                  className="absolute -top-1 -right-1 bg-emerald-600 hover:bg-red-700 text-white rounded-full p-0.5 border border-emerald-300 transition-colors shadow"
                   title="Clique para remover"
                 >
-                  <Check className="w-2.5 h-2.5" />
+                  <Check className="w-3 h-3" />
                 </button>
               </div>
-              <span className="font-bold text-[11px] text-[#fef08a] block truncate w-full">
+              <span className="font-extrabold text-xs text-yellow-200 block truncate w-full">
                 {cap.name}
               </span>
-              <span className="text-[10px] text-[#caa568]">Nv {lvl}</span>
+              <span className="text-xs font-bold text-amber-300">Nv {lvl}</span>
             </div>
           );
         })}
@@ -175,10 +175,10 @@ export const CaptainSelector: React.FC<CaptainSelectorProps> = ({
 
       {/* Level Slider & Description for Current Selected Captain */}
       {currentEditingCaptain && (
-        <div className="bg-[#180f0a] p-3.5 rounded-lg border border-[#5a3e22] space-y-2 font-serif">
-          <div className="flex justify-between text-xs font-semibold">
-            <span className="text-[#caa568]">Ajustar Nível de {currentEditingCaptain.name}:</span>
-            <span className="text-[#fef08a] font-black">
+        <div className="bg-[#120a06] p-4 rounded-xl border-2 border-[#5a3e22] space-y-2.5 shadow">
+          <div className="flex justify-between text-xs sm:text-sm font-bold">
+            <span className="text-amber-200">Ajustar Nível de {currentEditingCaptain.name}:</span>
+            <span className="text-yellow-300 font-black">
               Nível {currentLevel} (+{Math.round(currentLevel * 1.2)}% Bônus)
             </span>
           </div>
@@ -188,30 +188,30 @@ export const CaptainSelector: React.FC<CaptainSelectorProps> = ({
             max="100"
             value={currentLevel}
             onChange={(e) => onUpdateCaptainLevel(currentEditingCaptain.id, Number(e.target.value))}
-            className="w-full h-2 bg-[#100a06] rounded-lg appearance-none cursor-pointer accent-[#caa568]"
+            className="w-full h-2.5 bg-[#080402] rounded-lg appearance-none cursor-pointer accent-amber-400"
           />
-          <div className="flex items-center gap-1.5 text-[11px] text-[#caa568]/90">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+          <div className="flex items-center gap-2 text-xs font-medium text-amber-100">
+            <Sparkles className="w-4 h-4 text-yellow-400 flex-shrink-0" />
             <span>{currentEditingCaptain.description}</span>
           </div>
         </div>
       )}
 
       {/* Collapsible Full Roster of 29 Official Captains (Acordeom) */}
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         <button
           onClick={() => setIsRosterOpen((prev) => !prev)}
-          className="w-full flex items-center justify-between text-xs text-[#caa568] font-serif border-b border-[#5a3e22]/60 pb-1 hover:text-[#fef08a] transition-colors"
+          className="w-full flex items-center justify-between text-xs sm:text-sm text-amber-200 border-b border-[#5a3e22] pb-1.5 hover:text-yellow-300 transition-colors font-bold"
         >
-          <span className="flex items-center gap-1.5 font-bold">
-            {isRosterOpen ? <ChevronUp className="w-3.5 h-3.5 text-[#fef08a]" /> : <ChevronDown className="w-3.5 h-3.5 text-[#caa568]" />}
+          <span className="flex items-center gap-2 font-black">
+            {isRosterOpen ? <ChevronUp className="w-4 h-4 text-yellow-300" /> : <ChevronDown className="w-4 h-4 text-amber-300" />}
             {isRosterOpen ? 'Ocultar Elenco de Capitães' : 'Ver Todos os Capitães para Selecionar'}
           </span>
-          <span className="text-[10px] text-[#caa568]/70">Total: {DEFAULT_CAPTAINS.length} capitães</span>
+          <span className="text-xs font-bold text-slate-400">Total: {DEFAULT_CAPTAINS.length} capitães</span>
         </button>
 
         {isRosterOpen && (
-          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 font-serif max-h-56 overflow-y-auto pr-1 animate-fadeIn">
+          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2.5 max-h-60 overflow-y-auto pr-1 animate-fadeIn">
             {DEFAULT_CAPTAINS.map((c) => {
               const isSelected = selectedCaptainIds.includes(c.id);
               const lvl = captainLevels[c.id] || c.level;
@@ -222,24 +222,24 @@ export const CaptainSelector: React.FC<CaptainSelectorProps> = ({
                     onToggleSelectCaptain(c.id);
                     setActiveEditingId(c.id);
                   }}
-                  className={`p-1.5 rounded-lg border text-center transition-all flex flex-col items-center gap-1 ${
+                  className={`p-2 rounded-xl border text-center transition-all flex flex-col items-center gap-1 shadow ${
                     isSelected
-                      ? 'bg-gradient-to-b from-[#4a3018] to-[#29170a] border-[#caa568] ring-1 ring-[#fef08a]'
-                      : 'bg-[#180f0a] border-[#5a3e22] hover:border-[#caa568]/60 opacity-75 hover:opacity-100'
+                      ? 'bg-gradient-to-b from-[#4a3018] to-[#29170a] border-yellow-400 ring-2 ring-yellow-400'
+                      : 'bg-[#120a06] border-[#5a3e22] hover:border-[#caa568] opacity-85 hover:opacity-100'
                   }`}
                 >
                   <div className="relative">
                     <TroopAvatar id={c.id} tier={lvl} size="sm" />
                     {isSelected && (
-                      <span className="absolute -top-1 -right-1 bg-emerald-600 text-white rounded-full p-0.5 text-[8px]">
+                      <span className="absolute -top-1 -right-1 bg-emerald-600 text-white rounded-full p-0.5 text-[10px] font-black">
                         ✓
                       </span>
                     )}
                   </div>
-                  <span className="font-bold text-[10px] text-[#fef08a] block truncate w-full">
+                  <span className="font-extrabold text-xs text-yellow-200 block truncate w-full">
                     {c.name}
                   </span>
-                  <span className="text-[9px] text-[#caa568] font-sans">Nv {lvl}</span>
+                  <span className="text-xs font-bold text-amber-300">Nv {lvl}</span>
                 </button>
               );
             })}
@@ -249,4 +249,3 @@ export const CaptainSelector: React.FC<CaptainSelectorProps> = ({
     </div>
   );
 };
-
