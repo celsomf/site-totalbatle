@@ -4,6 +4,7 @@ import { EditSquadsModal } from './EditSquadsModal';
 import { updateMonsterSquads } from '../data/monsters';
 import { simulateCombat, DispatchedTroop } from '../utils/combatSimulator';
 import { TroopAvatar } from './TroopAvatar';
+import { BattlePreview } from './BattlePreview';
 import {
   Copy,
   Check,
@@ -634,6 +635,15 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* PRÉVIA OFICIAL DA BATALHA (ARENA VISUAL & REPRODUTOR) */}
+      <BattlePreview
+        simResult={simResult}
+        profile={profile}
+        captain={activeCaptain}
+        sendDragon={sendDragon}
+        targetMonster={targetMonster}
+      />
 
       {/* 5. STEP 2: O QUE COLOCAR NO JOGO (List View with Zero Clutter) */}
       <div className={`bg-[#0b0f19] p-4 sm:p-6 rounded-2xl border ${isDefeat ? 'border-red-600/70' : 'border-amber-500/40'} space-y-4 shadow-xl`}>

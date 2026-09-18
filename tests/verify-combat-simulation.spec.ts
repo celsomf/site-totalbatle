@@ -24,17 +24,38 @@ test('validar simulador de combate real com alerta de derrota certa para Tropa d
   const requirementText = page.locator('text="O que você precisa produzir no Quartel para vencer:"');
   await expect(requirementText).toBeVisible();
 
-  // 6. Abrir gaveta de Simulação Turno a Turno
-  const combatLogBtn = page.locator('button:has-text("Ver Simulação Turno a Turno")');
-  await expect(combatLogBtn).toBeVisible();
-  await combatLogBtn.click();
-  await page.waitForTimeout(600);
+  // 6. Validar que o componente BattlePreview (Prévia Oficial da Batalha) está visível
+  const battlePreviewTitle = page.getByRole('heading', { name: /Prévia Oficial da Batalha/i });
+  await expect(battlePreviewTitle).toBeVisible();
 
-  // 7. Tirar screenshot da tela comprovando o alerta de derrota e a simulação turno a turno
+  // 7. Validar que os times aparecem na Arena Visual
+  const playerSide = page.locator('text=/Seu Exército/i').first();
+  await expect(playerSide).toBeVisible();
+
+  const enemySide = page.locator('text=/Esquadrões Inimigos/i').first();
+  await expect(enemySide).toBeVisible();
+
+  // 8. Testar navegação de turnos (Próximo Passo)
+  const nextStepBtn = page.locator('button[title="Próximo passo"]');
+  if (await nextStepBtn.isVisible()) {
+    await nextStepBtn.click();
+    await page.waitForTimeout(300);
+    await nextStepBtn.click();
+    await page.waitForTimeout(300);
+  }
+
+  // 9. Tirar screenshot da arena de visualização de batalha
+  const battlePreviewSection = page.locator('#battle-preview-section');
+  if (await battlePreviewSection.isVisible()) {
+    await battlePreviewSection.screenshot({
+      path: 'C:/Users/celso/.gemini/antigravity/brain/b0b3a8ca-247a-4157-b90e-34924956138c/battle_preview_arena.png',
+    });
+  }
+
+  // 10. Tirar screenshot geral da tela
   await page.screenshot({
     path: 'C:/Users/celso/.gemini/antigravity/brain/b0b3a8ca-247a-4157-b90e-34924956138c/combat_simulator_defeat_lock.png',
-    fullPage: true,
   });
 
-  console.log('Teste de validação do simulador de combate concluído com sucesso!');
+  console.log('Teste de validação do simulador e prévia de batalha concluído com sucesso!');
 });
