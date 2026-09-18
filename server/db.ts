@@ -1,0 +1,85 @@
+import { Pool } from 'pg';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+export const pool = new Pool({
+  host: process.env.PGHOST || 'localhost',
+  port: Number(process.env.PGPORT) || 5432,
+  user: process.env.PGUSER || 'postgres',
+  password: process.env.PGPASSWORD || 'postgres',
+  database: process.env.PGDATABASE || 'postgres',
+  connectionTimeoutMillis: 3000,
+});
+
+export async function initDatabase() {
+  try {
+    const client = await pool.connect();
+    console.log('[PostgreSQL] Conectado com sucesso!');
+
+    // 1. Tabela de Perfil do Jogador
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS player_profiles (
+        id VARCHAR(50) PRIMARY KEY DEFAULT 'main_profile',
+        hero_id VARCHAR(50) NOT NULL DEFAULT 'garvel',
+        hero_name VARCHAR(100) NOT NULL DEFAULT 'Araning',
+        hero_level INT NOT NULL DEFAULT 16,
+        include_hero BOOLEAN NOT NULL DEFAULT true,
+        capitol_level INT NOT NULL DEFAULT 16,
+        dragon_level INT NOT NULL DEFAULT 15,
+        max_march_capacity INT NOT NULL DEFAULT 3125,
+        mercenary_capacity INT NOT NULL DEFAULT 1540,
+        special_capacity INT NOT NULL DEFAULT 770,
+        selected_captain_ids JSONB NOT NULL DEFAULT '["brunhild", "xi_guiying", "aydae"]'::jsonb,
+        selected_captain_id VARCHAR(50) NOT NULL DEFAULT 'brunhild',
+        academy_bonus JSONB NOT NULL DEFAULT '{"guardsmenAttack":25,"guardsmenHealth":20,"specialistsAttack":15,"specialistsHealth":10,"monstersAttack":20,"monstersHealth":20}'::jsonb,
+        custom_troops JSONB NOT NULL DEFAULT '[]'::jsonb,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS custom_troops JSONB DEFAULT '[]'::jsonb;
+    `);
+
+    // 2. Tabela de Níveis de Capitães
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS captain_levels (
+        profile_id VARCHAR(50) NOT NULL DEFAULT 'main_profile',
+        captain_id VARCHAR(50) NOT NULL,
+        level INT NOT NULL DEFAULT 20,
+        PRIMARY KEY (profile_id, captain_id)
+      );
+    `);
+
+    // 3. Tabela de Inventário e Estatísticas de Tropas
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS troop_inventory (
+        profile_id VARCHAR(50) NOT NULL DEFAULT 'main_profile',
+        troop_id VARCHAR(50) NOT NULL,
+        owned_count INT NOT NULL DEFAULT 0,
+        is_unlocked BOOLEAN NOT NULL DEFAULT true,
+        custom_attack INT,
+        custom_health INT,
+        PRIMARY KEY (profile_id, troop_id)
+      );
+    `);
+
+    // 4. Tabela de Histórico de Marchas
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS march_history (
+        id SERIAL PRIMARY KEY,
+        target_id VARCHAR(50) NOT NULL,
+        target_name VARCHAR(100) NOT NULL,
+        target_level INT NOT NULL,
+        total_march_size INT NOT NULL,
+        squads JSONB NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    client.release();
+    console.log('[PostgreSQL] Tabelas inicializadas com sucesso.');
+    return true;
+  } catch (err: any) {
+    console.warn('[PostgreSQL] Aviso ao conectar/inicializar banco:', err.message);
+    return false;
+  }
+}

@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#140e0a] text-[#f4ebd9] font-sans antialiased;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(180, 144, 83, 0.15) 0%, transparent 60%),
+      radial-gradient(circle at 10% 20%, rgba(120, 28, 28, 0.12) 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(20, 60, 30, 0.12) 0%, transparent 40%),
+      linear-gradient(to bottom, #18100a 0%, #0d0805 100%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, .font-fantasy {
+    font-family: 'Cinzel', serif;
+  }
+}
+
+/* Ornate Game Elements */
+.tb-parchment {
+  background-color: #f7f1e5;
+  background-image: linear-gradient(180deg, #faf5eb 0%, #f0e5d1 100%);
+  color: #2c2214;
+  border: 3px solid #b49053;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(180, 144, 83, 0.2);
+}
+
+.tb-card-dark {
+  background: linear-gradient(180deg, #241912 0%, #170f0b 100%);
+  border: 2px solid #5a3e22;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(202, 165, 104, 0.2);
+}
+
+.tb-gold-border {
+  border: 2px solid #caa568;
+  box-shadow: 0 0 10px rgba(202, 165, 104, 0.2);
+}
+
+/* Official Emerald Green Game Button (like "Treinar") */
+.tb-btn-green {
+  background: linear-gradient(180deg, #2e7d32 0%, #1b5e20 100%);
+  border: 1.5px solid #caa568;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: all 0.15s ease;
+}
+.tb-btn-green:hover {
+  background: linear-gradient(180deg, #388e3c 0%, #2e7d32 100%);
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* Official Gold / Bronze Button */
+.tb-btn-gold {
+  background: linear-gradient(180deg, #caa568 0%, #9b783c 100%);
+  border: 1.5px solid #ffe082;
+  color: #1a0f08;
+  font-weight: 800;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  transition: all 0.15s ease;
+}
+.tb-btn-gold:hover {
+  background: linear-gradient(180deg, #dfb877 0%, #ab8545 100%);
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* Official Red Ribbon Tab */
+.tb-tab-active {
+  background: linear-gradient(180deg, #b91c1c 0%, #7f1d1d 100%);
+  border: 1.5px solid #f59e0b;
+  color: #fef08a;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.4);
+}
+
+/* Custom scrollbar in Total Battle Gold & Leather */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1a120c;
+  border-left: 1px solid #3d2917;
+}
+::-webkit-scrollbar-thumb {
+  background: #6d4c2b;
+  border: 1px solid #caa568;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b49053;
+}
+

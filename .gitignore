@@ -7,3 +7,17 @@ _agent/
 # Spec Kit
 .specify/
 specs/
+
+# Playwright & Node
+node_modules/
+dist/
+build/
+*.log
+*.tsbuildinfo
+.env
+.DS_Store
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
