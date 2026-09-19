@@ -3,11 +3,11 @@ import { PlayerProfile, TroopUnit } from '../types';
 import { DEFAULT_TROOPS } from '../data/troops';
 import { fetchProfileFromDb, saveProfileToDb, checkDbHealth } from '../services/api';
 
-const STORAGE_KEY = 'total_battle_player_profile_v4'; // Bump version key to guarantee fresh load in user's browser
+const STORAGE_KEY = 'total_battle_player_profile_v5'; // Bump version key to guarantee fresh load in user's browser
 
 const DEFAULT_PROFILE: PlayerProfile = {
   heroId: 'garvel',
-  heroName: 'Araning',
+  heroName: 'Comandante',
   heroLevel: 16,
   includeHero: true,
   capitolLevel: 16,

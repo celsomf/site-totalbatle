@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('Preencher e validar exercito do jogador Araning', async ({ page }) => {
+test('Preencher e validar exercito do jogador', async ({ page }) => {
   await page.goto('http://localhost:5173/');
   await page.waitForLoadState('networkidle');
 
@@ -18,5 +18,5 @@ test('Preencher e validar exercito do jogador Araning', async ({ page }) => {
   await restoreBtn.click();
 
   await page.waitForTimeout(500);
-  await page.screenshot({ path: 'dist/exercito_araning_validado.png', fullPage: true });
+  await page.screenshot({ path: 'dist/exercito_validado.png', fullPage: true });
 });

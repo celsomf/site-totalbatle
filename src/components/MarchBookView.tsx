@@ -138,7 +138,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
 
   const handleCopy = () => {
     const leaderText = isRare
-      ? `👑 Líder: Herói ${profile.heroName || 'Araning'} (Nv ${profile.heroLevel || 18})`
+      ? `👑 Líder: Herói ${profile.heroName || 'Comandante'} (Nv ${profile.heroLevel || 18})`
       : `👑 Capitão: ${activeCaptain.name} (Nv ${activeCaptainLevel} - +${captainBonusPercent}% Bônus)`;
 
     const verdictText = isDefeat
@@ -421,7 +421,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                 </div>
                 <div className="min-w-0">
                   <h4 className="text-sm sm:text-base font-black text-white truncate">
-                    Herói {profile.heroName || 'Araning'} ({profile.heroId === 'julia' ? 'Julia' : 'Garvel'})
+                    Herói {profile.heroName || 'Comandante'} ({profile.heroId === 'julia' ? 'Julia' : 'Garvel'})
                   </h4>
                   <p className="text-xs font-bold text-purple-300">
                     Nível {profile.heroLevel || 18} • Comandante Oficial para Ataques Raros

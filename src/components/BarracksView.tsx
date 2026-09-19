@@ -97,12 +97,12 @@ export const BarracksView: React.FC<BarracksViewProps> = ({
             {onResetDefaults && (
               <button
                 onClick={() => {
-                  if (window.confirm('Deseja restaurar as tropas para a configuração padrão de Araning?')) {
+                  if (window.confirm('Deseja restaurar as tropas para a configuração padrão do exército?')) {
                     onResetDefaults();
                   }
                 }}
                 className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all shadow"
-                title="Restaurar exército original de Araning"
+                title="Restaurar exército para o padrão"
               >
                 <RefreshCw className="w-4 h-4 text-amber-400" />
                 <span>Restaurar Padrão</span>

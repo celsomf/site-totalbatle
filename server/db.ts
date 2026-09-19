@@ -22,7 +22,7 @@ export async function initDatabase() {
       CREATE TABLE IF NOT EXISTS player_profiles (
         id VARCHAR(50) PRIMARY KEY DEFAULT 'main_profile',
         hero_id VARCHAR(50) NOT NULL DEFAULT 'garvel',
-        hero_name VARCHAR(100) NOT NULL DEFAULT 'Araning',
+        hero_name VARCHAR(100) NOT NULL DEFAULT 'Comandante',
         hero_level INT NOT NULL DEFAULT 16,
         include_hero BOOLEAN NOT NULL DEFAULT true,
         capitol_level INT NOT NULL DEFAULT 16,

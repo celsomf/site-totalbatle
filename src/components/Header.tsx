@@ -21,7 +21,7 @@ export const Header: React.FC<HeaderProps> = ({ dbStatus = 'checking' }) => {
               </h1>
               <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-500/50 shadow-sm hidden sm:inline-flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-emerald-400" />
-                Conta Araning
+                Painel do Jogador
               </span>
             </div>
             <p className="text-xs font-semibold text-slate-400">

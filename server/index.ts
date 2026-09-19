@@ -135,7 +135,7 @@ app.post('/api/profile', async (req, res) => {
       [
         'main_profile',
         p.heroId || 'garvel',
-        p.heroName || 'Araning',
+        p.heroName || 'Comandante',
         p.heroLevel || 16,
         p.includeHero ?? true,
         p.capitolLevel || 16,

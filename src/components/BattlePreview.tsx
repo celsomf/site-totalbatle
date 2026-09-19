@@ -121,7 +121,7 @@ export const BattlePreview: React.FC<BattlePreviewProps> = ({
           {viewMode === 'arena' ? (
             /* Main Visual Arena Grid: ATACANTE vs DEFENSOR */
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-              {/* LEFT SIDE: ATACANTE (Araning) - 5 Cols */}
+              {/* LEFT SIDE: ATACANTE - 5 Cols */}
               <div className={`lg:col-span-5 bg-[#111827] rounded-2xl p-4 sm:p-5 border-2 flex flex-col justify-between space-y-4 shadow-xl ${
                 isDefeat ? 'border-rose-900/60' : 'border-emerald-900/60'
               }`}>
@@ -133,7 +133,7 @@ export const BattlePreview: React.FC<BattlePreviewProps> = ({
                     </div>
                     <div>
                       <h4 className="text-sm font-black text-white uppercase tracking-wider">
-                        Atacante: {profile.heroName || 'Araning'}
+                        Atacante: {profile.heroName || 'Comandante'}
                       </h4>
                       <span className="text-2xs text-slate-400 font-semibold">
                         Reino K:310 • Capitão {captain.name}

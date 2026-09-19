@@ -124,7 +124,7 @@ export function App() {
 
             <div className="text-xs text-slate-300 font-bold items-center gap-1.5 px-3 py-2 bg-slate-950/80 rounded-xl border border-slate-700 hidden sm:flex shadow-inner">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>Araning (K:310)</span>
+              <span>{profile.heroName || 'Comandante'} (K:310)</span>
             </div>
           </div>
         </div>
@@ -226,7 +226,7 @@ export function App() {
 
       {/* Footer */}
       <footer className="border-t border-slate-800 bg-[#0a0e17] py-4 text-center text-xs text-slate-500 font-medium">
-        Total Battle Combat Advisor • Otimizado para Conta Araning • Sincronizado com PostgreSQL 17
+        Total Battle Combat Advisor • Otimização Tática de Marchas • Sincronizado com PostgreSQL 17
       </footer>
     </div>
   );

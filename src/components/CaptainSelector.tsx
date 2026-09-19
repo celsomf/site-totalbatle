@@ -17,7 +17,7 @@ interface CaptainSelectorProps {
 
 export const CaptainSelector: React.FC<CaptainSelectorProps> = ({
   heroId = 'garvel',
-  heroName = 'Araning',
+  heroName = 'Comandante',
   selectedCaptainIds = ['brunhild', 'aydae', 'farhad'],
   captainLevels,
   heroLevel = 16,
@@ -112,7 +112,7 @@ export const CaptainSelector: React.FC<CaptainSelectorProps> = ({
             )}
           </div>
           <span className="font-extrabold text-xs text-yellow-200 block truncate w-full">
-            {heroName || 'Araning'} ({heroId === 'julia' ? 'Julia' : 'Garvel'})
+            {heroName || 'Comandante'} ({heroId === 'julia' ? 'Julia' : 'Garvel'})
           </span>
           <span className="text-xs font-bold text-amber-300">Nv {heroLevel}</span>
         </div>

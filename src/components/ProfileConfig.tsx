@@ -25,7 +25,7 @@ export const ProfileConfig: React.FC<ProfileConfigProps> = ({
           </div>
           <div>
             <h2 className="text-base sm:text-lg font-black text-white tracking-wide">
-              Cidade & Escolha do Herói ({profile.heroName || 'Araning'})
+              Cidade & Escolha do Herói ({profile.heroName || 'Comandante'})
             </h2>
             <p className="text-xs font-semibold text-slate-400">Escolha seu Herói inicial (Garvel ou Julia) e níveis da cidade</p>
           </div>
@@ -64,7 +64,7 @@ export const ProfileConfig: React.FC<ProfileConfigProps> = ({
                   <span className="text-2xs bg-emerald-600 text-white font-black px-2 py-0.5 rounded-md shadow">Ativo</span>
                 )}
               </div>
-              <p className="text-xs font-semibold text-slate-400 mt-0.5">Herói Guerreiro (Padrão Araning)</p>
+              <p className="text-xs font-semibold text-slate-400 mt-0.5">Herói Guerreiro (Corpo a Corpo)</p>
             </div>
           </div>
 
