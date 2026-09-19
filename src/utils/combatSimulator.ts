@@ -51,18 +51,103 @@ export function simulateCombat(
       break;
     }
 
-    // --- PHASE 1: PLAYER SQUADS ATTACK ---
-    // Priority order: Mercenaries (T5) -> G2 -> G1
-    const sortedPlayers = [...alivePlayers].sort((a, b) => {
-      if (a.isMercenary && !b.isMercenary) return -1;
-      if (!a.isMercenary && b.isMercenary) return 1;
-      return b.tier - a.tier;
-    });
+    // --- FASE 1: ATAQUE DO MONSTRO DEFENSOR (Iniciativa de Defesa do Total Battle) ---
+    const sortedEnemies = [...enemies]
+      .filter((e) => e.currentCount > 0)
+      .sort((a, b) => b.tier - a.tier || b.initiative - a.initiative);
+
+    for (const eSquad of sortedEnemies) {
+      if (eSquad.currentCount <= 0) continue;
+
+      const alivePlayerTargets = playerSquads.filter((p) => p.currentCount > 0);
+      if (alivePlayerTargets.length === 0) break;
+
+      // Lógica de mira precisa do Total Battle:
+      // 1. Monstros de Longo Alcance miram a linha de Longo Alcance do jogador (priorizando maior tier / contingente)
+      // 2. Monstros Corpo a Corpo miram a linha de Corpo a Corpo do jogador (onde a bucha G1 absorve)
+      // 3. Monstros Montados miram unidades de Longo Alcance ou infantaria
+      let targetPlayer: typeof alivePlayerTargets[0] | undefined;
+
+      if (eSquad.troopClass === 'ranged') {
+        const playerRanged = alivePlayerTargets
+          .filter((p) => p.troopClass === 'ranged')
+          .sort((a, b) => b.tier - a.tier || (b.unitAttack * b.currentCount) - (a.unitAttack * a.currentCount));
+        if (playerRanged.length > 0) {
+          targetPlayer = playerRanged[0];
+        }
+      } else if (eSquad.troopClass === 'melee') {
+        const playerMelee = alivePlayerTargets
+          .filter((p) => p.troopClass === 'melee')
+          .sort((a, b) => a.tier - b.tier); // Bucha G1 na frente absorve primeiro
+        if (playerMelee.length > 0) {
+          targetPlayer = playerMelee[0];
+        }
+      }
+
+      if (!targetPlayer) {
+        // Alvo padrão: menor tier primeiro (absorção de bucha geral)
+        targetPlayer = [...alivePlayerTargets].sort((a, b) => a.tier - b.tier)[0];
+      }
+
+      // Multiplicador de aspecto do monstro
+      let multiplier = 1;
+      let bonusText = '';
+      if (targetPlayer.troopClass === 'melee' && eSquad.aspects?.bonusVsMeleePercent) {
+        multiplier += eSquad.aspects.bonusVsMeleePercent / 100;
+        bonusText = `+${eSquad.aspects.bonusVsMeleePercent}% vs Melee`;
+      } else if (targetPlayer.troopClass === 'mounted' && eSquad.aspects?.bonusVsMountedPercent) {
+        multiplier += eSquad.aspects.bonusVsMountedPercent / 100;
+        bonusText = `+${eSquad.aspects.bonusVsMountedPercent}% vs Montadas`;
+      } else if (targetPlayer.troopClass === 'ranged' && eSquad.aspects?.bonusVsRangedPercent) {
+        multiplier += eSquad.aspects.bonusVsRangedPercent / 100;
+        bonusText = `+${eSquad.aspects.bonusVsRangedPercent}% vs Longo Alcance`;
+      }
+
+      const damage = Math.round(eSquad.currentCount * eSquad.unitAttack * multiplier);
+      totalEnemyDamage += damage;
+
+      const casualties = Math.min(
+        targetPlayer.currentCount,
+        Math.max(1, Math.floor(damage / targetPlayer.unitHealth))
+      );
+
+      targetPlayer.currentCount = Math.max(0, targetPlayer.currentCount - casualties);
+
+      rounds.push({
+        step: stepIndex++,
+        attackerName: eSquad.name,
+        attackerTier: eSquad.tier,
+        attackerCount: eSquad.currentCount,
+        defenderName: targetPlayer.name,
+        defenderTier: targetPlayer.tier,
+        damageDealt: damage,
+        casualties,
+        defenderRemainingCount: targetPlayer.currentCount,
+        isEnemyAttacking: true,
+        bonusText,
+      });
+
+      if (playerSquads.every((p) => p.currentCount <= 0)) {
+        break;
+      }
+    }
+
+    if (playerSquads.every((p) => p.currentCount <= 0)) {
+      break;
+    }
+
+    // --- FASE 2: ESQUADRÕES DO JOGADOR RETALIAM / ATACAM ---
+    const sortedPlayers = [...playerSquads]
+      .filter((p) => p.currentCount > 0)
+      .sort((a, b) => {
+        if (a.isMercenary && !b.isMercenary) return -1;
+        if (!a.isMercenary && b.isMercenary) return 1;
+        return b.tier - a.tier;
+      });
 
     for (const pSquad of sortedPlayers) {
       if (pSquad.currentCount <= 0) continue;
 
-      // Target highest threat enemy alive (by unit attack * count or primary squad)
       const targetEnemy = [...enemies]
         .filter((e) => e.currentCount > 0)
         .sort((a, b) => (b.unitAttack * b.currentCount) - (a.unitAttack * a.currentCount))[0];
@@ -93,76 +178,6 @@ export function simulateCombat(
       });
 
       if (enemies.every((e) => e.currentCount <= 0)) {
-        break;
-      }
-    }
-
-    // Check if all enemies were wiped out before enemy retaliation
-    if (enemies.every((e) => e.currentCount <= 0)) {
-      break;
-    }
-
-    // --- PHASE 2: ENEMY SQUADS RETALIATE ---
-    const sortedEnemies = [...enemies]
-      .filter((e) => e.currentCount > 0)
-      .sort((a, b) => b.tier - a.tier || b.initiative - a.initiative);
-
-    for (const eSquad of sortedEnemies) {
-      if (eSquad.currentCount <= 0) continue;
-
-      const alivePlayerTargets = playerSquads.filter((p) => p.currentCount > 0);
-      if (alivePlayerTargets.length === 0) break;
-
-      // Enemy targeting logic:
-      // If enemy has aspect bonus against a specific class, prefers that class;
-      // otherwise, attacks G1 (bucha) first if present, then G2, then Mercenaries
-      let targetPlayer = alivePlayerTargets.find((p) => {
-        if (eSquad.aspects?.bonusVsMeleePercent && p.troopClass === 'melee' && p.tier === 1) return true;
-        if (eSquad.aspects?.bonusVsMountedPercent && p.troopClass === 'mounted') return true;
-        return false;
-      });
-
-      if (!targetPlayer) {
-        // Attack lowest tier first (bucha / front-line absorption)
-        targetPlayer = [...alivePlayerTargets].sort((a, b) => a.tier - b.tier)[0];
-      }
-
-      // Calculate aspect multiplier
-      let multiplier = 1;
-      let bonusText = '';
-      if (targetPlayer.troopClass === 'melee' && eSquad.aspects?.bonusVsMeleePercent) {
-        multiplier += eSquad.aspects.bonusVsMeleePercent / 100;
-        bonusText = `+${eSquad.aspects.bonusVsMeleePercent}% vs Melee`;
-      } else if (targetPlayer.troopClass === 'mounted' && eSquad.aspects?.bonusVsMountedPercent) {
-        multiplier += eSquad.aspects.bonusVsMountedPercent / 100;
-        bonusText = `+${eSquad.aspects.bonusVsMountedPercent}% vs Montadas`;
-      }
-
-      const damage = Math.round(eSquad.currentCount * eSquad.unitAttack * multiplier);
-      totalEnemyDamage += damage;
-
-      const casualties = Math.min(
-        targetPlayer.currentCount,
-        Math.max(1, Math.floor(damage / targetPlayer.unitHealth))
-      );
-
-      targetPlayer.currentCount = Math.max(0, targetPlayer.currentCount - casualties);
-
-      rounds.push({
-        step: stepIndex++,
-        attackerName: eSquad.name,
-        attackerTier: eSquad.tier,
-        attackerCount: eSquad.currentCount,
-        defenderName: targetPlayer.name,
-        defenderTier: targetPlayer.tier,
-        damageDealt: damage,
-        casualties,
-        defenderRemainingCount: targetPlayer.currentCount,
-        isEnemyAttacking: true,
-        bonusText,
-      });
-
-      if (playerSquads.every((p) => p.currentCount <= 0)) {
         break;
       }
     }
@@ -289,14 +304,26 @@ export function buildDispatchedTroops(
     ? Math.min(activeMercenary.ownedCount, maxMercs)
     : 0;
 
-  const weakness = targetMonster.weaknessClasses || ['ranged'];
-  const prefersRanged = weakness.includes('ranged');
-  const prefersMelee = weakness.includes('melee');
+  const enemySquads = targetMonster.enemySquads || [];
+  const totalEnemyHp = enemySquads.reduce((sum, s) => sum + s.unitHealth * s.count, 0);
+  const enemyClasses = enemySquads.map((s) => s.troopClass);
+  const hasEnemyRanged = enemyClasses.includes('ranged');
+  const hasEnemyMelee = enemyClasses.includes('melee');
 
   const g2Ranged = troops.find((t) => t.id === 'g2_ranged');
   const g1Ranged = troops.find((t) => t.id === 'g1_ranged');
   const g2Melee = troops.find((t) => t.id === 'g2_melee');
   const g1Melee = troops.find((t) => t.id === 'g1_melee');
+
+  // Calcula o poder de ataque real dos mercenários
+  const mercUnitAttack = activeMercenary
+    ? Math.round(
+        (activeMercenary.customAttack || activeMercenary.baseAttack) *
+          (1 + (dragonBonusPercent + (profile.academyBonus?.monstersAttack || 20) + (captain.specialty === 'monsters' ? captainBonusPercent : 0)) / 100)
+      )
+    : 0;
+  const totalMercDamage = mercRecommended * mercUnitAttack;
+  const mercCanSolo = totalMercDamage >= totalEnemyHp;
 
   let g2RangedRec = 0;
   let g1RangedRec = 0;
@@ -304,32 +331,54 @@ export function buildDispatchedTroops(
   let g2MeleeRec = 0;
   let allocatedGuards = 0;
 
-  if (prefersRanged) {
-    g2RangedRec = Math.min(g2Ranged?.ownedCount || 0, maxGuards - 100);
-    allocatedGuards += g2RangedRec;
-
-    if (maxGuards - allocatedGuards > 50) {
-      g1RangedRec = Math.min(g1Ranged?.ownedCount || 0, maxGuards - allocatedGuards - 50);
+  if (mercCanSolo) {
+    // Mercenários eliminam o monstro sozinhos!
+    // NÃO arriscamos tropas nobres G2. Enviamos apenas Bucha G1 da classe correspondente.
+    if (hasEnemyRanged) {
+      // Inimigo de longo alcance atira na linha de longo alcance. Bucha DEVE ser G1 Arqueiro!
+      g1RangedRec = Math.min(g1Ranged?.ownedCount || 0, Math.min(maxGuards, 250));
       allocatedGuards += g1RangedRec;
+    } else {
+      // Inimigo corpo a corpo ou montado. Bucha DEVE ser G1 Melee (Lanceiro/Espadachim)!
+      g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, Math.min(maxGuards, 150));
+      allocatedGuards += g1MeleeRec;
     }
-
-    g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
-    allocatedGuards += g1MeleeRec;
-  } else if (prefersMelee) {
-    g2MeleeRec = Math.min(g2Melee?.ownedCount || 0, maxGuards - 100);
-    allocatedGuards += g2MeleeRec;
-
-    g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
-    allocatedGuards += g1MeleeRec;
   } else {
-    g2RangedRec = Math.min(g2Ranged?.ownedCount || 0, Math.floor((maxGuards - 100) / 2));
-    allocatedGuards += g2RangedRec;
+    // Mercenários não são suficientes sozinhos: precisamos de dano nobre G2
+    const weakness = targetMonster.weaknessClasses || ['ranged'];
+    const prefersRanged = weakness.includes('ranged') || hasEnemyMelee;
+    const prefersMelee = weakness.includes('melee') && !hasEnemyRanged;
 
-    g2MeleeRec = Math.min(g2Melee?.ownedCount || 0, Math.floor((maxGuards - allocatedGuards) / 2));
-    allocatedGuards += g2MeleeRec;
+    if (prefersRanged) {
+      // Dano principal com G2 Arqueiro
+      g2RangedRec = Math.min(g2Ranged?.ownedCount || 0, maxGuards - 100);
+      allocatedGuards += g2RangedRec;
 
-    g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
-    allocatedGuards += g1MeleeRec;
+      // Se o inimigo é Longo Alcance, bucha de absorção é G1 Ranged
+      if (hasEnemyRanged && maxGuards - allocatedGuards > 50) {
+        g1RangedRec = Math.min(g1Ranged?.ownedCount || 0, maxGuards - allocatedGuards);
+        allocatedGuards += g1RangedRec;
+      } else {
+        // Se inimigo é Melee, bucha na frente é G1 Melee
+        g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
+        allocatedGuards += g1MeleeRec;
+      }
+    } else if (prefersMelee) {
+      g2MeleeRec = Math.min(g2Melee?.ownedCount || 0, maxGuards - 100);
+      allocatedGuards += g2MeleeRec;
+
+      g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
+      allocatedGuards += g1MeleeRec;
+    } else {
+      g2RangedRec = Math.min(g2Ranged?.ownedCount || 0, Math.floor((maxGuards - 100) / 2));
+      allocatedGuards += g2RangedRec;
+
+      g2MeleeRec = Math.min(g2Melee?.ownedCount || 0, Math.floor((maxGuards - allocatedGuards) / 2));
+      allocatedGuards += g2MeleeRec;
+
+      g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
+      allocatedGuards += g1MeleeRec;
+    }
   }
 
   const dispatchedTroopsList: DispatchedTroop[] = [];

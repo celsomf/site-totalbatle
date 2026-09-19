@@ -206,6 +206,22 @@ export const MONSTER_UNITS_CATALOG: MonsterUnitDefinition[] = [
     },
   },
   {
+    id: 'banshee',
+    name: 'Banshee',
+    tier: 1,
+    family: 'undead',
+    subType: 'Morto-Vivo, Unidade de longo alcance',
+    troopClass: 'ranged',
+    unitAttack: 100,
+    unitHealth: 300,
+    leadership: 2,
+    initiative: 10,
+    aspects: {
+      bonusVsMeleePercent: 45,
+      description: 'Força contra unidades corpo a corpo: +45%',
+    },
+  },
+  {
     id: 'esqueleto_arqueiro',
     name: 'Esqueleto Arqueiro',
     tier: 2,
@@ -574,6 +590,22 @@ export const MONSTER_UNITS_CATALOG: MonsterUnitDefinition[] = [
       description: 'Força contra unidades montadas: +10%',
     },
   },
+  {
+    id: 'arqueiro_elfico',
+    name: 'Arqueiro Élfico',
+    tier: 1,
+    family: 'elfos',
+    subType: 'Elfos, Unidade de longo alcance',
+    troopClass: 'ranged',
+    unitAttack: 100,
+    unitHealth: 300,
+    leadership: 2,
+    initiative: 10,
+    aspects: {
+      bonusVsMeleePercent: 35,
+      description: 'Força contra unidades corpo a corpo: +35%',
+    },
+  },
 ];
 
 export function getMonsterUnit(id: string): MonsterUnitDefinition {
@@ -671,6 +703,14 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     availableLevels: [5, 10, 15, 18, 20, 25, 30, 35, 40],
     description: 'Hordas de esqueletos e cavaleiros da morte assombrando as florestas.',
     generateSquads: (lvl: number): EnemySquadUnit[] => {
+      if (lvl <= 10) {
+        const banshee = getMonsterUnit('banshee');
+        const esqueleto = getMonsterUnit('esqueleto_guerreiro');
+        return [
+          { ...banshee, id: `${banshee.id}_${lvl}`, count: Math.max(20, Math.round(lvl * 25)) },
+          { ...esqueleto, id: `${esqueleto.id}_${lvl}`, count: Math.max(30, Math.round(lvl * 35)) },
+        ];
+      }
       const cavaleiro = getMonsterUnit('cavaleiro_morte');
       const esqueleto = getMonsterUnit('esqueleto_arqueiro');
       const scale = lvl / 15;
@@ -684,6 +724,32 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
       vp: Math.round(lvl * 9000),
       tar: Math.round(lvl * 13500),
       chest: Math.round(lvl * 2.5),
+    }),
+    marchCapacities: () => ({ guards: 2000, mercenaries: 1000, monsters: 500 }),
+  },
+
+  // 3a. Tropa de Banshees (Mortos-Vivos Comum - Longo Alcance)
+  {
+    id: 'tropa_banshee_comum',
+    name: '👻 Tropa de Banshees Comum (Longo Alcance)',
+    faction: 'undead',
+    attackMode: 'common',
+    targetType: 'common_monster',
+    defaultLevel: 6,
+    availableLevels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25],
+    description: 'Banshees espectrais de longo alcance (210 no Nv 6). Atacam diretamente a linha de atiradores e têm +45% de dano contra corpo a corpo.',
+    generateSquads: (lvl: number): EnemySquadUnit[] => {
+      const banshee = getMonsterUnit('banshee');
+      const count = Math.max(20, Math.round(lvl * 35));
+      return [
+        { ...banshee, id: `${banshee.id}_${lvl}`, count },
+      ];
+    },
+    calculateRewards: (lvl: number) => ({
+      xp: Math.round(lvl * 15000),
+      vp: Math.round(lvl * 7500),
+      tar: Math.round(lvl * 11000),
+      chest: Math.round(lvl * 2),
     }),
     marchCapacities: () => ({ guards: 2000, mercenaries: 1000, monsters: 500 }),
   },
@@ -770,6 +836,32 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
       chest: Math.round(lvl * 2.5),
     }),
     marchCapacities: () => ({ guards: 2350, mercenaries: 1140, monsters: 570 }),
+  },
+
+  // 6b. Tropa de Arqueiros Élficos Comum (Longo Alcance)
+  {
+    id: 'tropa_arqueiros_elficos_comum',
+    name: '🏹 Tropa de Arqueiros Élficos Comum (Longo Alcance)',
+    faction: 'elfos',
+    attackMode: 'common',
+    targetType: 'common_monster',
+    defaultLevel: 6,
+    availableLevels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 20],
+    description: 'Atiradores élficos de longo alcance da floresta. Força 100, Saúde 300 e +35% contra corpo a corpo.',
+    generateSquads: (lvl: number): EnemySquadUnit[] => {
+      const elfo = getMonsterUnit('arqueiro_elfico');
+      const count = Math.max(20, Math.round(lvl * 35));
+      return [
+        { ...elfo, id: `${elfo.id}_${lvl}`, count },
+      ];
+    },
+    calculateRewards: (lvl: number) => ({
+      xp: Math.round(lvl * 16000),
+      vp: Math.round(lvl * 8000),
+      tar: Math.round(lvl * 12000),
+      chest: Math.round(lvl * 2),
+    }),
+    marchCapacities: () => ({ guards: 2000, mercenaries: 1000, monsters: 500 }),
   },
 
   // ==========================================

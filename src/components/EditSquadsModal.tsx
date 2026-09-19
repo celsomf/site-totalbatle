@@ -195,13 +195,36 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
                         className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-bold focus:outline-none focus:border-amber-400"
                       >
                         <option value="" disabled>
-                          -- Selecionar Monstro Conhecido --
+                          -- Selecionar Monstro por Classe --
                         </option>
-                        {MONSTER_UNITS_CATALOG.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            Tier {cat.tier} - {cat.name} ({cat.subType})
-                          </option>
-                        ))}
+                        <optgroup label="🏹 Longo Alcance (Ranged)">
+                          {MONSTER_UNITS_CATALOG.filter((c) => c.troopClass === 'ranged').map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              Tier {cat.tier} - {cat.name} ({cat.subType}) • Atk {cat.unitAttack} / HP {cat.unitHealth}
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="⚔️ Corpo a Corpo (Melee)">
+                          {MONSTER_UNITS_CATALOG.filter((c) => c.troopClass === 'melee').map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              Tier {cat.tier} - {cat.name} ({cat.subType}) • Atk {cat.unitAttack} / HP {cat.unitHealth}
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="🐎 Montadas (Mounted)">
+                          {MONSTER_UNITS_CATALOG.filter((c) => c.troopClass === 'mounted').map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              Tier {cat.tier} - {cat.name} ({cat.subType}) • Atk {cat.unitAttack} / HP {cat.unitHealth}
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="🦅 Voadores (Flying)">
+                          {MONSTER_UNITS_CATALOG.filter((c) => c.troopClass === 'flying').map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              Tier {cat.tier} - {cat.name} ({cat.subType}) • Atk {cat.unitAttack} / HP {cat.unitHealth}
+                            </option>
+                          ))}
+                        </optgroup>
                       </select>
                     </div>
 

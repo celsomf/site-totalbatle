@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TroopUnit, Captain, MonsterTarget, PlayerProfile, EnemySquadUnit } from '../types';
 import { EditSquadsModal } from './EditSquadsModal';
 import { updateMonsterSquads, MONSTER_PRESET_TEMPLATES, buildMonsterTargetFromTemplate } from '../data/monsters';
-import { simulateCombat, DispatchedTroop, findOptimalFarmLevel } from '../utils/combatSimulator';
+import { simulateCombat, DispatchedTroop, findOptimalFarmLevel, buildDispatchedTroops } from '../utils/combatSimulator';
 import { TroopAvatar } from './TroopAvatar';
 import { BattlePreview } from './BattlePreview';
 import {
@@ -90,139 +90,42 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   const maxGuards = targetMonster.marchCapacities?.guards || (isRare ? 5250 : isCommon ? 2000 : profile.maxMarchCapacity || 3125);
   const maxMercs = targetMonster.marchCapacities?.mercenaries || (isRare ? 2520 : isCommon ? 1000 : profile.mercenaryCapacity || 1540);
 
-  // 1. Mercenários Reais em Estoque (Caçador de Monstros Épico V ou similar)
+  // 1. Tropas em Estoque
   const activeMercenary = troops.find(
     (t) => t.category === 'mercenary' && t.isUnlocked && t.ownedCount > 0
   ) || troops.find((t) => t.id === 'epic_monster_hunter_v');
-
-  const mercRecommended = activeMercenary
-    ? Math.min(activeMercenary.ownedCount, maxMercs)
-    : 0;
-
-  // 2. Dano necessário para abater o monstro
-  const enemyHealth = targetMonster.totalHealth;
-
-  // 3. Alocação Inteligente de Tropas baseada nas Fraquezas e Bônus do Capitão Ativo
-  const weakness = targetMonster.weaknessClasses || ['ranged'];
-  const prefersRanged = weakness.includes('ranged');
-  const prefersMelee = weakness.includes('melee');
 
   const g2Ranged = troops.find((t) => t.id === 'g2_ranged');
   const g1Ranged = troops.find((t) => t.id === 'g1_ranged');
   const g2Melee = troops.find((t) => t.id === 'g2_melee');
   const g1Melee = troops.find((t) => t.id === 'g1_melee');
 
-  let g2RangedRec = 0;
-  let g1RangedRec = 0;
-  let g1MeleeRec = 0;
-  let g2MeleeRec = 0;
-  let allocatedGuards = 0;
+  // 2. Preparar unidades enviadas através do motor tático inteligente
+  const dispatchedTroopsList = buildDispatchedTroops(
+    troops,
+    profile,
+    targetMonster,
+    activeCaptain,
+    sendDragon
+  );
 
-  if (prefersRanged) {
-    g2RangedRec = Math.min(g2Ranged?.ownedCount || 0, maxGuards - 100);
-    allocatedGuards += g2RangedRec;
+  const mercTroop = dispatchedTroopsList.find((t) => t.isMercenary);
+  const mercRecommended = mercTroop?.count || 0;
+  const g2RangedRec = dispatchedTroopsList.find((t) => t.id === 'g2_ranged')?.count || 0;
+  const g1RangedRec = dispatchedTroopsList.find((t) => t.id === 'g1_ranged')?.count || 0;
+  const g2MeleeRec = dispatchedTroopsList.find((t) => t.id === 'g2_melee')?.count || 0;
+  const g1MeleeRec = dispatchedTroopsList.find((t) => t.id === 'g1_melee')?.count || 0;
+  const allocatedGuards = g2RangedRec + g1RangedRec + g2MeleeRec + g1MeleeRec;
 
-    if (maxGuards - allocatedGuards > 50) {
-      g1RangedRec = Math.min(g1Ranged?.ownedCount || 0, maxGuards - allocatedGuards - 50);
-      allocatedGuards += g1RangedRec;
-    }
-
-    g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
-    allocatedGuards += g1MeleeRec;
-  } else if (prefersMelee) {
-    g2MeleeRec = Math.min(g2Melee?.ownedCount || 0, maxGuards - 100);
-    allocatedGuards += g2MeleeRec;
-
-    g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
-    allocatedGuards += g1MeleeRec;
-  } else {
-    g2RangedRec = Math.min(g2Ranged?.ownedCount || 0, Math.floor((maxGuards - 100) / 2));
-    allocatedGuards += g2RangedRec;
-
-    g2MeleeRec = Math.min(g2Melee?.ownedCount || 0, Math.floor((maxGuards - allocatedGuards) / 2));
-    allocatedGuards += g2MeleeRec;
-
-    g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
-    allocatedGuards += g1MeleeRec;
-  }
-
-  // 4. Preparar unidades enviadas para o SIMULADOR DE COMBATE REAL
-  const dispatchedTroopsList: DispatchedTroop[] = [];
-
-  if (activeMercenary && mercRecommended > 0) {
-    dispatchedTroopsList.push({
-      id: activeMercenary.id,
-      name: activeMercenary.name,
-      tier: activeMercenary.tier,
-      troopClass: activeMercenary.troopClass,
-      isMercenary: true,
-      count: mercRecommended,
-      unitAttack: Math.round(
-        (activeMercenary.customAttack || activeMercenary.baseAttack) *
-          (1 + (dragonBonusPercent + (profile.academyBonus?.monstersAttack || 20) + (activeCaptain.specialty === 'monsters' ? captainBonusPercent : 0)) / 100)
-      ),
-      unitHealth: Math.round(
-        (activeMercenary.customHealth || activeMercenary.baseHealth) *
-          (1 + (profile.academyBonus?.monstersHealth || 40) / 100)
-      ),
-    });
-  }
-
-  if (g2RangedRec > 0 && g2Ranged) {
-    dispatchedTroopsList.push({
-      id: g2Ranged.id,
-      name: g2Ranged.name,
-      tier: g2Ranged.tier,
-      troopClass: g2Ranged.troopClass,
-      isMercenary: false,
-      count: g2RangedRec,
-      unitAttack: Math.round((g2Ranged.customAttack || g2Ranged.baseAttack) * (1 + (captainBonusPercent + dragonBonusPercent + academyBonusPercent) / 100)),
-      unitHealth: Math.round((g2Ranged.customHealth || g2Ranged.baseHealth) * (1 + (profile.academyBonus?.guardsmenHealth || 25.5) / 100)),
-    });
-  }
-
-  if (g1RangedRec > 0 && g1Ranged) {
-    dispatchedTroopsList.push({
-      id: g1Ranged.id,
-      name: g1Ranged.name,
-      tier: g1Ranged.tier,
-      troopClass: g1Ranged.troopClass,
-      isMercenary: false,
-      count: g1RangedRec,
-      unitAttack: Math.round((g1Ranged.customAttack || g1Ranged.baseAttack) * (1 + (captainBonusPercent + dragonBonusPercent + academyBonusPercent) / 100)),
-      unitHealth: Math.round((g1Ranged.customHealth || g1Ranged.baseHealth) * (1 + (profile.academyBonus?.guardsmenHealth || 25.5) / 100)),
-    });
-  }
-
-  if (g2MeleeRec > 0 && g2Melee) {
-    dispatchedTroopsList.push({
-      id: g2Melee.id,
-      name: g2Melee.name,
-      tier: g2Melee.tier,
-      troopClass: g2Melee.troopClass,
-      isMercenary: false,
-      count: g2MeleeRec,
-      unitAttack: Math.round((g2Melee.customAttack || g2Melee.baseAttack) * (1 + (captainBonusPercent + dragonBonusPercent + academyBonusPercent) / 100)),
-      unitHealth: Math.round((g2Melee.customHealth || g2Melee.baseHealth) * (1 + (profile.academyBonus?.guardsmenHealth || 25.5) / 100)),
-    });
-  }
-
-  if (g1MeleeRec > 0 && g1Melee) {
-    dispatchedTroopsList.push({
-      id: g1Melee.id,
-      name: g1Melee.name,
-      tier: g1Melee.tier,
-      troopClass: g1Melee.troopClass,
-      isMercenary: false,
-      count: g1MeleeRec,
-      unitAttack: Math.round((g1Melee.customAttack || g1Melee.baseAttack) * (1 + (captainBonusPercent + dragonBonusPercent + academyBonusPercent) / 100)),
-      unitHealth: Math.round((g1Melee.customHealth || g1Melee.baseHealth) * (1 + (profile.academyBonus?.guardsmenHealth || 25.5) / 100)),
-    });
-  }
-
-  // 5. EXECUTAR SIMULAÇÃO REAL DE COMBATE
+  // 3. EXECUTAR SIMULAÇÃO REAL DE COMBATE
   const simResult = simulateCombat(dispatchedTroopsList, targetMonster.enemySquads || []);
   const isDefeat = simResult.outcome === 'DEFEAT';
+  const g1Casualties = simResult.playerCasualties
+    .filter((p) => p.tier === 1)
+    .reduce((sum, p) => sum + p.lostCount, 0);
+  const t2Casualties = simResult.playerCasualties
+    .filter((p) => p.tier >= 2)
+    .reduce((sum, p) => sum + p.lostCount, 0);
 
   // 6. Recompensas recalculadas com os bônus do Capitão Ativo
   const projectedXP = isDefeat ? 0 : Math.round((targetMonster.xpReward || 50000) * (1 + activeCaptainLevel * 0.015));
@@ -240,6 +143,8 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
 
     const verdictText = isDefeat
       ? `🚨 ALERTA: DERROTA PREVISTA! Dano insuficiente (${simResult.totalPlayerDamage.toLocaleString('pt-BR')} vs ${simResult.initialEnemyHp.toLocaleString('pt-BR')} HP). NÃO MARCHAR!`
+      : simResult.safetyLevel === 'COSTLY_VICTORY'
+      ? `⚠️ ATENÇÃO: Vitória com Perda de Nobres (${t2Casualties.toLocaleString('pt-BR')} mortos em T2+)!`
       : `✅ Vitória Confirmada por Simulação (${simResult.safetyLevel === 'CLEAN_VICTORY' ? '0 Baixas' : 'Baixas absorvidas pela bucha G1'})`;
 
     const text =
@@ -341,14 +246,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
     image: string;
   }>;
 
-  // Total G1 and T2 casualties from simulation
-  const g1Casualties = simResult.playerCasualties
-    .filter((p) => p.tier === 1)
-    .reduce((sum, p) => sum + p.lostCount, 0);
-
-  const nobleCasualties = simResult.playerCasualties
-    .filter((p) => p.tier >= 2)
-    .reduce((sum, p) => sum + p.lostCount, 0);
+  const nobleCasualties = t2Casualties;
 
   return (
     <div className="bg-[#111827] text-slate-100 rounded-2xl p-5 sm:p-6 shadow-2xl border border-slate-700/80 space-y-6">
@@ -692,6 +590,22 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
               </h2>
               <p className="text-xs font-semibold text-emerald-300">
                 Dano massivo suficiente para aniquilar o alvo na primeira rodada sem contra-ataque.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : simResult.safetyLevel === 'COSTLY_VICTORY' ? (
+        <div className="bg-gradient-to-r from-rose-950 via-slate-900 to-rose-950 border-2 border-rose-500/80 rounded-2xl p-5 shadow-2xl space-y-3 animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white font-black shadow-lg">
+              ⚠️
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-black text-rose-100 tracking-wide uppercase">
+                Atenção: Vitória com Perda de Nobres (T2+)
+              </h2>
+              <p className="text-xs font-semibold text-rose-300">
+                Esta marcha causará <strong>{t2Casualties.toLocaleString('pt-BR')} mortos</strong> em tropas T2+! Ajuste a composição com Mercenários ou bucha adequada para evitar perda de nobres.
               </p>
             </div>
           </div>
