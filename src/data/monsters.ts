@@ -1240,8 +1240,8 @@ export function buildMonsterTargetFromTemplate(
 
   const classesPresent = squads.map((s) => s.troopClass);
   const weaknessClasses: TroopClass[] = [];
-  if (classesPresent.includes('ranged')) weaknessClasses.push('melee', 'mounted');
-  if (classesPresent.includes('mounted')) weaknessClasses.push('ranged', 'melee');
+  if (classesPresent.includes('ranged')) weaknessClasses.push('mounted');
+  if (classesPresent.includes('mounted')) weaknessClasses.push('melee');
   if (classesPresent.includes('flying')) weaknessClasses.push('ranged');
   if (classesPresent.includes('melee')) weaknessClasses.push('ranged');
 
@@ -1315,8 +1315,8 @@ export function updateMonsterSquads(
 
   const classesPresent = newSquads.map((s) => s.troopClass);
   const weaknessClasses: TroopClass[] = [];
-  if (classesPresent.includes('ranged')) weaknessClasses.push('melee', 'mounted');
-  if (classesPresent.includes('mounted')) weaknessClasses.push('ranged', 'melee');
+  if (classesPresent.includes('ranged')) weaknessClasses.push('mounted');
+  if (classesPresent.includes('mounted')) weaknessClasses.push('melee');
   if (classesPresent.includes('flying')) weaknessClasses.push('ranged');
   if (classesPresent.includes('melee')) weaknessClasses.push('ranged');
 

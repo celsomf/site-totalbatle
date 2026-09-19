@@ -345,39 +345,43 @@ export function buildDispatchedTroops(
     }
   } else {
     // Mercenários não são suficientes sozinhos: precisamos de dano nobre G2
-    const weakness = targetMonster.weaknessClasses || ['ranged'];
-    const prefersRanged = weakness.includes('ranged') || hasEnemyMelee;
-    const prefersMelee = weakness.includes('melee') && !hasEnemyRanged;
+    const enemyHasBonusVsMelee = enemySquads.some((s) => (s.aspects?.bonusVsMeleePercent || 0) > 0);
+    const avoidMelee = hasEnemyRanged || enemyHasBonusVsMelee;
 
-    if (prefersRanged) {
-      // Dano principal com G2 Arqueiro
+    if (avoidMelee) {
+      // Inimigo é Longo Alcance ou pune Melee (+35% / +45%). NUNCA enviar Corpo a Corpo!
       g2RangedRec = Math.min(g2Ranged?.ownedCount || 0, maxGuards - 100);
       allocatedGuards += g2RangedRec;
 
-      // Se o inimigo é Longo Alcance, bucha de absorção é G1 Ranged
-      if (hasEnemyRanged && maxGuards - allocatedGuards > 50) {
-        g1RangedRec = Math.min(g1Ranged?.ownedCount || 0, maxGuards - allocatedGuards);
-        allocatedGuards += g1RangedRec;
+      g1RangedRec = Math.min(g1Ranged?.ownedCount || 0, maxGuards - allocatedGuards);
+      allocatedGuards += g1RangedRec;
+    } else {
+      const weakness = targetMonster.weaknessClasses || ['ranged'];
+      const prefersRanged = weakness.includes('ranged') || hasEnemyMelee;
+      const prefersMelee = weakness.includes('melee') && !hasEnemyRanged;
+
+      if (prefersRanged) {
+        g2RangedRec = Math.min(g2Ranged?.ownedCount || 0, maxGuards - 100);
+        allocatedGuards += g2RangedRec;
+
+        g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
+        allocatedGuards += g1MeleeRec;
+      } else if (prefersMelee) {
+        g2MeleeRec = Math.min(g2Melee?.ownedCount || 0, maxGuards - 100);
+        allocatedGuards += g2MeleeRec;
+
+        g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
+        allocatedGuards += g1MeleeRec;
       } else {
-        // Se inimigo é Melee, bucha na frente é G1 Melee
+        g2RangedRec = Math.min(g2Ranged?.ownedCount || 0, Math.floor((maxGuards - 100) / 2));
+        allocatedGuards += g2RangedRec;
+
+        g2MeleeRec = Math.min(g2Melee?.ownedCount || 0, Math.floor((maxGuards - allocatedGuards) / 2));
+        allocatedGuards += g2MeleeRec;
+
         g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
         allocatedGuards += g1MeleeRec;
       }
-    } else if (prefersMelee) {
-      g2MeleeRec = Math.min(g2Melee?.ownedCount || 0, maxGuards - 100);
-      allocatedGuards += g2MeleeRec;
-
-      g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
-      allocatedGuards += g1MeleeRec;
-    } else {
-      g2RangedRec = Math.min(g2Ranged?.ownedCount || 0, Math.floor((maxGuards - 100) / 2));
-      allocatedGuards += g2RangedRec;
-
-      g2MeleeRec = Math.min(g2Melee?.ownedCount || 0, Math.floor((maxGuards - allocatedGuards) / 2));
-      allocatedGuards += g2MeleeRec;
-
-      g1MeleeRec = Math.min(g1Melee?.ownedCount || 0, maxGuards - allocatedGuards);
-      allocatedGuards += g1MeleeRec;
     }
   }
 
