@@ -128,21 +128,48 @@ export const SearchableMonsterSelect: React.FC<SearchableMonsterSelectProps> = (
 
   // Filter monsters based on search query and class filter
   const filteredMonsters = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
+    const normalize = (str: string) =>
+      str
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const rawQuery = searchTerm.trim();
+    if (!rawQuery) {
+      if (classFilter === 'all') return MONSTER_UNITS_CATALOG;
+      return MONSTER_UNITS_CATALOG.filter((m) => m.troopClass === classFilter);
+    }
+
+    const query = normalize(rawQuery);
+    const searchTokens = query.split(/\s+/).filter(Boolean);
 
     return MONSTER_UNITS_CATALOG.filter((monster) => {
       if (classFilter !== 'all' && monster.troopClass !== classFilter) {
         return false;
       }
 
-      if (!query) return true;
+      const normName = normalize(monster.name);
+      const normSub = normalize(monster.subType);
+      const normAliases = (monster.aliases || []).map(normalize);
+      const allText = [normName, normSub, ...normAliases].join(' ');
 
-      const nameMatch = monster.name.toLowerCase().includes(query);
-      const subTypeMatch = monster.subType.toLowerCase().includes(query);
+      // Suporte a sinônimos e prefixos: cavaleiro <-> cavalgante, valeiro -> cavalgante
+      const expandToken = (token: string) => {
+        if (token.includes('cavaleiro') || token.includes('valeiro')) return ['cavalgante', 'cavaleiro'];
+        if (token.includes('cavalgante')) return ['cavaleiro', 'cavalgante'];
+        return [token];
+      };
+
+      const tokensMatch = searchTokens.every((token) => {
+        const variants = expandToken(token);
+        return variants.some((v) => allText.includes(v));
+      });
+
       const tierMatch =
         `tier ${monster.tier}`.includes(query) ||
         `t${monster.tier}`.includes(query) ||
         monster.tier.toString() === query;
+
       const classMatch =
         monster.troopClass.toLowerCase().includes(query) ||
         (monster.troopClass === 'ranged' && 'longo alcance'.includes(query)) ||
@@ -150,7 +177,7 @@ export const SearchableMonsterSelect: React.FC<SearchableMonsterSelectProps> = (
         (monster.troopClass === 'mounted' && 'montadas'.includes(query)) ||
         (monster.troopClass === 'flying' && 'voadores'.includes(query));
 
-      return nameMatch || subTypeMatch || tierMatch || classMatch;
+      return tokensMatch || tierMatch || classMatch;
     });
   }, [searchTerm, classFilter]);
 

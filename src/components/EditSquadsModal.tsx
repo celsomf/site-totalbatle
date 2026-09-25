@@ -259,6 +259,10 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
                         <option value={3}>Tier III</option>
                         <option value={4}>Tier IV</option>
                         <option value={5}>Tier V</option>
+                        <option value={6}>Tier VI</option>
+                        <option value={7}>Tier VII</option>
+                        <option value={8}>Tier VIII</option>
+                        <option value={9}>Tier IX</option>
                       </select>
                     </div>
 
