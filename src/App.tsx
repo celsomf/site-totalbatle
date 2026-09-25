@@ -16,9 +16,15 @@ import { ProfileConfig } from './components/ProfileConfig';
 export function App() {
   const {
     profile,
+    activeProfileId,
+    availableProfiles,
     dbStatus,
+    switchProfile,
+    createNewProfile,
+    deleteProfile,
     updateProfile,
     updateCaptainLevel,
+    updateCaptainStars,
     toggleSelectCaptain,
     selectActiveCaptain,
     toggleTroopUnlocked,
@@ -27,7 +33,10 @@ export function App() {
     getHydratedTroops,
     addCustomTroop,
     removeCustomTroop,
+    loadDemoTroops,
+    clearAllTroops,
     resetToDefaults,
+    reconnectDb,
   } = usePlayerProfile();
 
   const [activeTab, setActiveTab] = useState<'march_book' | 'barracks' | 'captains' | 'crypts' | 'encyclopedia'>('march_book');
@@ -40,9 +49,22 @@ export function App() {
     .filter(Boolean) as Captain[];
   const selectedCaptain = selectedCaptains[0] || DEFAULT_CAPTAINS[0];
 
+  const displayName = profile.playerName || profile.heroName || 'Comandante';
+  const displayClan = profile.clanTag ? `[${profile.clanTag.replace(/^\[|\]$/g, '')}] ` : '';
+  const displayKingdom = profile.kingdom || 'K:310';
+
   return (
     <div className="min-h-screen text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-black">
-      <Header dbStatus={dbStatus} />
+      <Header
+        profile={profile}
+        activeProfileId={activeProfileId}
+        availableProfiles={availableProfiles}
+        onSwitchProfile={switchProfile}
+        onCreateProfile={createNewProfile}
+        onDeleteProfile={deleteProfile}
+        dbStatus={dbStatus}
+        onReconnectDb={reconnectDb}
+      />
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
@@ -124,7 +146,7 @@ export function App() {
 
             <div className="text-xs text-slate-300 font-bold items-center gap-1.5 px-3 py-2 bg-slate-950/80 rounded-xl border border-slate-700 hidden sm:flex shadow-inner">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>{profile.heroName || 'Comandante'} (K:310)</span>
+              <span>{displayClan}{displayName} ({displayKingdom})</span>
             </div>
           </div>
         </div>
@@ -148,6 +170,8 @@ export function App() {
               profile={profile}
               onUpdateProfile={updateProfile}
               onResetDefaults={resetToDefaults}
+              onLoadDemoTroops={loadDemoTroops}
+              onClearTroops={clearAllTroops}
             />
           </div>
         )}
@@ -173,6 +197,7 @@ export function App() {
               }}
               targetMonster={selectedMonster}
               onUpdateMonsterTarget={setSelectedMonster}
+              onUpdateProfile={updateProfile}
             />
           </div>
         )}
@@ -196,12 +221,14 @@ export function App() {
           <CaptainsView
             profile={profile}
             captainLevels={profile.captainLevels}
+            captainStars={profile.captainStars}
             onToggleHero={() => updateProfile({ includeHero: !profile.includeHero })}
             onUpdateHeroLevel={(level) => updateProfile({ heroLevel: level })}
             onUpdateHeroId={(id) => updateProfile({ heroId: id })}
             onToggleSelectCaptain={toggleSelectCaptain}
             onSelectActiveCaptain={selectActiveCaptain}
             onUpdateCaptainLevel={updateCaptainLevel}
+            onUpdateCaptainStars={updateCaptainStars}
           />
         )}
 

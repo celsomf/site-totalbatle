@@ -6,14 +6,20 @@ interface ProfileConfigProps {
   profile: PlayerProfile;
   onUpdateProfile: (updates: Partial<PlayerProfile>) => void;
   onResetDefaults: () => void;
+  onLoadDemoTroops?: () => void;
+  onClearTroops?: () => void;
 }
 
 export const ProfileConfig: React.FC<ProfileConfigProps> = ({
   profile,
   onUpdateProfile,
   onResetDefaults,
+  onLoadDemoTroops,
+  onClearTroops,
 }) => {
   const [showAcademy, setShowAcademy] = useState(false);
+
+  const displayName = profile.playerName || profile.heroName || 'Comandante';
 
   return (
     <div className="bg-[#111827] border border-slate-700/80 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-5">
@@ -25,18 +31,76 @@ export const ProfileConfig: React.FC<ProfileConfigProps> = ({
           </div>
           <div>
             <h2 className="text-base sm:text-lg font-black text-white tracking-wide">
-              Cidade & Escolha do Herói ({profile.heroName || 'Comandante'})
+              Configurações do Jogador ({displayName})
             </h2>
-            <p className="text-xs font-semibold text-slate-400">Escolha seu Herói inicial (Garvel ou Julia) e níveis da cidade</p>
+            <p className="text-xs font-semibold text-slate-400">Identificação, Herói principal e níveis da Cidade</p>
           </div>
         </div>
-        <button
-          onClick={onResetDefaults}
-          title="Restaurar exército padrão da imagem"
-          className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-amber-300 hover:text-white text-xs font-bold flex items-center gap-1.5 shadow transition-all"
-        >
-          <RotateCcw className="w-4 h-4" /> Restaurar Estoque
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {onLoadDemoTroops && (
+            <button
+              onClick={onLoadDemoTroops}
+              title="Carregar preset de exército para testes rápidos"
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-amber-300 hover:text-white text-xs font-bold flex items-center gap-1.5 shadow transition-all"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Exército Demo
+            </button>
+          )}
+          {onClearTroops && (
+            <button
+              onClick={() => {
+                if (confirm('Deseja zerar a contagem de todas as tropas deste perfil?')) {
+                  onClearTroops();
+                }
+              }}
+              title="Zerar todas as tropas deste jogador"
+              className="px-3 py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 text-rose-300 hover:text-rose-100 text-xs font-bold flex items-center gap-1.5 shadow transition-all"
+            >
+              Zerar Tropas
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Identificação do Jogador (Nickname, Reino, Clã) */}
+      <div className="bg-[#0b0f19] p-4 rounded-xl border border-slate-700 space-y-3 shadow-inner">
+        <span className="text-2xs font-black text-amber-300 uppercase tracking-wider block">
+          ♦ Identificação do Jogador & Reino ♦
+        </span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className="space-y-1">
+            <label className="text-slate-300 font-bold block">Nome / Nickname do Jogador:</label>
+            <input
+              type="text"
+              value={profile.playerName || profile.heroName || ''}
+              onChange={(e) => onUpdateProfile({ playerName: e.target.value, heroName: e.target.value })}
+              placeholder="Ex: Comandante"
+              className="w-full bg-[#111827] border border-slate-600 focus:border-amber-400 rounded-lg px-3 py-2 text-white font-semibold outline-none"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-slate-300 font-bold block">Reino (ex: K:310):</label>
+            <input
+              type="text"
+              value={profile.kingdom || 'K:310'}
+              onChange={(e) => onUpdateProfile({ kingdom: e.target.value })}
+              placeholder="K:310"
+              className="w-full bg-[#111827] border border-slate-600 focus:border-amber-400 rounded-lg px-3 py-2 text-white font-semibold outline-none"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-slate-300 font-bold block">Tag do Clã (Opcional):</label>
+            <input
+              type="text"
+              value={profile.clanTag || ''}
+              onChange={(e) => onUpdateProfile({ clanTag: e.target.value })}
+              placeholder="Ex: WAR"
+              className="w-full bg-[#111827] border border-slate-600 focus:border-amber-400 rounded-lg px-3 py-2 text-white font-semibold outline-none"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Hero Selection (Garvel vs Julia) */}

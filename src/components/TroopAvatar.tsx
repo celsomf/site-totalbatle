@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Shield, Swords, Crosshair, Compass, Zap, Users } from 'lucide-react';
+import { Shield } from 'lucide-react';
 
 interface TroopAvatarProps {
   id: string;
   tier?: number | string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  levelBadge?: number | string;
   className?: string;
 }
 
@@ -82,9 +83,37 @@ const REAL_TROOP_IMAGES: Record<string, string> = {
   s4_deadshot: '/assets/troops/archer_IV.png',
   s5_deadshot: '/assets/troops/archer_V.png',
 
-  // Unidades Pesadas & Cerco
+  // Unidades Pesadas & Cerco / Catapultas
   g1_heavy: '/assets/troops/swordman_I.png',
-  g1_siege: '/assets/troops/swordman_II.png',
+  g1_siege: '/assets/troops/catapult_I.png',
+  g2_siege: '/assets/troops/catapult_II.png',
+  g3_siege: '/assets/troops/catapult_III.png',
+  g4_siege: '/assets/troops/catapult_IV.png',
+  g5_siege: '/assets/troops/catapult_V.png',
+  icon_g1_siege: '/assets/troops/catapult_I.png',
+  icon_g2_siege: '/assets/troops/catapult_II.png',
+  icon_g3_siege: '/assets/troops/catapult_III.png',
+  icon_g4_siege: '/assets/troops/catapult_IV.png',
+  icon_g5_siege: '/assets/troops/catapult_V.png',
+  catapult_I: '/assets/troops/catapult_I.png',
+  catapult_II: '/assets/troops/catapult_II.png',
+  catapult_III: '/assets/troops/catapult_III.png',
+  catapult_IV: '/assets/troops/catapult_IV.png',
+  catapult_V: '/assets/troops/catapult_V.png',
+  catapult: '/assets/troops/catapult_I.png',
+  catapulta: '/assets/troops/catapult_I.png',
+  catapulta_I: '/assets/troops/catapult_I.png',
+  catapulta_II: '/assets/troops/catapult_II.png',
+  catapulta_III: '/assets/troops/catapult_III.png',
+  catapulta_IV: '/assets/troops/catapult_IV.png',
+  catapulta_V: '/assets/troops/catapult_V.png',
+  trabuco: '/assets/troops/catapult_I.png',
+  trabuco_I: '/assets/troops/catapult_I.png',
+  trabuco_II: '/assets/troops/catapult_II.png',
+  trabuco_III: '/assets/troops/catapult_III.png',
+  trabuco_IV: '/assets/troops/catapult_IV.png',
+  trabuco_V: '/assets/troops/catapult_V.png',
+
 
   // Guardas Avançados (T6-T7 / P1-P2)
   besteiro_pesado_VI: '/assets/troops/g6_ranged.png',
@@ -154,7 +183,7 @@ const REAL_TROOP_IMAGES: Record<string, string> = {
   swift_jaeger_VII: '/assets/troops/spies_V.png',
   panoptic_I: '/assets/troops/spies_V.png',
 
-  // Monstros & Mercenários
+  // Monstros & Mercenários & Dragões
   m3_golem: '/assets/troops/berserker.png',
   m3_specter: '/assets/troops/berserker.png',
   m3_beast: '/assets/troops/berserker.png',
@@ -164,6 +193,96 @@ const REAL_TROOP_IMAGES: Record<string, string> = {
   epic_monter_hunter_V: '/assets/troops/epic_monter_hunter_V.png',
   berserker: '/assets/troops/berserker.png',
   berserker_monstro: '/assets/troops/berserker.png',
+  emerald_dragon: '/assets/troops/emerald_dragon.png',
+  emeraldDragon: '/assets/troops/emerald_dragon.png',
+  dragao_esmeralda: '/assets/troops/emerald_dragon.png',
+  dragao_vida: '/assets/monsters/dragao_da_vida_avatar.png',
+  dragao_da_vida: '/assets/monsters/dragao_da_vida_avatar.png',
+  life_dragon: '/assets/monsters/dragao_da_vida_avatar.png',
+  arqueiro_elfico: '/assets/monsters/arqueiro_elfico_avatar.png',
+  banshee: '/assets/monsters/banshee_avatar.png',
+  capataz: '/assets/monsters/capataz_avatar.png',
+  carnical: '/assets/monsters/carnical_avatar.png',
+  carrasco: '/assets/monsters/carrasco_avatar.png',
+  cavalgante_da_morte: '/assets/monsters/cavalgante_da_morte_avatar.png',
+  cavalgante_cao_morte: '/assets/monsters/cavalgante_de_cao_da_morte_avatar.png',
+  cavalgante_de_cao_da_morte: '/assets/monsters/cavalgante_de_cao_da_morte_avatar.png',
+  cavalgante_fogo: '/assets/monsters/cavalgante_de_fogo_avatar.png',
+  cavalgante_de_fogo: '/assets/monsters/cavalgante_de_fogo_avatar.png',
+  cavalgante_jaguar: '/assets/monsters/cavalgante_de_jaguar_avatar.png',
+  cavalgante_de_jaguar: '/assets/monsters/cavalgante_de_jaguar_avatar.png',
+  cavalgante_trevas: '/assets/monsters/cavalgante_das_trevas_avatar.png',
+  cavalgante_das_trevas: '/assets/monsters/cavalgante_das_trevas_avatar.png',
+  cavalgante_escorpiao: '/assets/monsters/cavalgante_de_escorpiao_avatar.png',
+  cavalgante_de_escorpiao: '/assets/monsters/cavalgante_de_escorpiao_avatar.png',
+  scorpion_rider: '/assets/monsters/cavalgante_de_escorpiao_avatar.png',
+  cavalgante_lobo: '/assets/monsters/cavalgante_de_lobo_avatar.png',
+  cavalgante_de_lobo: '/assets/monsters/cavalgante_de_lobo_avatar.png',
+  wolf_rider: '/assets/monsters/cavalgante_de_lobo_avatar.png',
+  cavalgante_pegaso: '/assets/monsters/cavalgante_de_pegaso_avatar.png',
+  cavalgante_de_pegaso: '/assets/monsters/cavalgante_de_pegaso_avatar.png',
+  cavalgante_touro: '/assets/monsters/cavalgante_de_touro_avatar.png',
+  cavalgante_de_touro: '/assets/monsters/cavalgante_de_touro_avatar.png',
+  bull_rider: '/assets/monsters/cavalgante_de_touro_avatar.png',
+  cavalgante_unicornio: '/assets/monsters/cavalgante_de_unicornio_avatar.png',
+  cavalgante_de_unicornio: '/assets/monsters/cavalgante_de_unicornio_avatar.png',
+  unicorn_rider: '/assets/monsters/cavalgante_de_unicornio_avatar.png',
+  cavalgante_verme_fogo: '/assets/monsters/cavalgante_de_verme_de_fogo_avatar.png',
+  cavalgante_de_verme_de_fogo: '/assets/monsters/cavalgante_de_verme_de_fogo_avatar.png',
+  fire_worm_rider: '/assets/monsters/cavalgante_de_verme_de_fogo_avatar.png',
+  centauro: '/assets/monsters/centauro_avatar.png',
+  centaur: '/assets/monsters/centauro_avatar.png',
+  cerbero: '/assets/monsters/cerbero_avatar.png',
+  cerbero_demonio: '/assets/monsters/cerbero_avatar.png',
+  cerberus: '/assets/monsters/cerbero_avatar.png',
+  cerberus_unit: '/assets/monsters/cerbero_avatar.png',
+  ciclope: '/assets/monsters/ciclope_avatar.png',
+  cyclops: '/assets/monsters/ciclope_avatar.png',
+  corvo_tempestade: '/assets/monsters/corvo_da_tempestade_avatar.png',
+  corvo_da_tempestade: '/assets/monsters/corvo_da_tempestade_avatar.png',
+  cervo_tempestade: '/assets/monsters/corvo_da_tempestade_avatar.png',
+  cervo_da_tempestade: '/assets/monsters/corvo_da_tempestade_avatar.png',
+  storm_crow: '/assets/monsters/corvo_da_tempestade_avatar.png',
+  demonio: '/assets/monsters/demonio_avatar.png',
+  demon: '/assets/monsters/demonio_avatar.png',
+  demonio_chifres: '/assets/monsters/demonio_com_chifres_avatar.png',
+  demonio_com_chifres: '/assets/monsters/demonio_com_chifres_avatar.png',
+  horned_demon: '/assets/monsters/demonio_com_chifres_avatar.png',
+  druida: '/assets/monsters/druida_avatar.png',
+  druid: '/assets/monsters/druida_avatar.png',
+  ent: '/assets/monsters/ent_avatar.png',
+  esqueleto: '/assets/monsters/esqueleto_avatar.png',
+  skeleton: '/assets/monsters/esqueleto_avatar.png',
+  feiticeiro: '/assets/monsters/feiticeiro_avatar.png',
+  sorcerer: '/assets/monsters/feiticeiro_avatar.png',
+  witch_doctor: '/assets/monsters/feiticeiro_avatar.png',
+  gargula: '/assets/monsters/gargula_avatar.png',
+  gargoyle: '/assets/monsters/gargula_avatar.png',
+  goblin: '/assets/monsters/goblin_avatar.png',
+  lancador_machados: '/assets/monsters/lancador_de_machados_avatar.png',
+  lancador_de_machados: '/assets/monsters/lancador_de_machados_avatar.png',
+  axe_thrower: '/assets/monsters/lancador_de_machados_avatar.png',
+  licantropo: '/assets/monsters/licantropo_avatar.png',
+  lincantropo: '/assets/monsters/licantropo_avatar.png',
+  lycanthrope: '/assets/monsters/licantropo_avatar.png',
+  necromante: '/assets/monsters/necromante_avatar.png',
+  necromancer: '/assets/monsters/necromante_avatar.png',
+  abominacao: '/assets/monsters/abominacao_avatar.png',
+  ogro_xama: '/assets/monsters/ogro_xama_avatar.png',
+  verme_areia: '/assets/monsters/verme_da_areia_avatar.png',
+  sandworm: '/assets/monsters/verme_da_areia_avatar.png',
+  m3_dragon: '/assets/troops/emerald_dragon.png',
+  stone_gargoyle: '/assets/troops/stone_gargoyle.png',
+  stoneGargoyle: '/assets/troops/stone_gargoyle.png',
+  gargula_de_pedra: '/assets/troops/stone_gargoyle.png',
+  battle_boar: '/assets/troops/battle_boar.png',
+  battleBoar: '/assets/troops/battle_boar.png',
+  javali_de_batalha: '/assets/troops/battle_boar.png',
+  swift_marksman: '/assets/troops/swift_marksman.png',
+  swiftMarksman: '/assets/troops/swift_marksman.png',
+  atirador_veloz: '/assets/troops/swift_marksman.png',
+  merc_swift_marksman: '/assets/troops/swift_marksman.png',
+
 
   // Capitães Oficiais
   alexander: '/assets/troops/alexander.png',
@@ -198,8 +317,47 @@ const REAL_TROOP_IMAGES: Record<string, string> = {
   ye_ho_sung: '/assets/troops/ye_ho_sung.png',
 };
 
-export const TroopAvatar: React.FC<TroopAvatarProps> = ({ id, tier, size = 'md', className = '' }) => {
+function getTroopImageSrc(id: string): string {
+  if (!id) return '';
+  if (REAL_TROOP_IMAGES[id]) return REAL_TROOP_IMAGES[id];
+
+  const lower = id.toLowerCase();
+  if (REAL_TROOP_IMAGES[lower]) return REAL_TROOP_IMAGES[lower];
+
+  // Strip dynamic suffix like necromante_172000_0 or cavalgante_unicornio_1_11
+  const cleanId = lower.replace(/_\d+.*$/, '');
+  if (REAL_TROOP_IMAGES[cleanId]) return REAL_TROOP_IMAGES[cleanId];
+
+  // Slugify from name (e.g. "Lançador de Machados" -> "lancador_de_machados")
+  const slug = lower
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  if (REAL_TROOP_IMAGES[slug]) return REAL_TROOP_IMAGES[slug];
+
+  const cleanSlug = slug.replace(/_\d+.*$/, '');
+  if (REAL_TROOP_IMAGES[cleanSlug]) return REAL_TROOP_IMAGES[cleanSlug];
+
+  const withoutArticles = slug.replace(/_(de|da|do|das|dos|com)_/g, '_');
+  if (REAL_TROOP_IMAGES[withoutArticles]) return REAL_TROOP_IMAGES[withoutArticles];
+
+  return `/assets/troops/${id}.png`;
+}
+
+export const TroopAvatar: React.FC<TroopAvatarProps> = ({
+  id,
+  size = 'md',
+  levelBadge,
+  className = '',
+}) => {
   const [imgError, setImgError] = useState(false);
+
+  const realImgSrc = getTroopImageSrc(id);
+
+  React.useEffect(() => {
+    setImgError(false);
+  }, [realImgSrc]);
 
   const sizeClasses =
     size === 'sm'
@@ -210,76 +368,32 @@ export const TroopAvatar: React.FC<TroopAvatarProps> = ({ id, tier, size = 'md',
       ? 'w-28 h-28'
       : 'w-16 h-16';
 
-  const tierSizeClass =
-    size === 'sm'
-      ? 'text-[8px] px-1 py-0.2'
-      : size === 'lg' || size === 'xl'
-      ? 'text-xs px-2 py-0.5'
-      : 'text-[10px] px-1.5 py-0.5';
-
-  const getTierRoman = (t?: number | string) => {
-    if (!t) return null;
-    const num = Number(t);
-    switch (num) {
-      case 1: return 'I';
-      case 2: return 'II';
-      case 3: return 'III';
-      case 4: return 'IV';
-      case 5: return 'V';
-      case 6: return 'VI';
-      case 7: return 'VII';
-      case 8: return 'VIII';
-      case 9: return 'IX';
-      default: return String(t);
-    }
-  };
-
-  const getTierColor = (t?: number | string) => {
-    const num = Number(t);
-    switch (num) {
-      case 1: return 'bg-stone-800 text-stone-200 border-stone-500';
-      case 2: return 'bg-emerald-950 text-emerald-300 border-emerald-500';
-      case 3: return 'bg-blue-950 text-blue-300 border-blue-500';
-      case 4: return 'bg-purple-950 text-purple-300 border-purple-500';
-      case 5: return 'bg-amber-950 text-amber-300 border-amber-500';
-      case 6: return 'bg-red-950 text-red-300 border-red-500';
-      case 7: return 'bg-yellow-500 text-slate-950 font-black border-yellow-300';
-      default: return 'bg-slate-800 text-slate-200 border-slate-600';
-    }
-  };
-
-  const realImgSrc = REAL_TROOP_IMAGES[id] || `/assets/troops/${id}.png`;
-
-  const romanTier = getTierRoman(tier);
-
   return (
-    <div
-      className={`relative ${sizeClasses} rounded-xl border border-slate-700 bg-slate-950 shadow-md flex-shrink-0 overflow-hidden ring-1 ring-black/40 ${className}`}
-    >
-      {realImgSrc && !imgError ? (
-        <img
-          src={realImgSrc}
-          alt={id}
-          className="w-full h-full object-cover"
-          onError={() => setImgError(true)}
-        />
-      ) : (
-        <div className="w-full h-full bg-slate-900 flex flex-col items-center justify-center text-slate-400 p-2">
-          <Shield className="w-6 h-6 text-amber-400/80 mb-1" />
-          <span className="text-[9px] font-bold text-slate-300 uppercase truncate max-w-full">
-            {id.replace(/^(g[0-9]_|s[0-9]_|m[0-9]_)/, '')}
-          </span>
-        </div>
-      )}
+    <div className={`relative ${sizeClasses} flex-shrink-0 ${className}`}>
+      <div className="w-full h-full rounded-xl border border-slate-700 bg-slate-950 shadow-md overflow-hidden ring-1 ring-black/40">
+        {realImgSrc && !imgError ? (
+          <img
+            src={realImgSrc}
+            alt={id}
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="w-full h-full bg-slate-900 flex flex-col items-center justify-center text-slate-400 p-2">
+            <Shield className="w-6 h-6 text-amber-400/80 mb-1" />
+            <span className="text-[9px] font-bold text-slate-300 uppercase truncate max-w-full">
+              {id.replace(/^(g[0-9]_|s[0-9]_|m[0-9]_)/, '')}
+            </span>
+          </div>
+        )}
+      </div>
 
-      {/* Roman Tier Badge in Top Left Corner */}
-      {romanTier && (
+      {levelBadge !== undefined && levelBadge !== null && (
         <div
-          className={`absolute top-0 left-0 ${tierSizeClass} rounded-br-lg border-r border-b font-black flex items-center justify-center shadow-md ${getTierColor(
-            tier
-          )}`}
+          className="absolute -top-1.5 -right-1.5 z-20 bg-gradient-to-b from-amber-700 via-yellow-800 to-amber-950 border border-amber-300 text-amber-100 font-mono font-black text-[10px] sm:text-xs px-1.5 py-0.5 rounded shadow-xl flex items-center justify-center pointer-events-none ring-1 ring-black/60"
+          style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}
         >
-          {romanTier}
+          {levelBadge}
         </div>
       )}
     </div>

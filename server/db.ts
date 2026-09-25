@@ -21,6 +21,9 @@ export async function initDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS player_profiles (
         id VARCHAR(50) PRIMARY KEY DEFAULT 'main_profile',
+        player_name VARCHAR(100) NOT NULL DEFAULT 'Comandante',
+        kingdom VARCHAR(50) NOT NULL DEFAULT 'K:310',
+        clan_tag VARCHAR(20) NOT NULL DEFAULT '',
         hero_id VARCHAR(50) NOT NULL DEFAULT 'garvel',
         hero_name VARCHAR(100) NOT NULL DEFAULT 'Comandante',
         hero_level INT NOT NULL DEFAULT 16,
@@ -36,6 +39,9 @@ export async function initDatabase() {
         custom_troops JSONB NOT NULL DEFAULT '[]'::jsonb,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+      ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS player_name VARCHAR(100) DEFAULT 'Comandante';
+      ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS kingdom VARCHAR(50) DEFAULT 'K:310';
+      ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS clan_tag VARCHAR(20) DEFAULT '';
       ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS custom_troops JSONB DEFAULT '[]'::jsonb;
     `);
 
@@ -73,6 +79,29 @@ export async function initDatabase() {
         squads JSONB NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    // 5. Tabela de Unidades de Monstros
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS monster_units (
+        id VARCHAR(50) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        tier INT NOT NULL,
+        family VARCHAR(50) NOT NULL,
+        sub_type VARCHAR(150) NOT NULL,
+        troop_class VARCHAR(50) NOT NULL,
+        unit_attack INT NOT NULL,
+        unit_health INT NOT NULL,
+        leadership INT NOT NULL,
+        initiative INT NOT NULL,
+        aspects JSONB NOT NULL DEFAULT '{}'::jsonb,
+        is_enemy BOOLEAN NOT NULL DEFAULT true,
+        unit_type VARCHAR(50) NOT NULL DEFAULT 'enemy_monster',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      ALTER TABLE monster_units ADD COLUMN IF NOT EXISTS is_enemy BOOLEAN NOT NULL DEFAULT true;
+      ALTER TABLE monster_units ADD COLUMN IF NOT EXISTS unit_type VARCHAR(50) NOT NULL DEFAULT 'enemy_monster';
     `);
 
     client.release();

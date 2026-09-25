@@ -8,6 +8,9 @@ export interface TroopAspects {
   bonusVsFlyingPercent?: number;
   bonusVsSiegePercent?: number;
   bonusVsBeastsPercent?: number;
+  bonusVsGiantsPercent?: number;
+  bonusVsDragonsPercent?: number;
+  bonusVsElementalsPercent?: number;
   bonusVsFortificationsPercent?: number;
   bonusVsHumanPercent?: number;
   isPvpDoubled?: boolean;
@@ -59,7 +62,7 @@ export interface EnemySquadUnit {
   name: string;
   tier: number;
   troopClass: TroopClass;
-  family: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'elemental' | 'epic' | 'elfos';
+  family: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'elemental' | 'epic' | 'elfos' | 'dragons';
   subType?: string; // Ex: 'Elfos, Unidade de longo alcance' ou 'Demônio, Unidade montada'
   unitAttack: number;
   unitHealth: number;
@@ -72,8 +75,15 @@ export interface EnemySquadUnit {
     bonusVsMountedPercent?: number;
     bonusVsFlyingPercent?: number;
     bonusVsElementalsPercent?: number;
+    bonusVsDragonsPercent?: number;
+    bonusVsSiegePercent?: number;
+    bonusVsFortificationsPercent?: number;
+    bonusVsBeastsPercent?: number;
+    bonusVsGiantsPercent?: number;
     description?: string;
   };
+  isEnemy?: boolean;
+  unitType?: 'enemy_monster';
   avatarUrl?: string;
 }
 
@@ -147,9 +157,33 @@ export interface MonsterTarget {
   estimatedChestPoints: number;
   estimatedCaptainXP: number;
   description?: string;
+  isCustomConfig?: boolean;
+  activeVariantId?: string;
+  activeVariantName?: string;
+}
+
+export interface CustomMonsterVariant {
+  id: string;
+  name: string;
+  squads: EnemySquadUnit[];
+  createdAt?: number;
+}
+
+export interface ProfileSummary {
+  id: string;
+  playerName: string;
+  kingdom?: string;
+  clanTag?: string;
+  capitolLevel?: number;
+  heroId?: 'garvel' | 'julia';
+  updatedAt?: string;
 }
 
 export interface PlayerProfile {
+  id?: string;
+  playerName?: string;
+  kingdom?: string;
+  clanTag?: string;
   heroId?: 'garvel' | 'julia';
   heroName?: string;
   heroLevel: number;
@@ -162,6 +196,7 @@ export interface PlayerProfile {
   selectedCaptainId: string;       // Capitão principal (retrocompatibilidade)
   selectedCaptainIds?: string[];   // Até 3 capitães selecionados simultaneamente
   captainLevels: Record<string, number>;
+  captainStars?: Record<string, number>;
   unlockedTroopIds: string[];
   ownedTroopCounts: Record<string, number>;
   customTroopStats: Record<string, { attack: number; health: number }>;

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { EnemySquadUnit, TroopClass } from '../types';
 import { MONSTER_UNITS_CATALOG } from '../data/monsters';
 import { X, Plus, Trash2, RotateCcw, Save, ShieldAlert, Sparkles, AlertCircle } from 'lucide-react';
+import { SearchableMonsterSelect } from './SearchableMonsterSelect';
+import { TroopAvatar } from './TroopAvatar';
 
 interface EditSquadsModalProps {
   isOpen: boolean;
@@ -82,10 +84,6 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
   };
 
   const handleRemoveSquad = (index: number) => {
-    if (squads.length <= 1) {
-      alert('O alvo precisa ter no mínimo 1 esquadrão inimigo.');
-      return;
-    }
     setSquads((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -112,10 +110,10 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-black text-white tracking-wide">
-                Ajustar Composição das Tropas Inimigas
+                Ajustar Composição do Exército Inimigo (Monstros do Mapa)
               </h3>
               <p className="text-xs font-semibold text-slate-400">
-                Alvo: <strong className="text-amber-300">{monsterName} (Nv {monsterLevel})</strong> — Edite os esquadrões para bater 100% com o seu jogo
+                Alvo: <strong className="text-amber-300">{monsterName} (Nv {monsterLevel})</strong> — Edite os esquadrões inimigos para bater 100% com o seu jogo
               </p>
             </div>
           </div>
@@ -157,20 +155,60 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
             )}
           </div>
 
-          <div className="space-y-3">
-            {squads.map((sq, idx) => {
+          {squads.length === 0 ? (
+            <div className="p-8 text-center space-y-3 bg-slate-950/60 rounded-xl border border-dashed border-slate-700">
+              <div className="w-12 h-12 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center mx-auto text-amber-400">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-slate-200 font-bold">
+                  Nenhum esquadrão cadastrado para este alvo.
+                </p>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  Clique no botão abaixo para adicionar os monstros e quantidades reais que aparecem no seu jogo.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddSquad}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs shadow-lg transition-all"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>+ Adicionar Primeiro Esquadrão</span>
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {squads.map((sq, idx) => {
               return (
                 <div
                   key={sq.id || idx}
                   className="bg-[#0b0f19] border border-slate-700/80 rounded-xl p-3.5 sm:p-4 space-y-3 relative group hover:border-amber-400/60 transition-all shadow-md"
                 >
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-black text-white flex items-center gap-2 text-sm">
-                      <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-xs">
-                        {idx + 1}
-                      </span>
-                      Esquadrão Inimigo #{idx + 1}
-                    </span>
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                    <div className="flex items-center gap-3">
+                      <TroopAvatar
+                        id={sq.id || sq.name}
+                        size="md"
+                        className="border-amber-500/50 shadow-md ring-1 ring-amber-500/30"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-xs">
+                            {idx + 1}
+                          </span>
+                          <span className="font-black text-white text-sm">
+                            {sq.name || `Esquadrão Inimigo #${idx + 1}`}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded text-3xs font-black bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            Tier {sq.tier}
+                          </span>
+                        </div>
+                        <p className="text-3xs text-slate-400 mt-0.5">
+                          {sq.subType || 'Monstro do Mapa'}
+                        </p>
+                      </div>
+                    </div>
 
                     <button
                       type="button"
@@ -189,43 +227,11 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
                       <label className="text-2xs font-bold text-slate-400">
                         Carregar Monstro do Catálogo:
                       </label>
-                      <select
-                        onChange={(e) => handleSelectCatalogUnit(idx, e.target.value)}
-                        defaultValue=""
-                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-bold focus:outline-none focus:border-amber-400"
-                      >
-                        <option value="" disabled>
-                          -- Selecionar Monstro por Classe --
-                        </option>
-                        <optgroup label="🏹 Longo Alcance (Ranged)">
-                          {MONSTER_UNITS_CATALOG.filter((c) => c.troopClass === 'ranged').map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              Tier {cat.tier} - {cat.name} ({cat.subType}) • Atk {cat.unitAttack} / HP {cat.unitHealth}
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="⚔️ Corpo a Corpo (Melee)">
-                          {MONSTER_UNITS_CATALOG.filter((c) => c.troopClass === 'melee').map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              Tier {cat.tier} - {cat.name} ({cat.subType}) • Atk {cat.unitAttack} / HP {cat.unitHealth}
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="🐎 Montadas (Mounted)">
-                          {MONSTER_UNITS_CATALOG.filter((c) => c.troopClass === 'mounted').map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              Tier {cat.tier} - {cat.name} ({cat.subType}) • Atk {cat.unitAttack} / HP {cat.unitHealth}
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="🦅 Voadores (Flying)">
-                          {MONSTER_UNITS_CATALOG.filter((c) => c.troopClass === 'flying').map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              Tier {cat.tier} - {cat.name} ({cat.subType}) • Atk {cat.unitAttack} / HP {cat.unitHealth}
-                            </option>
-                          ))}
-                        </optgroup>
-                      </select>
+                      <SearchableMonsterSelect
+                        onSelect={(unitId) => handleSelectCatalogUnit(idx, unitId)}
+                        selectedMonsterName={sq.name}
+                        placeholder={sq.name ? `Monstro: ${sq.name} (Trocar)` : '-- Selecionar Monstro por Classe / Nome --'}
+                      />
                     </div>
 
                     <div className="space-y-1">
@@ -346,6 +352,7 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
               );
             })}
           </div>
+        )}
 
           {/* Add Squad Button */}
           <button

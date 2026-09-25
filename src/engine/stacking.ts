@@ -1,4 +1,5 @@
 import { TroopUnit, MonsterTarget, Captain, PlayerProfile, MarchSquadAllocation, MarchRecommendation } from '../types';
+import { getCaptainMonsterAttackBonus } from '../utils/captainStats';
 
 /**
  * Calculates 2n+1 fodder squads to absorb first strikes from an Epic or Common monster,
@@ -84,7 +85,11 @@ export function allocateMarchSquads(
     const unitHealth = primaryUnit.customHealth || primaryUnit.baseHealth;
 
     // Apply Captain monster bonus, Dragão bonus & Academy bonus
-    const captainBonus = (captain?.monsterAttackBonusPercent || 0) / 100;
+    const captainLevel = profile.captainLevels[captain?.id] || captain?.level || 1;
+    const captainStars = profile.captainStars?.[captain?.id] || captain?.stars || 1;
+    const captainBonus = captain
+      ? getCaptainMonsterAttackBonus(captain, captainLevel, captainStars) / 100
+      : 0;
     const dragonBonus = (profile.dragonLevel || 15) * 0.01; // +15% at dragon lvl 15
     const academyCategoryBonus = primaryUnit.category === 'guardsman'
       ? (profile.academyBonus.guardsmenAttack || 0) / 100

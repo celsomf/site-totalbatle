@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PlayerProfile, TroopUnit, Captain } from '../types';
 import { calculateCryptOneShot } from '../engine/crypt';
 import { Compass, CheckCircle2, Copy, Check, Zap, Shield, Sparkles } from 'lucide-react';
+import { TroopAvatar } from './TroopAvatar';
 
 interface CryptOptimizerProps {
   profile: PlayerProfile;
@@ -141,14 +142,7 @@ export const CryptOptimizer: React.FC<CryptOptimizerProps> = ({ profile, troops,
         {primarySquad ? (
           <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-xl border border-slate-700 bg-slate-950 flex items-center justify-center overflow-hidden flex-shrink-0 shadow">
-                <img
-                  src={primarySquad.unitId.includes('titan') || primarySquad.unitId.includes('berserker') ? '/assets/troops/berserker.png' : `/assets/troops/${primarySquad.unitId}.png`}
-                  alt={primarySquad.unitName}
-                  className="w-full h-full object-cover"
-                  onError={(e) => { (e.target as any).src = '/assets/troops/archer_II.png'; }}
-                />
-              </div>
+              <TroopAvatar id={primarySquad.unitId} tier={primarySquad.tier} size="md" />
 
               <div>
                 <span className="text-2xs font-bold text-emerald-400 uppercase tracking-wide block">

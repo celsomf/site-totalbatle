@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { DEFAULT_CAPTAINS } from '../data/captains';
+import { getCaptainMonsterAttackBonus } from '../utils/captainStats';
 import { TroopAvatar } from './TroopAvatar';
 import { Crown, Sparkles, UserCheck, Check, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -179,7 +180,7 @@ export const CaptainSelector: React.FC<CaptainSelectorProps> = ({
           <div className="flex justify-between text-xs sm:text-sm font-bold">
             <span className="text-amber-200">Ajustar Nível de {currentEditingCaptain.name}:</span>
             <span className="text-yellow-300 font-black">
-              Nível {currentLevel} (+{Math.round(currentLevel * 1.2)}% Bônus)
+              Nível {currentLevel} (+{getCaptainMonsterAttackBonus(currentEditingCaptain, currentLevel)}% Bônus)
             </span>
           </div>
           <input

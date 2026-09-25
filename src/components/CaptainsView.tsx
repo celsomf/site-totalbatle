@@ -2,27 +2,36 @@ import React, { useState } from 'react';
 import { DEFAULT_CAPTAINS } from '../data/captains';
 import { PlayerProfile, Captain } from '../types';
 import { Crown, Sparkles, UserCheck, Check, Shield, Search, Star } from 'lucide-react';
+import {
+  getCaptainComputedStats,
+  getHeroAttackBonus,
+  getHeroLeadershipBonus,
+} from '../utils/captainStats';
 
 interface CaptainsViewProps {
   profile: PlayerProfile;
   captainLevels: Record<string, number>;
+  captainStars?: Record<string, number>;
   onToggleHero: () => void;
   onUpdateHeroLevel: (level: number) => void;
   onUpdateHeroId: (id: 'garvel' | 'julia') => void;
   onToggleSelectCaptain: (captainId: string) => void;
   onSelectActiveCaptain: (captainId: string) => void;
   onUpdateCaptainLevel: (captainId: string, level: number) => void;
+  onUpdateCaptainStars?: (captainId: string, stars: number) => void;
 }
 
 export const CaptainsView: React.FC<CaptainsViewProps> = ({
   profile,
   captainLevels,
+  captainStars = {},
   onToggleHero,
   onUpdateHeroLevel,
   onUpdateHeroId,
   onToggleSelectCaptain,
   onSelectActiveCaptain,
   onUpdateCaptainLevel,
+  onUpdateCaptainStars,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [bonusFilter, setBonusFilter] = useState<'all' | 'monster' | 'crypt' | 'speed' | 'pvp'>('all');
@@ -119,10 +128,10 @@ export const CaptainsView: React.FC<CaptainsViewProps> = ({
                   <span className="text-xs font-mono font-bold text-amber-300">Nv {heroLevel}</span>
                 </div>
                 <p className="text-2xs font-semibold text-slate-400 mt-1">
-                  +15.000 Liderança Base
+                  +{getHeroLeadershipBonus(heroLevel).toLocaleString('pt-BR')} Liderança Base
                 </p>
                 <p className="text-2xs font-bold text-emerald-300">
-                  +{(heroLevel * 2.5).toFixed(1)}% Ataque Geral
+                  +{getHeroAttackBonus(heroLevel).toFixed(1)}% Ataque Geral
                 </p>
               </div>
             </div>
@@ -151,9 +160,11 @@ export const CaptainsView: React.FC<CaptainsViewProps> = ({
           {selectedCaptainIds.map((cId, idx) => {
             const captain = DEFAULT_CAPTAINS.find((c) => c.id === cId);
             const level = captainLevels[cId] || captain?.level || 10;
+            const stars = captainStars[cId] || captain?.stars || 1;
             const isPrimary = idx === 0;
 
             if (!captain) return null;
+            const stats = getCaptainComputedStats(captain, level, stars);
 
             return (
               <div
@@ -196,13 +207,37 @@ export const CaptainsView: React.FC<CaptainsViewProps> = ({
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-black text-white truncate">{captain.name}</h4>
                     <p className="text-2xs font-semibold text-slate-400 truncate">{captain.description}</p>
-                    <p className="text-2xs font-bold text-emerald-300 mt-1">
-                      +{((captain.monsterAttackBonusPercent || 20) + (level - 1) * 1.2).toFixed(1)}% Bônus de Ataque
+                    <p className={`text-2xs font-bold mt-1 ${stats.primaryBonusColor}`}>
+                      {stats.primaryBonusFormatted}
                     </p>
+                    {captain.marchSpeedBonusPercent > 0 && captain.specialty !== 'speed' && (
+                      <p className="text-3xs font-semibold text-slate-400">
+                        +{stats.marchSpeedBonusPercent.toFixed(1)}% Vel.
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-700/80 text-2xs">
+                {/* Stars selector */}
+                <div className="flex items-center justify-between pt-1 text-2xs border-t border-slate-800/80">
+                  <span className="text-slate-400 font-semibold">Estrelas:</span>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5, 6].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => onUpdateCaptainStars && onUpdateCaptainStars(cId, s)}
+                        className={`p-0.5 rounded transition-transform ${
+                          s <= stars ? 'text-amber-400 hover:scale-110' : 'text-slate-600 hover:text-slate-400'
+                        }`}
+                        title={`${s} Estrela(s)`}
+                      >
+                        <Star className={`w-3.5 h-3.5 ${s <= stars ? 'fill-amber-400' : ''}`} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 border-t border-slate-700/80 text-2xs">
                   <span className="text-slate-400 font-semibold">Nível {level}:</span>
                   <div className="flex items-center gap-1.5">
                     <button
@@ -308,6 +343,8 @@ export const CaptainsView: React.FC<CaptainsViewProps> = ({
             const isSelected = selectedCaptainIds.includes(captain.id);
             const isLeader = selectedCaptainIds[0] === captain.id;
             const level = captainLevels[captain.id] || captain.level || 10;
+            const stars = captainStars[captain.id] || captain.stars || 1;
+            const stats = getCaptainComputedStats(captain, level, stars);
 
             return (
               <div
@@ -341,9 +378,25 @@ export const CaptainsView: React.FC<CaptainsViewProps> = ({
                     <h4 className="text-sm font-black text-white truncate">{captain.name}</h4>
                     <p className="text-2xs font-semibold text-slate-400 truncate">{captain.description}</p>
 
-                    <div className="flex items-center gap-1 mt-1 text-2xs font-bold text-slate-300">
-                      <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                      <span>{captain.stars || 3}★</span>
+                    <div className="flex items-center gap-1.5 mt-1 text-2xs font-bold">
+                      <span className={`font-mono font-bold ${stats.primaryBonusColor}`}>
+                        {stats.primaryBonusFormatted}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 mt-1 text-2xs">
+                      {[1, 2, 3, 4, 5, 6].map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => onUpdateCaptainStars && onUpdateCaptainStars(captain.id, s)}
+                          className={`p-0.5 transition-transform ${
+                            s <= stars ? 'text-amber-400 hover:scale-110' : 'text-slate-600 hover:text-slate-400'
+                          }`}
+                          title={`${s} Estrela(s)`}
+                        >
+                          <Star className={`w-3 h-3 ${s <= stars ? 'fill-amber-400' : ''}`} />
+                        </button>
+                      ))}
                       <span className="text-slate-600">•</span>
                       <span className="text-emerald-300 font-mono font-bold">Nv {level}</span>
                     </div>

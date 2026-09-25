@@ -114,7 +114,7 @@ export const TroopEncyclopedia: React.FC<TroopEncyclopediaProps> = ({
           }`}
         >
           <Skull className="w-4 h-4 text-rose-300" />
-          <span>Bestiário Oficial de Monstros & Facções</span>
+          <span>Bestiário Oficial de Inimigos & Monstros</span>
         </button>
       </div>
 
@@ -328,17 +328,17 @@ export const TroopEncyclopedia: React.FC<TroopEncyclopediaProps> = ({
           </div>
         </>
       ) : (
-        /* Bestiário Oficial de Monstros */
+        /* Bestiário Oficial de Inimigos */
         <div className="bg-[#111827] border border-slate-700/80 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-b border-slate-700/80 pb-4">
             <div className="flex items-center gap-2.5">
               <Skull className="w-5 h-5 text-rose-400" />
               <div>
                 <h3 className="text-base font-black text-white tracking-wide">
-                  Bestiário & Unidades de Monstros ({filteredMonsters.length} Criaturas Catalogadas)
+                  Bestiário de Monstros Inimigos ({filteredMonsters.length} Criaturas Catalogadas)
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Consulte atributos reais, liderança, iniciativa e aspectos táticos de cada monstro do mapa
+                  Consulte atributos reais, liderança, iniciativa e aspectos dos monstros e marchas inimigas do mapa
                 </p>
               </div>
             </div>
@@ -349,11 +349,12 @@ export const TroopEncyclopedia: React.FC<TroopEncyclopediaProps> = ({
               onChange={(e) => setMonsterFamily(e.target.value)}
               className="bg-[#0b0f19] text-amber-300 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold focus:outline-none"
             >
-              <option value="all">Todas as Facções</option>
-              <option value="inferno">🔥 Demônios / Tropa do Inferno</option>
+              <option value="all">Todas as Facções Inimigas</option>
+              <option value="inferno">🔥 Demônios do Inferno</option>
               <option value="cursed">🦇 Amaldiçoados / Feras</option>
               <option value="undead">💀 Mortos-Vivos</option>
               <option value="barbarian">🪓 Bárbaros & Salteadores</option>
+              <option value="elfos">🌲 Elfos do Destino</option>
               <option value="epic">👑 Monstros Épicos (Clã & Torneio)</option>
             </select>
           </div>
@@ -361,7 +362,7 @@ export const TroopEncyclopedia: React.FC<TroopEncyclopediaProps> = ({
           {/* Grid of Monsters */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 max-h-[580px] overflow-y-auto pr-1">
             {filteredMonsters.map((m) => {
-              const tierRoman = ['I', 'II', 'III', 'IV', 'V'][m.tier - 1] || `${m.tier}`;
+              const tierRoman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'][m.tier - 1] || `${m.tier}`;
               return (
                 <div
                   key={m.id}
@@ -374,9 +375,14 @@ export const TroopEncyclopedia: React.FC<TroopEncyclopediaProps> = ({
                       </span>
                       <h4 className="text-xs font-black text-white">{m.name}</h4>
                     </div>
-                    <span className="text-2xs text-slate-400 capitalize bg-slate-900 px-2 py-0.5 rounded border border-slate-700">
-                      {m.family}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded text-2xs bg-rose-950/80 text-rose-300 border border-rose-800/80 font-bold uppercase tracking-wider">
+                        Inimigo
+                      </span>
+                      <span className="text-2xs text-slate-400 capitalize bg-slate-900 px-2 py-0.5 rounded border border-slate-700">
+                        {m.family}
+                      </span>
+                    </div>
                   </div>
 
                   <p className="text-2xs text-slate-400 italic">{m.subType}</p>

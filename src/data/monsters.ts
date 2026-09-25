@@ -1,4 +1,6 @@
-import { MonsterTarget, TroopClass, TargetType, AttackMode, EnemySquadUnit } from '../types';
+import { MonsterTarget, TroopClass, TargetType, AttackMode, EnemySquadUnit, CustomMonsterVariant } from '../types';
+
+export type { EnemySquadUnit, CustomMonsterVariant };
 
 export interface MonsterUnitDefinition {
   id: string;
@@ -646,15 +648,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 17,
     availableLevels: [5, 10, 12, 15, 17, 20, 22, 25, 30, 35, 40],
     description: 'Demônios de ataque comum liderados por Cavalgantes de Fogo e Demônios com Chifres.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const cavalgante = getMonsterUnit('cavalgante_fogo');
-      const demonio = getMonsterUnit('demonio_chifres');
-      const scale = lvl / 17;
-      return [
-        { ...cavalgante, id: `${cavalgante.id}_${lvl}`, count: Math.max(10, Math.round(260 * scale)) },
-        { ...demonio, id: `${demonio.id}_${lvl}`, count: Math.max(20, Math.round(640 * scale)) },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * 19647),
       vp: Math.round(lvl * 9823),
@@ -674,15 +668,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 16,
     availableLevels: [5, 10, 12, 15, 16, 20, 25, 30, 35, 40],
     description: 'Amaldiçoados comuns liderados por Guerreiros de Ossos e Feiticeiros.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const ossos = getMonsterUnit('guerreiro_ossos');
-      const feiticeiro = getMonsterUnit('feiticeiro');
-      const scale = lvl / 16;
-      return [
-        { ...ossos, id: `${ossos.id}_${lvl}`, count: Math.max(20, Math.round(320 * scale)) },
-        { ...feiticeiro, id: `${feiticeiro.id}_${lvl}`, count: Math.max(100, Math.round(3500 * scale)) },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * 18500),
       vp: Math.round(lvl * 9200),
@@ -702,23 +688,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 15,
     availableLevels: [5, 10, 15, 18, 20, 25, 30, 35, 40],
     description: 'Hordas de esqueletos e cavaleiros da morte assombrando as florestas.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      if (lvl <= 10) {
-        const banshee = getMonsterUnit('banshee');
-        const esqueleto = getMonsterUnit('esqueleto_guerreiro');
-        return [
-          { ...banshee, id: `${banshee.id}_${lvl}`, count: Math.max(20, Math.round(lvl * 25)) },
-          { ...esqueleto, id: `${esqueleto.id}_${lvl}`, count: Math.max(30, Math.round(lvl * 35)) },
-        ];
-      }
-      const cavaleiro = getMonsterUnit('cavaleiro_morte');
-      const esqueleto = getMonsterUnit('esqueleto_arqueiro');
-      const scale = lvl / 15;
-      return [
-        { ...cavaleiro, id: `${cavaleiro.id}_${lvl}`, count: Math.max(15, Math.round(180 * scale)) },
-        { ...esqueleto, id: `${esqueleto.id}_${lvl}`, count: Math.max(50, Math.round(550 * scale)) },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * 18000),
       vp: Math.round(lvl * 9000),
@@ -738,13 +708,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 6,
     availableLevels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25],
     description: 'Banshees espectrais de longo alcance (210 no Nv 6). Atacam diretamente a linha de atiradores e têm +45% de dano contra corpo a corpo.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const banshee = getMonsterUnit('banshee');
-      const count = Math.max(20, Math.round(lvl * 35));
-      return [
-        { ...banshee, id: `${banshee.id}_${lvl}`, count },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * 15000),
       vp: Math.round(lvl * 7500),
@@ -764,15 +728,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 15,
     availableLevels: [5, 10, 15, 20, 25, 30, 35, 40],
     description: 'Bárbaros saqueadores das montanhas liderados por Caçadores e Salteadores.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const cacador = getMonsterUnit('cacador_estepes');
-      const machado = getMonsterUnit('salteador_machado');
-      const scale = lvl / 15;
-      return [
-        { ...cacador, id: `${cacador.id}_${lvl}`, count: Math.max(30, Math.round(420 * scale)) },
-        { ...machado, id: `${machado.id}_${lvl}`, count: Math.max(100, Math.round(2800 * scale)) },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * 17800),
       vp: Math.round(lvl * 8900),
@@ -792,15 +748,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 15,
     availableLevels: [5, 10, 15, 20, 25, 30, 35, 40],
     description: 'Guardiões das florestas sagradas e elementais de pedra.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const guardiao = getMonsterUnit('guardiao_pedra');
-      const elfo = getMonsterUnit('patrulheiro_elfo');
-      const scale = lvl / 15;
-      return [
-        { ...guardiao, id: `${guardiao.id}_${lvl}`, count: Math.max(25, Math.round(380 * scale)) },
-        { ...elfo, id: `${elfo.id}_${lvl}`, count: Math.max(80, Math.round(2200 * scale)) },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * 18200),
       vp: Math.round(lvl * 9100),
@@ -820,15 +768,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 14,
     availableLevels: [5, 8, 10, 12, 14, 16, 18, 20, 25, 30],
     description: 'Elfos do mapa de batalha liderados por Druidas de longo alcance e infantaria de Anões guerreiros.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const druida = getMonsterUnit('druida');
-      const anao = getMonsterUnit('anao');
-      const scale = lvl / 14;
-      return [
-        { ...druida, id: `${druida.id}_${lvl}`, count: Math.max(10, Math.round(370 * scale)) },
-        { ...anao, id: `${anao.id}_${lvl}`, count: Math.max(50, Math.round(5100 * scale)) },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * 22300),
       vp: Math.round(lvl * 10465),
@@ -848,13 +788,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 6,
     availableLevels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 20],
     description: 'Atiradores élficos de longo alcance da floresta. Força 100, Saúde 300 e +35% contra corpo a corpo.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const elfo = getMonsterUnit('arqueiro_elfico');
-      const count = Math.max(20, Math.round(lvl * 35));
-      return [
-        { ...elfo, id: `${elfo.id}_${lvl}`, count },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * 16000),
       vp: Math.round(lvl * 8000),
@@ -878,17 +812,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 21,
     availableLevels: [10, 15, 18, 20, 21, 25, 28, 30, 35, 40, 45],
     description: 'Tropa rara de alto poder liderada por Vampiros voadores, Cavalgantes de Jaguar e Feiticeiros.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const vampiro = getMonsterUnit('vampiro');
-      const jaguar = getMonsterUnit('cavalgante_jaguar');
-      const feiticeiro = getMonsterUnit('feiticeiro');
-      const scale = lvl / 21;
-      return [
-        { ...vampiro, id: `${vampiro.id}_${lvl}`, count: Math.max(10, Math.round(630 * scale)) },
-        { ...jaguar, id: `${jaguar.id}_${lvl}`, count: Math.max(500, Math.round(17000 * scale)) },
-        { ...feiticeiro, id: `${feiticeiro.id}_${lvl}`, count: Math.max(1000, Math.round(31000 * scale)) },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * 199000),
       vp: Math.round(lvl * 99500),
@@ -908,17 +832,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 22,
     availableLevels: [10, 15, 20, 22, 25, 28, 30, 35, 40, 45],
     description: 'Pitonisas de Fogo, Cavalgantes e hordas demoníacas raras de elite.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const pitonisa = getMonsterUnit('pitonisa_fogo');
-      const cavalgante = getMonsterUnit('cavalgante_fogo');
-      const magogue = getMonsterUnit('magogue');
-      const scale = lvl / 22;
-      return [
-        { ...pitonisa, id: `${pitonisa.id}_${lvl}`, count: Math.max(10, Math.round(550 * scale)) },
-        { ...cavalgante, id: `${cavalgante.id}_${lvl}`, count: Math.max(400, Math.round(14000 * scale)) },
-        { ...magogue, id: `${magogue.id}_${lvl}`, count: Math.max(1000, Math.round(28000 * scale)) },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * 205000),
       vp: Math.round(lvl * 102500),
@@ -938,17 +852,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 20,
     availableLevels: [10, 15, 20, 25, 30, 35, 40, 45],
     description: 'Liches Ancestrais e Cavaleiros da Morte em marcha de destruição.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const lich = getMonsterUnit('lich_ancestral');
-      const cavaleiro = getMonsterUnit('cavaleiro_morte');
-      const esqueleto = getMonsterUnit('esqueleto_guerreiro');
-      const scale = lvl / 20;
-      return [
-        { ...lich, id: `${lich.id}_${lvl}`, count: Math.max(10, Math.round(480 * scale)) },
-        { ...cavaleiro, id: `${cavaleiro.id}_${lvl}`, count: Math.max(350, Math.round(12500 * scale)) },
-        { ...esqueleto, id: `${esqueleto.id}_${lvl}`, count: Math.max(1000, Math.round(25000 * scale)) },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * 195000),
       vp: Math.round(lvl * 97500),
@@ -968,17 +872,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 20,
     availableLevels: [10, 15, 20, 25, 30, 35, 40, 45],
     description: 'Salteadores selvagens das montanhas montados em lobos ferozes e Berserkers.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const berserker = getMonsterUnit('berserker_colossal');
-      const lobo = getMonsterUnit('cavaleiro_lobo');
-      const machado = getMonsterUnit('salteador_machado');
-      const scale = lvl / 20;
-      return [
-        { ...berserker, id: `${berserker.id}_${lvl}`, count: Math.max(10, Math.round(500 * scale)) },
-        { ...lobo, id: `${lobo.id}_${lvl}`, count: Math.max(450, Math.round(13500 * scale)) },
-        { ...machado, id: `${machado.id}_${lvl}`, count: Math.max(1000, Math.round(27000 * scale)) },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * 190000),
       vp: Math.round(lvl * 95000),
@@ -998,17 +892,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 22,
     availableLevels: [10, 15, 20, 22, 25, 30, 35, 40, 45],
     description: 'Elementais de Fogo Primordiais, Cavaleiros de Grifo e Patrulheiros.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const fogo = getMonsterUnit('elemental_fogo');
-      const grifo = getMonsterUnit('cavaleiro_grifo');
-      const elfo = getMonsterUnit('patrulheiro_elfo');
-      const scale = lvl / 22;
-      return [
-        { ...fogo, id: `${fogo.id}_${lvl}`, count: Math.max(10, Math.round(520 * scale)) },
-        { ...grifo, id: `${grifo.id}_${lvl}`, count: Math.max(400, Math.round(14000 * scale)) },
-        { ...elfo, id: `${elfo.id}_${lvl}`, count: Math.max(1000, Math.round(26000 * scale)) },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * 200000),
       vp: Math.round(lvl * 100000),
@@ -1032,17 +916,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 15,
     availableLevels: [5, 10, 15, 20, 25, 30, 35, 40],
     description: 'Monstro Épico de Clã. Prioriza o esquadrão com maior HP.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const u = getMonsterUnit('tinman_unit');
-      return [
-        {
-          ...u,
-          unitAttack: Math.round(u.unitAttack * Math.pow(lvl, 1.45)),
-          unitHealth: Math.round(u.unitHealth * Math.pow(lvl, 1.65)),
-          count: 1,
-        },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * lvl * 650 + 15000),
       vp: Math.round(lvl * lvl * 320 + 8000),
@@ -1061,17 +935,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 20,
     availableLevels: [10, 15, 20, 25, 30, 35, 40],
     description: 'Fera colossal de gelo e fúria.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const u = getMonsterUnit('fenrir_unit');
-      return [
-        {
-          ...u,
-          unitAttack: Math.round(u.unitAttack * Math.pow(lvl, 1.45)),
-          unitHealth: Math.round(u.unitHealth * Math.pow(lvl, 1.65)),
-          count: 1,
-        },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * lvl * 700 + 18000),
       vp: Math.round(lvl * lvl * 350 + 9000),
@@ -1090,17 +954,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 25,
     availableLevels: [15, 20, 25, 30, 35, 40],
     description: 'Chefe titânico de torneio marítimo.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const u = getMonsterUnit('jormungandr_unit');
-      return [
-        {
-          ...u,
-          unitAttack: Math.round(u.unitAttack * Math.pow(lvl, 1.45)),
-          unitHealth: Math.round(u.unitHealth * Math.pow(lvl, 1.65)),
-          count: 1,
-        },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * lvl * 800 + 25000),
       vp: Math.round(lvl * lvl * 400 + 12000),
@@ -1119,17 +973,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 20,
     availableLevels: [10, 15, 20, 25, 30, 35, 40],
     description: 'Rainha das aranhas sombrias. Dispara teias paralisantes.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const u = getMonsterUnit('arachne_unit');
-      return [
-        {
-          ...u,
-          unitAttack: Math.round(u.unitAttack * Math.pow(lvl, 1.45)),
-          unitHealth: Math.round(u.unitHealth * Math.pow(lvl, 1.65)),
-          count: 1,
-        },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * lvl * 720 + 19000),
       vp: Math.round(lvl * lvl * 360 + 9500),
@@ -1148,17 +992,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 22,
     availableLevels: [10, 15, 20, 22, 25, 30, 35, 40],
     description: 'Guardião de 3 cabeças do inferno. Golpe triplo em linha.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const u = getMonsterUnit('cerberus_unit');
-      return [
-        {
-          ...u,
-          unitAttack: Math.round(u.unitAttack * Math.pow(lvl, 1.45)),
-          unitHealth: Math.round(u.unitHealth * Math.pow(lvl, 1.65)),
-          count: 1,
-        },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * lvl * 750 + 20000),
       vp: Math.round(lvl * lvl * 370 + 10000),
@@ -1177,17 +1011,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 25,
     availableLevels: [15, 20, 25, 30, 35, 40],
     description: 'Pássaro mítico solar de destruição em área.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const u = getMonsterUnit('phoenix_unit');
-      return [
-        {
-          ...u,
-          unitAttack: Math.round(u.unitAttack * Math.pow(lvl, 1.45)),
-          unitHealth: Math.round(u.unitHealth * Math.pow(lvl, 1.65)),
-          count: 1,
-        },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * lvl * 820 + 26000),
       vp: Math.round(lvl * lvl * 410 + 13000),
@@ -1206,17 +1030,7 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
     defaultLevel: 30,
     availableLevels: [20, 25, 30, 35, 40, 45],
     description: 'Chefe supremo de clã. Dano cataclísmico em todas as linhas.',
-    generateSquads: (lvl: number): EnemySquadUnit[] => {
-      const u = getMonsterUnit('ancient_terror_unit');
-      return [
-        {
-          ...u,
-          unitAttack: Math.round(u.unitAttack * Math.pow(lvl, 1.45)),
-          unitHealth: Math.round(u.unitHealth * Math.pow(lvl, 1.65)),
-          count: 1,
-        },
-      ];
-    },
+    generateSquads: (): EnemySquadUnit[] => [],
     calculateRewards: (lvl: number) => ({
       xp: Math.round(lvl * lvl * 900 + 30000),
       vp: Math.round(lvl * lvl * 450 + 15000),
@@ -1226,12 +1040,248 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
   },
 ];
 
+
+const CUSTOM_MONSTER_TARGETS_STORAGE_KEY = 'tba_custom_monster_targets_v1';
+
+const memoryStorageFallback: Record<string, string> = {};
+
+function getSafeStorage(): { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void; removeItem: (k: string) => void } {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return window.localStorage;
+  }
+  if (typeof localStorage !== 'undefined') {
+    return localStorage;
+  }
+  return {
+    getItem: (k: string) => (k in memoryStorageFallback ? memoryStorageFallback[k] : null),
+    setItem: (k: string, v: string) => {
+      memoryStorageFallback[k] = v;
+    },
+    removeItem: (k: string) => {
+      delete memoryStorageFallback[k];
+    },
+  };
+}
+
+export interface CustomMonsterLevelEntry {
+  activeVariantId?: string;
+  variants: CustomMonsterVariant[];
+}
+
+export function getCustomTargetsMap(): Record<string, any> {
+  try {
+    const storage = getSafeStorage();
+    const raw = storage.getItem(CUSTOM_MONSTER_TARGETS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.error('Erro ao ler monstros customizados do localStorage:', e);
+    return {};
+  }
+}
+
+export function normalizeLevelEntry(rawEntry: any): CustomMonsterLevelEntry | null {
+  if (!rawEntry) return null;
+  if (Array.isArray(rawEntry)) {
+    if (rawEntry.length === 0) return null;
+    return {
+      activeVariantId: 'variant_1',
+      variants: [
+        {
+          id: 'variant_1',
+          name: 'Equipe 1',
+          squads: rawEntry,
+        },
+      ],
+    };
+  }
+  if (rawEntry.variants && Array.isArray(rawEntry.variants) && rawEntry.variants.length > 0) {
+    const activeVariantId = rawEntry.activeVariantId || rawEntry.variants[0].id;
+    return {
+      activeVariantId,
+      variants: rawEntry.variants,
+    };
+  }
+  return null;
+}
+
+export function getSavedCustomVariants(templateId: string, level: number): CustomMonsterVariant[] {
+  const map = getCustomTargetsMap();
+  const key = `${templateId}_lvl_${level}`;
+  const entry = normalizeLevelEntry(map[key]);
+  return entry ? entry.variants : [];
+}
+
+export function getActiveCustomVariant(templateId: string, level: number): CustomMonsterVariant | null {
+  const map = getCustomTargetsMap();
+  const key = `${templateId}_lvl_${level}`;
+  const entry = normalizeLevelEntry(map[key]);
+  if (!entry || entry.variants.length === 0) return null;
+  const found = entry.variants.find((v) => v.id === entry.activeVariantId);
+  return found || entry.variants[0];
+}
+
+export function getSavedCustomSquads(
+  templateId: string,
+  level: number,
+  variantId?: string
+): EnemySquadUnit[] | null {
+  const variants = getSavedCustomVariants(templateId, level);
+  if (variants.length === 0) return null;
+  if (variantId) {
+    const found = variants.find((v) => v.id === variantId);
+    return found ? found.squads : null;
+  }
+  const active = getActiveCustomVariant(templateId, level);
+  return active ? active.squads : null;
+}
+
+export function hasSavedCustomSquads(templateId: string, level: number): boolean {
+  return getSavedCustomVariants(templateId, level).length > 0;
+}
+
+export function saveCustomMonsterVariant(
+  templateId: string,
+  level: number,
+  squads: EnemySquadUnit[],
+  variantName?: string,
+  variantIdToUpdate?: string
+): CustomMonsterVariant {
+  try {
+    const map = getCustomTargetsMap();
+    const key = `${templateId}_lvl_${level}`;
+    const existing = normalizeLevelEntry(map[key]);
+
+    const variants: CustomMonsterVariant[] = existing ? [...existing.variants] : [];
+    let updatedVariant: CustomMonsterVariant;
+
+    if (variantIdToUpdate) {
+      const idx = variants.findIndex((v) => v.id === variantIdToUpdate);
+      if (idx >= 0) {
+        updatedVariant = {
+          ...variants[idx],
+          name: variantName || variants[idx].name,
+          squads,
+        };
+        variants[idx] = updatedVariant;
+      } else {
+        updatedVariant = {
+          id: variantIdToUpdate,
+          name: variantName || `Equipe ${variants.length + 1}`,
+          squads,
+          createdAt: Date.now(),
+        };
+        variants.push(updatedVariant);
+      }
+    } else {
+      const newId = `var_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const defaultName = `Equipe ${variants.length + 1}`;
+      updatedVariant = {
+        id: newId,
+        name: variantName || defaultName,
+        squads,
+        createdAt: Date.now(),
+      };
+      variants.push(updatedVariant);
+    }
+
+    const newEntry: CustomMonsterLevelEntry = {
+      activeVariantId: updatedVariant.id,
+      variants,
+    };
+
+    map[key] = newEntry;
+    const storage = getSafeStorage();
+    storage.setItem(CUSTOM_MONSTER_TARGETS_STORAGE_KEY, JSON.stringify(map));
+    return updatedVariant;
+  } catch (e) {
+    console.error('Erro ao salvar variante de monstro no localStorage:', e);
+    return {
+      id: 'fallback',
+      name: variantName || 'Equipe',
+      squads,
+    };
+  }
+}
+
+export function setActiveCustomVariant(templateId: string, level: number, variantId: string): void {
+  try {
+    const map = getCustomTargetsMap();
+    const key = `${templateId}_lvl_${level}`;
+    const existing = normalizeLevelEntry(map[key]);
+    if (!existing) return;
+
+    if (existing.variants.some((v) => v.id === variantId)) {
+      existing.activeVariantId = variantId;
+      map[key] = existing;
+      const storage = getSafeStorage();
+      storage.setItem(CUSTOM_MONSTER_TARGETS_STORAGE_KEY, JSON.stringify(map));
+    }
+  } catch (e) {
+    console.error('Erro ao alternar variante ativa:', e);
+  }
+}
+
+export function saveCustomMonsterSquads(
+  templateId: string,
+  level: number,
+  squads: EnemySquadUnit[]
+): void {
+  const active = getActiveCustomVariant(templateId, level);
+  saveCustomMonsterVariant(templateId, level, squads, active?.name, active?.id);
+}
+
+export function removeSavedCustomMonsterVariant(
+  templateId: string,
+  level: number,
+  variantId?: string
+): void {
+  try {
+    const map = getCustomTargetsMap();
+    const key = `${templateId}_lvl_${level}`;
+    if (!variantId) {
+      delete map[key];
+    } else {
+      const existing = normalizeLevelEntry(map[key]);
+      if (existing) {
+        existing.variants = existing.variants.filter((v) => v.id !== variantId);
+        if (existing.variants.length === 0) {
+          delete map[key];
+        } else {
+          if (existing.activeVariantId === variantId) {
+            existing.activeVariantId = existing.variants[0].id;
+          }
+          map[key] = existing;
+        }
+      }
+    }
+    const storage = getSafeStorage();
+    storage.setItem(CUSTOM_MONSTER_TARGETS_STORAGE_KEY, JSON.stringify(map));
+  } catch (e) {
+    console.error('Erro ao remover variante de monstro do localStorage:', e);
+  }
+}
+
+export function removeSavedCustomMonsterSquads(templateId: string, level: number): void {
+  removeSavedCustomMonsterVariant(templateId, level);
+}
+
 export function buildMonsterTargetFromTemplate(
   template: MonsterPresetTemplate,
-  level: number
+  level: number,
+  ignoreSaved: boolean = false,
+  variantId?: string
 ): MonsterTarget {
   const validLevel = Math.max(1, Math.min(45, level));
-  const squads = template.generateSquads(validLevel);
+  const variants = !ignoreSaved ? getSavedCustomVariants(template.id, validLevel) : [];
+  const activeVariant =
+    variants.length > 0
+      ? variantId
+        ? variants.find((v) => v.id === variantId) || variants[0]
+        : getActiveCustomVariant(template.id, validLevel) || variants[0]
+      : null;
+
+  const isCustom = Boolean(activeVariant && activeVariant.squads.length > 0);
+  const squads = isCustom ? activeVariant!.squads : (template.generateSquads ? template.generateSquads(validLevel) : []);
   const rewards = template.calculateRewards(validLevel);
   const caps = template.marchCapacities(validLevel, template.attackMode);
 
@@ -1247,15 +1297,6 @@ export function buildMonsterTargetFromTemplate(
 
   const uniqueWeaknesses = Array.from(new Set(weaknessClasses));
 
-  const coords =
-    template.id === 'tropa_elfos_comum'
-      ? '(K:310 X:915 Y:233)'
-      : template.attackMode === 'rare'
-      ? '(K:310 X:917 Y:253)'
-      : template.attackMode === 'common'
-      ? '(K:310 X:924 Y:264)'
-      : '(K:310 X:922 Y:258)';
-
   return {
     id: `${template.id}_lvl_${validLevel}`,
     name: `${template.name} (Nível ${validLevel})`,
@@ -1266,9 +1307,8 @@ export function buildMonsterTargetFromTemplate(
     totalHealth,
     baseAttack,
     squadCount: squads.length,
-    weaknessClasses: uniqueWeaknesses.length > 0 ? uniqueWeaknesses : ['ranged'],
+    weaknessClasses: uniqueWeaknesses.length > 0 ? uniqueWeaknesses : (squads.length > 0 ? ['ranged'] : []),
     enemySquads: squads,
-    coordinates: coords,
     xpReward: rewards.xp,
     valorReward: rewards.vp,
     tarReward: rewards.tar,
@@ -1277,6 +1317,9 @@ export function buildMonsterTargetFromTemplate(
     estimatedCaptainXP: rewards.xp,
     estimatedChestPoints: rewards.chest || 10,
     description: template.description,
+    isCustomConfig: isCustom,
+    activeVariantId: activeVariant?.id,
+    activeVariantName: activeVariant?.name,
   };
 }
 

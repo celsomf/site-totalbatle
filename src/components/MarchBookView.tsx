@@ -3,6 +3,7 @@ import { TroopUnit, Captain, MonsterTarget, PlayerProfile, EnemySquadUnit } from
 import { EditSquadsModal } from './EditSquadsModal';
 import { updateMonsterSquads, MONSTER_PRESET_TEMPLATES, buildMonsterTargetFromTemplate } from '../data/monsters';
 import { simulateCombat, DispatchedTroop, findOptimalFarmLevel, buildDispatchedTroops } from '../utils/combatSimulator';
+import { getCaptainMonsterAttackBonus, getCaptainComputedStats, getHeroAttackBonus } from '../utils/captainStats';
 import { TroopAvatar } from './TroopAvatar';
 import { BattlePreview } from './BattlePreview';
 import {
@@ -33,6 +34,7 @@ interface MarchBookViewProps {
   onSelectCaptain: (id: string) => void;
   targetMonster: MonsterTarget;
   onUpdateMonsterTarget?: (monster: MonsterTarget) => void;
+  onUpdateProfile?: (updates: Partial<PlayerProfile>) => void;
 }
 
 export const MarchBookView: React.FC<MarchBookViewProps> = ({
@@ -43,6 +45,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   onSelectCaptain,
   targetMonster,
   onUpdateMonsterTarget,
+  onUpdateProfile,
 }) => {
   const [copied, setCopied] = useState(false);
   const [copiedNumber, setCopiedNumber] = useState<string | null>(null);
@@ -72,10 +75,13 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   const activeCapId = selectedCaptainId || profile.selectedCaptainId || profile.selectedCaptainIds?.[0] || 'farhad';
   const activeCaptain = captains.find((c) => c.id === activeCapId) || captains[0];
   const activeCaptainLevel = profile.captainLevels[activeCaptain.id] || activeCaptain.level || 1;
+  const activeCaptainStars = profile.captainStars?.[activeCaptain.id] || activeCaptain.stars || 1;
 
-  // Bônus do Capitão Ativo calculado dinamicamente
-  const captainBonusPercent = Math.round(
-    (activeCaptain.monsterAttackBonusPercent || 20) + (activeCaptainLevel * 1.2)
+  // Bônus do Capitão Ativo calculado centralizadamente
+  const captainBonusPercent = getCaptainMonsterAttackBonus(
+    activeCaptain,
+    activeCaptainLevel,
+    activeCaptainStars
   );
 
   const templateId = targetMonster.id.split('_lvl_')[0];
@@ -86,21 +92,12 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   const dragonBonusPercent = sendDragon ? 15 : 0;
   const academyBonusPercent = profile.academyBonus?.guardsmenAttack || 25;
 
-  // Capacidades de marcha dinâmicas
-  const maxGuards = targetMonster.marchCapacities?.guards || (isRare ? 5250 : isCommon ? 2000 : profile.maxMarchCapacity || 3125);
-  const maxMercs = targetMonster.marchCapacities?.mercenaries || (isRare ? 2520 : isCommon ? 1000 : profile.mercenaryCapacity || 1540);
+  // Capacidades de marcha do perfil do jogador (persistidas no banco)
+  const maxGuards = profile.maxMarchCapacity || targetMonster.marchCapacities?.guards || 2000;
+  const maxMercs = profile.mercenaryCapacity || targetMonster.marchCapacities?.mercenaries || 1000;
+  const maxMonsters = profile.specialCapacity || targetMonster.marchCapacities?.monsters || 500;
 
-  // 1. Tropas em Estoque
-  const activeMercenary = troops.find(
-    (t) => t.category === 'mercenary' && t.isUnlocked && t.ownedCount > 0
-  ) || troops.find((t) => t.id === 'epic_monster_hunter_v');
-
-  const g2Ranged = troops.find((t) => t.id === 'g2_ranged');
-  const g1Ranged = troops.find((t) => t.id === 'g1_ranged');
-  const g2Melee = troops.find((t) => t.id === 'g2_melee');
-  const g1Melee = troops.find((t) => t.id === 'g1_melee');
-
-  // 2. Preparar unidades enviadas através do motor tático inteligente
+  // 1. Preparar unidades enviadas através do motor tático inteligente
   const dispatchedTroopsList = buildDispatchedTroops(
     troops,
     profile,
@@ -109,15 +106,18 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
     sendDragon
   );
 
-  const mercTroop = dispatchedTroopsList.find((t) => t.isMercenary);
-  const mercRecommended = mercTroop?.count || 0;
-  const g2RangedRec = dispatchedTroopsList.find((t) => t.id === 'g2_ranged')?.count || 0;
-  const g1RangedRec = dispatchedTroopsList.find((t) => t.id === 'g1_ranged')?.count || 0;
-  const g2MeleeRec = dispatchedTroopsList.find((t) => t.id === 'g2_melee')?.count || 0;
-  const g1MeleeRec = dispatchedTroopsList.find((t) => t.id === 'g1_melee')?.count || 0;
-  const allocatedGuards = g2RangedRec + g1RangedRec + g2MeleeRec + g1MeleeRec;
+  const allocatedGuards = dispatchedTroopsList
+    .filter((t) => !t.isMercenary && t.category !== 'monster')
+    .reduce((sum, t) => sum + t.count, 0);
 
-  // 3. EXECUTAR SIMULAÇÃO REAL DE COMBATE
+  const mercTroops = dispatchedTroopsList.filter((t) => t.isMercenary || t.category === 'mercenary');
+  const mercRecommended = mercTroops.reduce((sum, t) => sum + t.count, 0);
+
+  const allocatedMonsters = dispatchedTroopsList
+    .filter((t) => t.category === 'monster')
+    .reduce((sum, t) => sum + t.count, 0);
+
+  // 2. EXECUTAR SIMULAÇÃO REAL DE COMBATE
   const simResult = simulateCombat(dispatchedTroopsList, targetMonster.enemySquads || []);
   const isDefeat = simResult.outcome === 'DEFEAT';
   const g1Casualties = simResult.playerCasualties
@@ -127,7 +127,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
     .filter((p) => p.tier >= 2)
     .reduce((sum, p) => sum + p.lostCount, 0);
 
-  // 6. Recompensas recalculadas com os bônus do Capitão Ativo
+  // 3. Recompensas recalculadas com os bônus do Capitão Ativo
   const projectedXP = isDefeat ? 0 : Math.round((targetMonster.xpReward || 50000) * (1 + activeCaptainLevel * 0.015));
   const projectedVP = isDefeat ? 0 : Math.round((targetMonster.valorReward || 18000) * (1 + activeCaptainLevel * 0.01));
 
@@ -138,7 +138,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
 
   const handleCopy = () => {
     const leaderText = isRare
-      ? `👑 Líder: Herói ${profile.heroName || 'Comandante'} (Nv ${profile.heroLevel || 18})`
+      ? `👑 Líder: Herói ${profile.playerName || profile.heroName || 'Comandante'} (Nv ${profile.heroLevel || 16})`
       : `👑 Capitão: ${activeCaptain.name} (Nv ${activeCaptainLevel} - +${captainBonusPercent}% Bônus)`;
 
     const verdictText = isDefeat
@@ -147,17 +147,34 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
       ? `⚠️ ATENÇÃO: Vitória com Perda de Nobres (${t2Casualties.toLocaleString('pt-BR')} mortos em T2+)!`
       : `✅ Vitória Confirmada por Simulação (${simResult.safetyLevel === 'CLEAN_VICTORY' ? '0 Baixas' : 'Baixas absorvidas pela bucha G1'})`;
 
+    const regularTroops = dispatchedTroopsList.filter((t) => !t.isMercenary);
+
+    const mercText =
+      mercTroops.length > 0
+        ? `🔥 MERCENÁRIOS:\n` +
+          mercTroops.map((m) => `• ${m.name}: ${m.count.toLocaleString('pt-BR')} un.\n`).join('') +
+          `\n`
+        : '';
+
+    const armyText =
+      regularTroops.length > 0
+        ? `⚔️ EXÉRCITO (${allocatedGuards.toLocaleString('pt-BR')} / ${maxGuards.toLocaleString('pt-BR')}):\n` +
+          regularTroops
+            .map((r) => {
+              const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'][r.tier - 1] || `${r.tier}`;
+              const note = r.tier === 1 ? ' (Absorção de Baixas)' : ' (Dano Principal)';
+              return `• [${roman}] ${r.name}: ${r.count.toLocaleString('pt-BR')} un.${note}\n`;
+            })
+            .join('')
+        : '';
+
     const text =
       `📜 ORDEM DE MARCHA TOTAL BATTLE\n` +
-      `🎯 Alvo: ${targetMonster.name} ${targetMonster.coordinates || ''}\n` +
+      `🎯 Alvo: ${targetMonster.name}\n` +
       `${leaderText}\n` +
       `🐉 Dragão: ${sendDragon ? 'Sim (⚡ 50 Energia)' : 'Não'}\n\n` +
-      (mercRecommended > 0 && activeMercenary ? `🔥 MERCENÁRIOS:\n• ${activeMercenary.name}: ${mercRecommended} un.\n\n` : '') +
-      `⚔️ EXÉRCITO (${allocatedGuards.toLocaleString('pt-BR')} / ${maxGuards.toLocaleString('pt-BR')}):\n` +
-      (g2RangedRec > 0 ? `• [II] Arqueiro de Linha: ${g2RangedRec.toLocaleString('pt-BR')} un. (Dano Principal)\n` : '') +
-      (g1RangedRec > 0 ? `• [I] Arqueiro Recruta: ${g1RangedRec.toLocaleString('pt-BR')} un.\n` : '') +
-      (g1MeleeRec > 0 ? `• [I] Lanceiro (Bucha): ${g1MeleeRec.toLocaleString('pt-BR')} un. (Absorção de Baixas)\n` : '') +
-      (g2MeleeRec > 0 ? `• [II] Guerreiro Veterano: ${g2MeleeRec.toLocaleString('pt-BR')} un.\n` : '') +
+      mercText +
+      armyText +
       `\n${verdictText}`;
 
     navigator.clipboard.writeText(text);
@@ -171,82 +188,82 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
     setTimeout(() => setCopiedNumber(null), 1800);
   };
 
-  // Troops to dispatch in clear order
-  const marchSquadList = [
-    mercRecommended > 0 && activeMercenary && {
-      id: activeMercenary.id,
-      name: activeMercenary.name,
-      role: 'Mercenário de Elite',
-      roleColor: 'text-amber-400',
-      badge: `Tier ${activeMercenary.tier} • Mercenário`,
-      badgeColor: 'bg-amber-950/80 text-amber-300 border-amber-500/40',
-      stock: activeMercenary.ownedCount,
-      count: mercRecommended,
-      key: 'merc',
-      image: '/assets/troops/epic_monter_hunter_V.png',
-    },
-    g2RangedRec > 0 && {
-      id: 'g2_ranged',
-      name: 'Arqueiro de Linha (G2)',
-      role: 'Dano Principal Seguro',
-      roleColor: 'text-emerald-400',
-      badge: 'Tier II • Longo Alcance',
-      badgeColor: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40',
-      stock: g2Ranged?.ownedCount || 0,
-      count: g2RangedRec,
-      key: 'g2_ranged',
-      image: '/assets/troops/g2_ranged.png',
-    },
-    g1RangedRec > 0 && {
-      id: 'g1_ranged',
-      name: 'Arqueiro Recruta (G1)',
-      role: 'Dano de Apoio',
-      roleColor: 'text-emerald-400',
-      badge: 'Tier I • Longo Alcance',
-      badgeColor: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40',
-      stock: g1Ranged?.ownedCount || 0,
-      count: g1RangedRec,
-      key: 'g1_ranged',
-      image: '/assets/troops/g1_ranged.png',
-    },
-    g1MeleeRec > 0 && {
-      id: 'g1_melee',
-      name: 'Espadachim Recruta (G1)',
-      role: '🛡️ Bucha de Absorção de Baixas',
-      roleColor: 'text-amber-300',
-      badge: 'Tier I • Corpo a Corpo',
-      badgeColor: 'bg-amber-950/80 text-amber-300 border-amber-500/40',
-      stock: g1Melee?.ownedCount || 0,
-      count: g1MeleeRec,
-      key: 'g1_melee',
-      image: '/assets/troops/g1_melee.png',
-    },
-    g2MeleeRec > 0 && {
-      id: 'g2_melee',
-      name: 'Guerreiro Veterano (G2)',
-      role: 'Dano Frontal',
-      roleColor: 'text-rose-400',
-      badge: 'Tier II • Corpo a Corpo',
-      badgeColor: 'bg-rose-950/80 text-rose-300 border-rose-500/40',
-      stock: g2Melee?.ownedCount || 0,
-      count: g2MeleeRec,
-      key: 'g2_melee',
-      image: '/assets/troops/g2_melee.png',
-    },
-  ].filter(Boolean) as Array<{
-    id: string;
-    name: string;
-    role: string;
-    roleColor: string;
-    badge: string;
-    badgeColor: string;
-    stock: number;
-    count: number;
-    key: string;
-    image: string;
-  }>;
+  const classLabelMap: Record<string, string> = {
+    ranged: 'Longo Alcance',
+    melee: 'Corpo a Corpo',
+    mounted: 'Montadas',
+    flying: 'Voadoras',
+    siege: 'Cerco',
+  };
+
+  // Mapeamento dinâmico de esquadrões despachados
+  const marchSquadList = dispatchedTroopsList.map((unit) => {
+    const originalTroop = troops.find((t) => t.id === unit.id);
+    const isMerc = unit.isMercenary || unit.category === 'mercenary';
+    const isBucha = unit.tier === 1;
+
+    let role = 'Dano Principal';
+    let roleColor = 'text-emerald-400';
+    let badgeColor = 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40';
+
+    if (isMerc) {
+      role = 'Mercenário de Elite';
+      roleColor = 'text-amber-400';
+      badgeColor = 'bg-amber-950/80 text-amber-300 border-amber-500/40';
+    } else if (isBucha) {
+      role = '🛡️ Bucha de Absorção de Baixas';
+      roleColor = 'text-amber-300';
+      badgeColor = 'bg-amber-950/80 text-amber-300 border-amber-500/40';
+    } else if (unit.troopClass === 'melee') {
+      role = 'Dano Frontal';
+      roleColor = 'text-rose-400';
+      badgeColor = 'bg-rose-950/80 text-rose-300 border-rose-500/40';
+    } else if (unit.troopClass === 'ranged') {
+      role = 'Dano Principal Seguro';
+      roleColor = 'text-emerald-400';
+      badgeColor = 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40';
+    } else if (unit.troopClass === 'mounted') {
+      role = 'Ataque Rápido / Flanco';
+      roleColor = 'text-sky-400';
+      badgeColor = 'bg-sky-950/80 text-sky-300 border-sky-500/40';
+    } else if (unit.troopClass === 'flying') {
+      role = 'Ataque Aéreo Superior';
+      roleColor = 'text-purple-400';
+      badgeColor = 'bg-purple-950/80 text-purple-300 border-purple-500/40';
+    }
+
+    const romanTier = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'][unit.tier - 1] || `${unit.tier}`;
+    const badge = isMerc
+      ? `Tier ${romanTier} • Mercenário`
+      : `Tier ${romanTier} • ${classLabelMap[unit.troopClass] || unit.troopClass}`;
+
+    return {
+      id: unit.id,
+      name: unit.name,
+      role,
+      roleColor,
+      badge,
+      badgeColor,
+      stock: originalTroop?.ownedCount || unit.count,
+      count: unit.count,
+      key: unit.id,
+      tier: unit.tier,
+      avatarIcon: unit.avatarIcon || originalTroop?.avatarIcon || unit.id,
+    };
+  });
 
   const nobleCasualties = t2Casualties;
+
+  // Resumo de sincronização por tipo
+  const summaryByTier = dispatchedTroopsList.reduce<Record<string, number>>((acc, t) => {
+    const key = t.isMercenary ? 'Mercs' : `T${t.tier}`;
+    acc[key] = (acc[key] || 0) + t.count;
+    return acc;
+  }, {});
+
+  const summaryString = Object.entries(summaryByTier)
+    .map(([key, count]) => `${count.toLocaleString('pt-BR')} ${key}`)
+    .join(' • ');
 
   return (
     <div className="bg-[#111827] text-slate-100 rounded-2xl p-5 sm:p-6 shadow-2xl border border-slate-700/80 space-y-6">
@@ -265,7 +282,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
             <span>Sincronizado com Quartel</span>
             <span className="font-mono text-slate-200">
-              ({mercRecommended > 0 ? `${mercRecommended} Mercs • ` : ''}{g2RangedRec + g2MeleeRec} G2 • {g1RangedRec + g1MeleeRec} G1)
+              ({summaryString || '0 Tropas'})
             </span>
             <span className="text-slate-400 font-mono hidden sm:inline">
               • {lastCalculatedAt.toLocaleTimeString('pt-BR')}
@@ -326,6 +343,239 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
           </button>
         </div>
       )}
+
+      {/* AVISO QUANDO MONSTRO NÃO TEM TROPAS CADASTRADAS */}
+      {(!targetMonster.enemySquads || targetMonster.enemySquads.length === 0) && (
+        <div className="bg-amber-950/60 border border-amber-500/60 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-200 shadow-xl animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div>
+              <h4 className="text-sm font-black text-amber-300">
+                Alvo Selecionado sem Tropas Cadastradas ({targetMonster.name})
+              </h4>
+              <p className="text-xs text-amber-200/90 font-medium">
+                As combinações fictícias foram removidas. Adicione os monstros e quantidades reais no painel do monstro acima para simular a marcha contra o inimigo real.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PAINEL DE SLOTS DE CAPACIDADE DE MARCHA (TOTAL BATTLE) */}
+      <div className="bg-[#0b0f19] p-4 sm:p-5 rounded-2xl border border-amber-500/40 shadow-xl space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/80 pb-2.5">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 font-black text-xs">
+              ⚡
+            </div>
+            <div>
+              <h3 className="text-xs sm:text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <span>Slots de Capacidade de Marcha (Total Battle)</span>
+              </h3>
+              <p className="text-2xs sm:text-xs text-slate-400 font-semibold">
+                Digite os limites que aparecem no jogo para otimizar o envio de guardas, mercenários e monstros:
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="text-2xs text-amber-300/80 bg-amber-950/60 px-2.5 py-1 rounded-lg border border-amber-500/30 font-bold">
+              💡 Ajuste os 3 números da sua tela
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* SLOT 1: GUARDAS (CAPACETE ROMANO VERMELHO) */}
+          <div className="bg-slate-900/90 p-3.5 rounded-xl border border-red-500/40 hover:border-red-400 transition-all shadow-md space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-700 to-red-900 border border-red-400/60 flex items-center justify-center shadow text-lg">
+                  🛡️
+                </div>
+                <div>
+                  <span className="text-xs font-black text-white block">
+                    Guardas
+                  </span>
+                  <span className="text-2xs text-red-300 font-bold block">
+                    Tropas Regulares T1-T6
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min="0"
+                  step="25"
+                  value={maxGuards}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    const validVal = isNaN(val) ? 0 : val;
+                    if (onUpdateProfile) {
+                      onUpdateProfile({ maxMarchCapacity: validVal });
+                    }
+                    if (onUpdateMonsterTarget) {
+                      onUpdateMonsterTarget({
+                        ...targetMonster,
+                        marchCapacities: {
+                          guards: validVal,
+                          mercenaries: maxMercs,
+                          monsters: maxMonsters,
+                        },
+                      });
+                    }
+                  }}
+                  className="w-24 bg-[#0b0f19] border border-red-500/60 focus:border-red-400 text-red-200 font-mono font-black text-xs px-2 py-1 rounded-lg text-right outline-none shadow-inner"
+                  title="Capacidade máxima de guardas permitida pelo jogo para este ataque (salvo no perfil)"
+                />
+              </div>
+            </div>
+
+            {/* Barra de Alocação de Guardas */}
+            <div className="space-y-1 pt-1 border-t border-slate-800">
+              <div className="flex items-center justify-between text-2xs font-bold">
+                <span className="text-slate-400">Alocação Atual:</span>
+                <span className="font-mono text-red-300 font-black">
+                  {allocatedGuards.toLocaleString('pt-BR')} / {maxGuards.toLocaleString('pt-BR')}
+                </span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                <div
+                  className="h-full bg-gradient-to-r from-red-500 to-rose-400 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(100, (allocatedGuards / (maxGuards || 1)) * 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* SLOT 2: MERCENÁRIOS (ÁGUIA DOURADA) */}
+          <div className="bg-slate-900/90 p-3.5 rounded-xl border border-amber-500/40 hover:border-amber-400 transition-all shadow-md space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-600 to-amber-900 border border-amber-400/60 flex items-center justify-center shadow text-lg">
+                  🦅
+                </div>
+                <div>
+                  <span className="text-xs font-black text-white block">
+                    Mercenários
+                  </span>
+                  <span className="text-2xs text-amber-300 font-bold block">
+                    Elite & Atiradores
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min="0"
+                  step="20"
+                  value={maxMercs}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    const validVal = isNaN(val) ? 0 : val;
+                    if (onUpdateProfile) {
+                      onUpdateProfile({ mercenaryCapacity: validVal });
+                    }
+                    if (onUpdateMonsterTarget) {
+                      onUpdateMonsterTarget({
+                        ...targetMonster,
+                        marchCapacities: {
+                          guards: maxGuards,
+                          mercenaries: validVal,
+                          monsters: maxMonsters,
+                        },
+                      });
+                    }
+                  }}
+                  className="w-24 bg-[#0b0f19] border border-amber-500/60 focus:border-amber-400 text-amber-200 font-mono font-black text-xs px-2 py-1 rounded-lg text-right outline-none shadow-inner"
+                  title="Capacidade máxima de mercenários permitida pelo jogo para este ataque (salvo no perfil)"
+                />
+              </div>
+            </div>
+
+            {/* Barra de Alocação de Mercenários */}
+            <div className="space-y-1 pt-1 border-t border-slate-800">
+              <div className="flex items-center justify-between text-2xs font-bold">
+                <span className="text-slate-400">Alocação Atual:</span>
+                <span className="font-mono text-amber-300 font-black">
+                  {mercRecommended.toLocaleString('pt-BR')} / {maxMercs.toLocaleString('pt-BR')}
+                </span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(100, (mercRecommended / (maxMercs || 1)) * 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* SLOT 3: MONSTROS & ESPECIAIS (LEÃO DOURADO) */}
+          <div className="bg-slate-900/90 p-3.5 rounded-xl border border-purple-500/40 hover:border-purple-400 transition-all shadow-md space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-700 to-purple-950 border border-purple-400/60 flex items-center justify-center shadow text-lg">
+                  🦁
+                </div>
+                <div>
+                  <span className="text-xs font-black text-white block">
+                    Monstros
+                  </span>
+                  <span className="text-2xs text-purple-300 font-bold block">
+                    Convocados & Dragões
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min="0"
+                  step="10"
+                  value={maxMonsters}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    const validVal = isNaN(val) ? 0 : val;
+                    if (onUpdateProfile) {
+                      onUpdateProfile({ specialCapacity: validVal });
+                    }
+                    if (onUpdateMonsterTarget) {
+                      onUpdateMonsterTarget({
+                        ...targetMonster,
+                        marchCapacities: {
+                          guards: maxGuards,
+                          mercenaries: maxMercs,
+                          monsters: validVal,
+                        },
+                      });
+                    }
+                  }}
+                  className="w-24 bg-[#0b0f19] border border-purple-500/60 focus:border-purple-400 text-purple-200 font-mono font-black text-xs px-2 py-1 rounded-lg text-right outline-none shadow-inner"
+                  title="Capacidade máxima de monstros especiais permitida pelo jogo para este ataque (salvo no perfil)"
+                />
+              </div>
+            </div>
+
+            {/* Barra de Alocação de Monstros */}
+            <div className="space-y-1 pt-1 border-t border-slate-800">
+              <div className="flex items-center justify-between text-2xs font-bold">
+                <span className="text-slate-400">Alocação Atual:</span>
+                <span className="font-mono text-purple-300 font-black">
+                  {allocatedMonsters.toLocaleString('pt-BR')} / {maxMonsters.toLocaleString('pt-BR')}
+                </span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                <div
+                  className="h-full bg-gradient-to-r from-purple-500 to-indigo-400 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(100, (allocatedMonsters / (maxMonsters || 1)) * 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* 2. Collapsible Enemy Squads Drawer with In-place Editing */}
       {showEnemyDetails && (
@@ -421,10 +671,10 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                 </div>
                 <div className="min-w-0">
                   <h4 className="text-sm sm:text-base font-black text-white truncate">
-                    Herói {profile.heroName || 'Comandante'} ({profile.heroId === 'julia' ? 'Julia' : 'Garvel'})
+                    Herói {profile.playerName || profile.heroName || 'Comandante'} ({profile.heroId === 'julia' ? 'Julia' : 'Garvel'})
                   </h4>
                   <p className="text-xs font-bold text-purple-300">
-                    Nível {profile.heroLevel || 18} • Comandante Oficial para Ataques Raros
+                    Nível {profile.heroLevel || 16} • Líder Oficial para Ataques Raros
                   </p>
                 </div>
               </div>
@@ -433,7 +683,8 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                 {displayedCaptains.map((cap) => {
                   const isSelected = cap.id === activeCapId;
                   const level = profile.captainLevels[cap.id] || cap.level || 1;
-                  const bonus = Math.round((cap.monsterAttackBonusPercent || 20) + (level * 1.2));
+                  const stars = profile.captainStars?.[cap.id] || cap.stars || 1;
+                  const stats = getCaptainComputedStats(cap, level, stars);
                   return (
                     <button
                       key={cap.id}
@@ -460,7 +711,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                           {cap.name}
                         </span>
                         <span className="text-2xs font-black text-emerald-400 block">
-                          +{bonus}% Atk (Nv {level})
+                          {stats.primaryBonusFormatted} (Nv {level})
                         </span>
                       </div>
                     </button>
@@ -665,16 +916,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
             >
               {/* Unit Info */}
               <div className="flex items-center gap-4 min-w-0">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl border border-slate-700 bg-slate-950 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-md">
-                  <img
-                    src={unit.image}
-                    alt={unit.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as any).src = '/assets/troops/archer_II.png';
-                    }}
-                  />
-                </div>
+                <TroopAvatar id={unit.avatarIcon || unit.id} tier={unit.tier} size="md" />
 
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">

@@ -52,9 +52,6 @@ export const BattlePreview: React.FC<BattlePreviewProps> = ({
               <h3 className="text-base sm:text-lg font-black text-white tracking-wide">
                 Prévia da Batalha (Simulação de Relatório)
               </h3>
-              <span className="text-xs text-amber-400 font-mono font-bold">
-                {targetMonster.coordinates || '(K:310 X:915 Y:233)'}
-              </span>
             </div>
             <p className="text-xs text-slate-400 font-semibold">
               {isOpen
@@ -66,14 +63,20 @@ export const BattlePreview: React.FC<BattlePreviewProps> = ({
 
         {/* Right: Verdict & Accordion Toggle */}
         <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
-          <div className={`px-3.5 py-1.5 rounded-xl border font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg ${
-            isDefeat
-              ? 'bg-rose-950 text-rose-200 border-rose-500'
-              : 'bg-emerald-950 text-emerald-200 border-emerald-500'
-          }`}>
-            {isDefeat ? <Skull className="w-3.5 h-3.5 text-rose-400" /> : <Crown className="w-3.5 h-3.5 text-amber-300" />}
-            <span>{isDefeat ? 'DERROTA PREVISTA' : 'VITÓRIA PREVISTA'}</span>
-          </div>
+          {(!targetMonster.enemySquads || targetMonster.enemySquads.length === 0) ? (
+            <div className="px-3.5 py-1.5 rounded-xl border font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg bg-slate-900 text-slate-400 border-slate-700">
+              <span>AGUARDANDO MONSTROS</span>
+            </div>
+          ) : (
+            <div className={`px-3.5 py-1.5 rounded-xl border font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg ${
+              isDefeat
+                ? 'bg-rose-950 text-rose-200 border-rose-500'
+                : 'bg-emerald-950 text-emerald-200 border-emerald-500'
+            }`}>
+              {isDefeat ? <Skull className="w-3.5 h-3.5 text-rose-400" /> : <Crown className="w-3.5 h-3.5 text-amber-300" />}
+              <span>{isDefeat ? 'DERROTA PREVISTA' : 'VITÓRIA PREVISTA'}</span>
+            </div>
+          )}
 
           <button
             type="button"
@@ -90,8 +93,20 @@ export const BattlePreview: React.FC<BattlePreviewProps> = ({
       {/* Accordion Body */}
       {isOpen && (
         <div className="space-y-4 animate-fadeIn">
-          {/* Sub-bar with View Mode Switcher */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-[#111827] px-4 py-2.5 rounded-xl border border-slate-800">
+          {(!targetMonster.enemySquads || targetMonster.enemySquads.length === 0) ? (
+            <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 text-center space-y-2.5 shadow-inner">
+              <span className="text-3xl">🛡️</span>
+              <h4 className="text-sm font-black text-amber-300">
+                Nenhum monstro cadastrado para este alvo ({targetMonster.name})
+              </h4>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                As combinações fictícias foram removidas. Adicione os monstros e quantidades reais no seletor de alvos acima para visualizar a arena de combate e o relatório turno a turno.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Sub-bar with View Mode Switcher */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-[#111827] px-4 py-2.5 rounded-xl border border-slate-800">
             <span className="text-xs font-bold text-slate-300">
               Confronto resolvido em <strong className="text-amber-300 font-mono">{totalSteps} rodadas</strong> de combate
             </span>
@@ -133,10 +148,10 @@ export const BattlePreview: React.FC<BattlePreviewProps> = ({
                     </div>
                     <div>
                       <h4 className="text-sm font-black text-white uppercase tracking-wider">
-                        Atacante: {profile.heroName || 'Comandante'}
+                        Atacante: {profile.playerName || profile.heroName || 'Comandante'}
                       </h4>
                       <span className="text-2xs text-slate-400 font-semibold">
-                        Reino K:310 • Capitão {captain.name}
+                        Reino {profile.kingdom || 'K:310'} • Capitão {captain.name}
                       </span>
                     </div>
                   </div>
@@ -354,6 +369,8 @@ export const BattlePreview: React.FC<BattlePreviewProps> = ({
               ))}
             </div>
           )}
+        </>
+      )}
         </div>
       )}
     </div>

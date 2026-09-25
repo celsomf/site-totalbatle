@@ -23,16 +23,42 @@ app.get('/api/health', async (_req, res) => {
   }
 });
 
-// GET /api/profile
-app.get('/api/profile', async (_req, res) => {
+// GET /api/profiles (List all player profiles)
+app.get('/api/profiles', async (_req, res) => {
   try {
+    const client = await pool.connect();
+    const result = await client.query(
+      `SELECT id, player_name AS "playerName", kingdom, clan_tag AS "clanTag", 
+              capitol_level AS "capitolLevel", hero_id AS "heroId", updated_at AS "updatedAt" 
+       FROM player_profiles 
+       ORDER BY updated_at DESC`
+    );
+    client.release();
+    res.json({ profiles: result.rows });
+  } catch (err: any) {
+    console.error('[API Error /profiles GET]:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/profile or /api/profile/:id
+app.get(['/api/profile', '/api/profile/:id'], async (req, res) => {
+  try {
+    const targetId = req.params.id || (req.query.id as string) || 'main_profile';
     const client = await pool.connect();
     
     // Perfil base
-    const profileRes = await client.query(
+    let profileRes = await client.query(
       'SELECT * FROM player_profiles WHERE id = $1',
-      ['main_profile']
+      [targetId]
     );
+
+    if (profileRes.rows.length === 0 && targetId === 'main_profile') {
+      // Se 'main_profile' não existir, tenta pegar o perfil mais recente
+      profileRes = await client.query(
+        'SELECT * FROM player_profiles ORDER BY updated_at DESC LIMIT 1'
+      );
+    }
 
     if (profileRes.rows.length === 0) {
       client.release();
@@ -40,11 +66,12 @@ app.get('/api/profile', async (_req, res) => {
     }
 
     const row = profileRes.rows[0];
+    const actualProfileId = row.id;
 
     // Níveis de Capitães
     const captainsRes = await client.query(
       'SELECT captain_id, level FROM captain_levels WHERE profile_id = $1',
-      ['main_profile']
+      [actualProfileId]
     );
     const captainLevels: Record<string, number> = {};
     for (const c of captainsRes.rows) {
@@ -54,7 +81,7 @@ app.get('/api/profile', async (_req, res) => {
     // Inventário de Tropas
     const troopsRes = await client.query(
       'SELECT troop_id, owned_count, is_unlocked, custom_attack, custom_health FROM troop_inventory WHERE profile_id = $1',
-      ['main_profile']
+      [actualProfileId]
     );
     const ownedTroopCounts: Record<string, number> = {};
     const unlockedTroopIds: string[] = [];
@@ -76,8 +103,12 @@ app.get('/api/profile', async (_req, res) => {
     client.release();
 
     const fullProfile = {
+      id: row.id,
+      playerName: row.player_name || 'Comandante',
+      kingdom: row.kingdom || 'K:310',
+      clanTag: row.clan_tag || '',
       heroId: row.hero_id,
-      heroName: row.hero_name,
+      heroName: row.hero_name || row.player_name || 'Comandante',
       heroLevel: row.hero_level,
       includeHero: row.include_hero,
       capitolLevel: row.capitol_level,
@@ -102,21 +133,25 @@ app.get('/api/profile', async (_req, res) => {
   }
 });
 
-// POST /api/profile (Save / Update entire profile)
-app.post('/api/profile', async (req, res) => {
+// POST /api/profile or /api/profile/:id (Save / Update entire profile)
+app.post(['/api/profile', '/api/profile/:id'], async (req, res) => {
   try {
     const p = req.body;
+    const profileId = req.params.id || p.id || 'main_profile';
     const client = await pool.connect();
 
     // Upsert player_profiles
     await client.query(
       `
       INSERT INTO player_profiles (
-        id, hero_id, hero_name, hero_level, include_hero, capitol_level, dragon_level,
+        id, player_name, kingdom, clan_tag, hero_id, hero_name, hero_level, include_hero, capitol_level, dragon_level,
         max_march_capacity, mercenary_capacity, special_capacity,
         selected_captain_id, selected_captain_ids, academy_bonus, custom_troops, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
       ON CONFLICT (id) DO UPDATE SET
+        player_name = EXCLUDED.player_name,
+        kingdom = EXCLUDED.kingdom,
+        clan_tag = EXCLUDED.clan_tag,
         hero_id = EXCLUDED.hero_id,
         hero_name = EXCLUDED.hero_name,
         hero_level = EXCLUDED.hero_level,
@@ -133,9 +168,12 @@ app.post('/api/profile', async (req, res) => {
         updated_at = NOW()
       `,
       [
-        'main_profile',
+        profileId,
+        p.playerName || p.heroName || 'Comandante',
+        p.kingdom || 'K:310',
+        p.clanTag || '',
         p.heroId || 'garvel',
-        p.heroName || 'Comandante',
+        p.heroName || p.playerName || 'Comandante',
         p.heroLevel || 16,
         p.includeHero ?? true,
         p.capitolLevel || 16,
@@ -159,7 +197,7 @@ app.post('/api/profile', async (req, res) => {
           VALUES ($1, $2, $3)
           ON CONFLICT (profile_id, captain_id) DO UPDATE SET level = EXCLUDED.level
           `,
-          ['main_profile', capId, lvl]
+          [profileId, capId, lvl]
         );
       }
     }
@@ -179,15 +217,169 @@ app.post('/api/profile', async (req, res) => {
             custom_attack = EXCLUDED.custom_attack,
             custom_health = EXCLUDED.custom_health
           `,
-          ['main_profile', troopId, count, isUnlocked, custom?.attack || null, custom?.health || null]
+          [profileId, troopId, count, isUnlocked, custom?.attack || null, custom?.health || null]
         );
       }
     }
 
     client.release();
-    res.json({ success: true, message: 'Perfil salvo com sucesso no PostgreSQL' });
+    res.json({ success: true, message: `Perfil '${profileId}' salvo com sucesso no PostgreSQL` });
   } catch (err: any) {
     console.error('[API Error /profile POST]:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/profile/:id (Delete a profile and associated inventory/captains)
+app.delete('/api/profile/:id', async (req, res) => {
+  try {
+    const profileId = req.params.id;
+    if (!profileId) {
+      return res.status(400).json({ error: 'ID de perfil obrigatório' });
+    }
+
+    const client = await pool.connect();
+    await client.query('DELETE FROM troop_inventory WHERE profile_id = $1', [profileId]);
+    await client.query('DELETE FROM captain_levels WHERE profile_id = $1', [profileId]);
+    await client.query('DELETE FROM player_profiles WHERE id = $1', [profileId]);
+    client.release();
+
+    res.json({ success: true, message: `Perfil '${profileId}' excluído com sucesso.` });
+  } catch (err: any) {
+    console.error('[API Error /profile DELETE]:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/monsters (List all registered monster units)
+app.get('/api/monsters', async (_req, res) => {
+  try {
+    const client = await pool.connect();
+    const result = await client.query(
+      'SELECT id, name, tier, family, sub_type AS "subType", troop_class AS "troopClass", unit_attack AS "unitAttack", unit_health AS "unitHealth", leadership, initiative, aspects FROM monster_units ORDER BY family, tier, name'
+    );
+    client.release();
+    res.json({ monsters: result.rows });
+  } catch (err: any) {
+    console.error('[API Error /monsters GET]:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/monsters (Upsert single monster unit)
+app.post('/api/monsters', async (req, res) => {
+  try {
+    const m = req.body;
+    if (!m.id || !m.name || m.unitAttack == null || m.unitHealth == null) {
+      return res.status(400).json({ error: 'Campos obrigatórios ausentes (id, name, unitAttack, unitHealth)' });
+    }
+
+    const client = await pool.connect();
+    await client.query(
+      `
+      INSERT INTO monster_units (
+        id, name, tier, family, sub_type, troop_class, unit_attack, unit_health, leadership, initiative, aspects, is_enemy, unit_type, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+      ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        tier = EXCLUDED.tier,
+        family = EXCLUDED.family,
+        sub_type = EXCLUDED.sub_type,
+        troop_class = EXCLUDED.troop_class,
+        unit_attack = EXCLUDED.unit_attack,
+        unit_health = EXCLUDED.unit_health,
+        leadership = EXCLUDED.leadership,
+        initiative = EXCLUDED.initiative,
+        aspects = EXCLUDED.aspects,
+        is_enemy = EXCLUDED.is_enemy,
+        unit_type = EXCLUDED.unit_type,
+        updated_at = NOW()
+      `,
+      [
+        m.id,
+        m.name,
+        m.tier || 1,
+        m.family || 'barbarian',
+        m.subType || '',
+        m.troopClass || 'melee',
+        m.unitAttack,
+        m.unitHealth,
+        m.leadership || 1,
+        m.initiative || 10,
+        JSON.stringify(m.aspects || {}),
+        m.isEnemy ?? true,
+        m.unitType || 'enemy_monster',
+      ]
+    );
+
+    client.release();
+    res.json({ success: true, message: `Monstro '${m.name}' salvo com sucesso.` });
+  } catch (err: any) {
+    console.error('[API Error /monsters POST]:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/monsters/bulk (Upsert multiple monster units in batch)
+app.post('/api/monsters/bulk', async (req, res) => {
+  try {
+    const { monsters } = req.body;
+    if (!Array.isArray(monsters) || monsters.length === 0) {
+      return res.status(400).json({ error: 'Array de monstros vazio ou inválido' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const m of monsters) {
+        await client.query(
+          `
+          INSERT INTO monster_units (
+            id, name, tier, family, sub_type, troop_class, unit_attack, unit_health, leadership, initiative, aspects, is_enemy, unit_type, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+          ON CONFLICT (id) DO UPDATE SET
+            name = EXCLUDED.name,
+            tier = EXCLUDED.tier,
+            family = EXCLUDED.family,
+            sub_type = EXCLUDED.sub_type,
+            troop_class = EXCLUDED.troop_class,
+            unit_attack = EXCLUDED.unit_attack,
+            unit_health = EXCLUDED.unit_health,
+            leadership = EXCLUDED.leadership,
+            initiative = EXCLUDED.initiative,
+            aspects = EXCLUDED.aspects,
+            is_enemy = EXCLUDED.is_enemy,
+            unit_type = EXCLUDED.unit_type,
+            updated_at = NOW()
+          `,
+          [
+            m.id,
+            m.name,
+            m.tier || 1,
+            m.family || 'barbarian',
+            m.subType || '',
+            m.troopClass || 'melee',
+            m.unitAttack,
+            m.unitHealth,
+            m.leadership || 1,
+            m.initiative || 10,
+            JSON.stringify(m.aspects || {}),
+            m.isEnemy ?? true,
+            m.unitType || 'enemy_monster',
+          ]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+
+    res.json({ success: true, count: monsters.length, message: `${monsters.length} monstros salvos com sucesso.` });
+  } catch (err: any) {
+    console.error('[API Error /monsters/bulk POST]:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

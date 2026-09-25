@@ -8,9 +8,12 @@ test('validar simulador de combate real com alerta de derrota certa para Tropa d
   await page.click('button:has-text("Livro de Marcha")');
   await page.waitForTimeout(600);
 
-  // 2. No Seletor de Alvo Inimigo, selecionar Tropa de Elfos Comum
+  // 2. No Seletor de Alvo Inimigo, selecionar modo Raro (Herói) e Horda do Inferno Rara
+  await page.click('button:has-text("Raro (Herói)")');
+  await page.waitForTimeout(600);
+
   const templateSelect = page.locator('select').first();
-  await templateSelect.selectOption({ label: '🌿 Tropa de Elfos Comum' });
+  await templateSelect.selectOption({ value: 'tropa_inferno_rara' });
   await page.waitForTimeout(600);
 
   // 3. Validar que o alerta vermelho DERROTA CERTA (NÃO MARCHAR) é exibido
@@ -120,7 +123,7 @@ test('validar assertividade das sugestões: Tropa de Mortos-Vivos Nv 6 não deve
 
   // 2. Selecionar Tropa de Mortos-Vivos Comum
   const templateSelect = page.locator('select').first();
-  await templateSelect.selectOption({ label: '🧟 Tropa de Mortos-Vivos Comum' });
+  await templateSelect.selectOption({ value: 'tropa_undead_comum' });
   await page.waitForTimeout(600);
 
   // 3. Ajustar nível para 6
