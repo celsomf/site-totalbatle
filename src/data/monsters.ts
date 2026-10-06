@@ -1,4 +1,4 @@
-import { MonsterTarget, TroopClass, TargetType, AttackMode, EnemySquadUnit, CustomMonsterVariant } from '../types';
+import { MonsterTarget, TroopAspects, TroopClass, TargetType, AttackMode, EnemySquadUnit, CustomMonsterVariant } from '../types';
 
 export type { EnemySquadUnit, CustomMonsterVariant };
 
@@ -7,21 +7,18 @@ export interface MonsterUnitDefinition {
   name: string;
   aliases?: string[];
   tier: number;
-  family: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'elemental' | 'epic' | 'elfos';
+  family: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'elemental' | 'epic' | 'elfos' | 'dragons';
   subType: string;
   troopClass: TroopClass;
   unitAttack: number;
   unitHealth: number;
   leadership: number;
   initiative: number;
-  aspects: {
-    bonusVsMeleePercent?: number;
-    bonusVsRangedPercent?: number;
-    bonusVsMountedPercent?: number;
-    bonusVsFlyingPercent?: number;
-    bonusVsElementalsPercent?: number;
-    description: string;
-  };
+  avatarPath?: string;
+  detailImagePath?: string;
+  isEnemy?: boolean;
+  unitType?: 'enemy_monster';
+  aspects: TroopAspects & { description: string };
 }
 
 // 1. Catálogo Completo de Monstros do Total Battle
@@ -705,7 +702,7 @@ export function getMonsterUnit(id: string): MonsterUnitDefinition {
 export interface MonsterPresetTemplate {
   id: string;
   name: string;
-  faction: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'elemental' | 'epic' | 'elfos';
+  faction: string;
   attackMode: AttackMode;
   targetType: TargetType;
   defaultLevel: number;
@@ -778,26 +775,6 @@ export const MONSTER_PRESET_TEMPLATES: MonsterPresetTemplate[] = [
       vp: Math.round(lvl * 9000),
       tar: Math.round(lvl * 13500),
       chest: Math.round(lvl * 2.5),
-    }),
-    marchCapacities: () => ({ guards: 2000, mercenaries: 1000, monsters: 500 }),
-  },
-
-  // 3a. Tropa de Banshees (Mortos-Vivos Comum - Longo Alcance)
-  {
-    id: 'tropa_banshee_comum',
-    name: '👻 Tropa de Banshees Comum (Longo Alcance)',
-    faction: 'undead',
-    attackMode: 'common',
-    targetType: 'common_monster',
-    defaultLevel: 6,
-    availableLevels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25],
-    description: 'Banshees espectrais de longo alcance (210 no Nv 6). Atacam diretamente a linha de atiradores e têm +45% de dano contra corpo a corpo.',
-    generateSquads: (): EnemySquadUnit[] => [],
-    calculateRewards: (lvl: number) => ({
-      xp: Math.round(lvl * 15000),
-      vp: Math.round(lvl * 7500),
-      tar: Math.round(lvl * 11000),
-      chest: Math.round(lvl * 2),
     }),
     marchCapacities: () => ({ guards: 2000, mercenaries: 1000, monsters: 500 }),
   },

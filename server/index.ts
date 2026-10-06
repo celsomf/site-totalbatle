@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { pool, initDatabase } from './db';
+import { isCatalogWriteAuthorized } from './gameCatalog';
+import { mutateCatalogFormations, readCatalog } from './catalogApi';
 
 dotenv.config();
 
@@ -9,7 +11,35 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
+
+// Catálogos de leitura e formações compartilhadas do jogo.
+app.get('/api/catalog', async (_req, res) => {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(await readCatalog(pool));
+  } catch (err: any) {
+    console.error('[API Error /catalog GET]:', err.message);
+    res.status(503).json({ error: 'Não foi possível carregar os dados do catálogo.' });
+  }
+});
+
+app.post('/api/monster-formations', async (req, res) => {
+  if (!isCatalogWriteAuthorized(req.header('authorization'))) {
+    const tokenConfigured = Boolean(process.env.CATALOG_WRITE_TOKEN);
+    return res.status(tokenConfigured ? 401 : 503).json({
+      error: tokenConfigured ? 'Chave de edição inválida ou ausente.' : 'A edição compartilhada está sem chave de segurança configurada.',
+    });
+  }
+
+  try {
+    res.json(await mutateCatalogFormations(pool, req.body));
+  } catch (err: any) {
+    const message = err instanceof Error ? err.message : 'Não foi possível salvar a formação.';
+    const clientError = /inválid|informe|encontrad|mesm|limite|quantidade|catálogo|origem|destino|família|monstro/i.test(message);
+    res.status(clientError ? 400 : 500).json({ error: message });
+  }
+});
 
 // Health check
 app.get('/api/health', async (_req, res) => {
@@ -121,6 +151,8 @@ app.get(['/api/profile', '/api/profile/:id'], async (req, res) => {
       captainLevels,
       unlockedTroopIds,
       ownedTroopCounts,
+      activeMarches: row.active_marches || [],
+      attackHistory: row.attack_history || [],
       customTroopStats,
       customTroops: row.custom_troops || [],
       academyBonus: row.academy_bonus,
@@ -146,8 +178,8 @@ app.post(['/api/profile', '/api/profile/:id'], async (req, res) => {
       INSERT INTO player_profiles (
         id, player_name, kingdom, clan_tag, hero_id, hero_name, hero_level, include_hero, capitol_level, dragon_level,
         max_march_capacity, mercenary_capacity, special_capacity,
-        selected_captain_id, selected_captain_ids, academy_bonus, custom_troops, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
+        selected_captain_id, selected_captain_ids, academy_bonus, custom_troops, active_marches, attack_history, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW())
       ON CONFLICT (id) DO UPDATE SET
         player_name = EXCLUDED.player_name,
         kingdom = EXCLUDED.kingdom,
@@ -165,6 +197,8 @@ app.post(['/api/profile', '/api/profile/:id'], async (req, res) => {
         selected_captain_ids = EXCLUDED.selected_captain_ids,
         academy_bonus = EXCLUDED.academy_bonus,
         custom_troops = EXCLUDED.custom_troops,
+        active_marches = EXCLUDED.active_marches,
+        attack_history = EXCLUDED.attack_history,
         updated_at = NOW()
       `,
       [
@@ -185,6 +219,8 @@ app.post(['/api/profile', '/api/profile/:id'], async (req, res) => {
         JSON.stringify(p.selectedCaptainIds || ['brunhild', 'xi_guiying', 'aydae']),
         JSON.stringify(p.academyBonus || {}),
         JSON.stringify(p.customTroops || []),
+        JSON.stringify(p.activeMarches || []),
+        JSON.stringify(p.attackHistory || []),
       ]
     );
 
@@ -268,6 +304,9 @@ app.get('/api/monsters', async (_req, res) => {
 
 // POST /api/monsters (Upsert single monster unit)
 app.post('/api/monsters', async (req, res) => {
+  if (!isCatalogWriteAuthorized(req.header('authorization'))) {
+    return res.status(process.env.CATALOG_WRITE_TOKEN ? 401 : 503).json({ error: 'Acesso de edição não autorizado.' });
+  }
   try {
     const m = req.body;
     if (!m.id || !m.name || m.unitAttack == null || m.unitHealth == null) {
@@ -322,6 +361,9 @@ app.post('/api/monsters', async (req, res) => {
 
 // POST /api/monsters/bulk (Upsert multiple monster units in batch)
 app.post('/api/monsters/bulk', async (req, res) => {
+  if (!isCatalogWriteAuthorized(req.header('authorization'))) {
+    return res.status(process.env.CATALOG_WRITE_TOKEN ? 401 : 503).json({ error: 'Acesso de edição não autorizado.' });
+  }
   try {
     const { monsters } = req.body;
     if (!Array.isArray(monsters) || monsters.length === 0) {
@@ -384,8 +426,13 @@ app.post('/api/monsters/bulk', async (req, res) => {
   }
 });
 
-// Inicia servidor e banco
-initDatabase().then(() => {
+// Inicia servidor somente quando o banco, fonte oficial dos dados, estiver acessível.
+initDatabase().then((initialized) => {
+  if (!initialized) {
+    console.error('[API Server] Inicialização cancelada: banco de dados indisponível.');
+    process.exitCode = 1;
+    return;
+  }
   app.listen(PORT, () => {
     console.log(`[API Server] Rodando em http://localhost:${PORT}`);
   });

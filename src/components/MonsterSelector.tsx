@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   MonsterTarget,
   TroopClass,
@@ -8,21 +8,8 @@ import {
   PlayerProfile,
   Captain,
 } from '../types';
-import {
-  MONSTER_PRESET_TEMPLATES,
-  buildMonsterTargetFromTemplate,
-  updateMonsterSquads,
-  saveCustomMonsterSquads,
-  removeSavedCustomMonsterSquads,
-  hasSavedCustomSquads,
-  getCustomTargetsMap,
-  getSavedCustomVariants,
-  saveCustomMonsterVariant,
-  setActiveCustomVariant,
-  removeSavedCustomMonsterVariant,
-  CustomMonsterVariant,
-  MonsterPresetTemplate,
-} from '../data/monsters';
+import { buildMonsterTargetFromTemplate, updateMonsterTarget } from '../domain/monsterTargets';
+import { useGameCatalog } from '../context/GameCatalogContext';
 import { findOptimalFarmLevel, buildDispatchedTroops, simulateCombat } from '../utils/combatSimulator';
 import { DEFAULT_CAPTAINS } from '../data/captains';
 import { EditSquadsModal } from './EditSquadsModal';
@@ -42,9 +29,11 @@ import {
   ChevronRight,
   Compass,
   Zap,
-  Plus,
   Trash2,
   ShieldAlert,
+  Copy,
+  Database,
+  Plus,
 } from 'lucide-react';
 
 interface MonsterSelectorProps {
@@ -64,47 +53,8 @@ interface WatchtowerFamily {
   factions: string[];
 }
 
-const WATCHTOWER_FAMILIES: WatchtowerFamily[] = [
-  { id: 'barbarians', name: 'Bárbaros', avatarId: 'ogro_xama', factions: ['barbarian'] },
-  { id: 'inferno', name: 'Inferno', avatarId: 'demonio_com_chifres', factions: ['inferno'] },
-  { id: 'undead', name: 'Mortos-Vivos', avatarId: 'esqueleto', factions: ['undead'] },
-  { id: 'elves', name: 'Elfos', avatarId: 'arqueiro_elfico', factions: ['elfos', 'elemental'] },
-  { id: 'cursed', name: 'Amaldiçoados', avatarId: 'licantropo', factions: ['cursed'] },
-  { id: 'others', name: 'Outros / Épicos', avatarId: 'dragao_da_vida', factions: ['epic', 'dragons'] },
-];
-
-function getMonsterAvatarForSquads(
-  squads: EnemySquadUnit[] | undefined,
-  faction: string,
-  level: number
-): string {
-  // 1. Give absolute priority to the first enemy squad unit selected/configured!
-  const firstSquad = squads?.[0];
-  if (firstSquad) {
-    if (firstSquad.id) return firstSquad.id;
-    if (firstSquad.name) return firstSquad.name;
-  }
-
-  // 2. Fallback to family + level bracket if no squads exist
-  if (faction === 'barbarian') {
-    return level < 15 ? 'lancador_de_machados' : 'ogro_xama';
-  }
-  if (faction === 'inferno') {
-    return level < 15 ? 'demonio_com_chifres' : 'cavalgante_de_fogo';
-  }
-  if (faction === 'undead') {
-    return level < 15 ? 'esqueleto' : 'cavalgante_da_morte';
-  }
-  if (faction === 'elfos' || faction === 'elemental') {
-    return level < 15 ? 'arqueiro_elfico' : 'druida';
-  }
-  if (faction === 'cursed') {
-    return level < 15 ? 'licantropo' : 'cavalgante_de_jaguar';
-  }
-  if (faction === 'epic' || faction === 'dragons') {
-    return 'dragao_da_vida';
-  }
-  return 'ogro_xama';
+function getMonsterAvatarForSquads(squads: EnemySquadUnit[] | undefined, fallbackId: string): string {
+  return squads?.[0]?.id || fallbackId;
 }
 
 function estimateMonsterStrength(squads: EnemySquadUnit[]): number {
@@ -132,308 +82,210 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
   captain,
   sendDragon,
 }) => {
-  // Determine initial family from selected monster
-  const initialFamilyId = useMemo(() => {
-    const f = selectedMonster.faction || 'inferno';
-    const found = WATCHTOWER_FAMILIES.find((fam) => fam.factions.includes(f));
-    return found ? found.id : 'inferno';
-  }, [selectedMonster.faction]);
-
-  const [activeFamilyId, setActiveFamilyId] = useState<string>(initialFamilyId);
-  const [activeAttackMode, setActiveAttackMode] = useState<AttackMode>(
-    selectedMonster.attackMode || 'common'
-  );
-
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(() => {
-    return selectedMonster.id.split('_lvl_')[0] || 'tropa_inferno_comum';
-  });
-
-  const [monsterLevel, setMonsterLevel] = useState<number>(selectedMonster.level || 17);
+  const { templates, monsters, saveFormation, copyFormation, importLegacyFormations, legacyFormationCount, legacyVariantCount, legacyImportDone, legacyImporting, legacyImportResult } = useGameCatalog();
+  const families = useMemo<WatchtowerFamily[]>(() => {
+    const unique = new Map<string, WatchtowerFamily>();
+    for (const template of templates) {
+      const current = unique.get(template.watchtowerFamilyId);
+      if (current) {
+        if (!current.factions.includes(template.faction)) current.factions.push(template.faction);
+      } else {
+        unique.set(template.watchtowerFamilyId, {
+          id: template.watchtowerFamilyId,
+          name: template.watchtowerFamilyName,
+          avatarId: template.watchtowerAvatarUnitId,
+          factions: [template.faction],
+        });
+      }
+    }
+    return Array.from(unique.values());
+  }, [templates]);
+  const initialTemplate = templates.find((template) => template.id === selectedMonster.id.split('_lvl_')[0]) || templates[0];
+  const [activeFamilyId, setActiveFamilyId] = useState<string>(initialTemplate?.watchtowerFamilyId || 'inferno');
+  const [activeAttackMode, setActiveAttackMode] = useState<AttackMode>(selectedMonster.attackMode || 'common');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialTemplate?.id || '');
+  const [monsterLevel, setMonsterLevel] = useState<number>(selectedMonster.level || initialTemplate?.defaultLevel || 1);
   const [isEditingSquads, setIsEditingSquads] = useState<boolean>(false);
   const [showWatchtowerList, setShowWatchtowerList] = useState<boolean>(false);
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+  const [filterSavedOnly, setFilterSavedOnly] = useState<boolean>(false);
+  const [showCopyLevels, setShowCopyLevels] = useState(false);
+  const [copyLevelSelection, setCopyLevelSelection] = useState<number[]>([]);
+  const [copyError, setCopyError] = useState<string | null>(null);
+  const [isCopying, setIsCopying] = useState(false);
+  const [isMigratingLegacy, setIsMigratingLegacy] = useState(false);
+  const [saveFeedbackIsError, setSaveFeedbackIsError] = useState(false);
 
-  // Active family definition
-  const activeFamily =
-    WATCHTOWER_FAMILIES.find((fam) => fam.id === activeFamilyId) || WATCHTOWER_FAMILIES[0];
+  useEffect(() => {
+    if (!legacyImportResult) return;
+    setSaveFeedbackIsError(legacyImportResult.unresolved.length > 0);
+    setSaveFeedback(
+      legacyImportResult.unresolved.length > 0
+        ? `${legacyImportResult.imported} importada(s); ${legacyImportResult.skipped} ignorada(s). ${legacyImportResult.unresolved.length} item(ns) precisam de revisão.`
+        : `${legacyImportResult.imported} formação(ões) antiga(s) importada(s); ${legacyImportResult.skipped} ignorada(s).`
+    );
+  }, [legacyImportResult]);
 
-  // Filter templates belonging to active family
-  const familyTemplates = useMemo(() => {
-    return MONSTER_PRESET_TEMPLATES.filter((tpl) => activeFamily.factions.includes(tpl.faction));
-  }, [activeFamily]);
-
-  // Mode filtered templates inside active family
-  const availableModesForFamily = useMemo(() => {
-    const modes = new Set(familyTemplates.map((t) => t.attackMode));
-    return Array.from(modes);
-  }, [familyTemplates]);
-
-  // If current mode is not present in family, fallback to first available
-  const effectiveMode = availableModesForFamily.includes(activeAttackMode)
-    ? activeAttackMode
-    : availableModesForFamily[0] || 'common';
-
-  const modeTemplates = useMemo(() => {
-    return familyTemplates.filter((t) => t.attackMode === effectiveMode);
-  }, [familyTemplates, effectiveMode]);
-
-  const currentTemplate: MonsterPresetTemplate =
-    modeTemplates.find((t) => t.id === selectedTemplateId) ||
-    modeTemplates[0] ||
-    familyTemplates[0] ||
-    MONSTER_PRESET_TEMPLATES[0];
+  const activeFamily = families.find((family) => family.id === activeFamilyId) || families[0];
+  const familyTemplates = useMemo(() =>
+    templates.filter((template) => template.watchtowerFamilyId === activeFamily?.id),
+    [activeFamily?.id, templates]
+  );
+  const availableModesForFamily = useMemo(() => Array.from(new Set(familyTemplates.map((template) => template.attackMode))), [familyTemplates]);
+  const effectiveMode = availableModesForFamily.includes(activeAttackMode) ? activeAttackMode : availableModesForFamily[0] || 'common';
+  const modeTemplates = useMemo(() => familyTemplates.filter((template) => template.attackMode === effectiveMode), [familyTemplates, effectiveMode]);
+  const currentTemplate = modeTemplates.find((template) => template.id === selectedTemplateId) || modeTemplates[0] || familyTemplates[0] || templates[0];
+  const hasEnemyComposition = Boolean(selectedMonster.enemySquads?.some((squad) => squad.count > 0));
 
   const fallbackCaptain: Captain = captain || DEFAULT_CAPTAINS[0];
-
-  const optimalFarm =
-    troops && profile
-      ? findOptimalFarmLevel(currentTemplate, troops, profile, fallbackCaptain, sendDragon ?? true)
-      : null;
-
-  const currentDispatched =
-    troops && profile
-      ? buildDispatchedTroops(troops, profile, selectedMonster, fallbackCaptain, sendDragon ?? true)
-      : [];
-
-  const currentSim =
-    currentDispatched.length > 0
-      ? simulateCombat(currentDispatched, selectedMonster.enemySquads || [])
-      : null;
-
+  const optimalFarm = troops && profile && currentTemplate
+    ? findOptimalFarmLevel(currentTemplate, troops, profile, fallbackCaptain, sendDragon ?? true)
+    : null;
+  const currentDispatched = troops && profile
+    ? buildDispatchedTroops(troops, profile, selectedMonster, fallbackCaptain, sendDragon ?? true)
+    : [];
+  const currentSim = hasEnemyComposition && currentDispatched.length > 0
+    ? simulateCombat(currentDispatched, selectedMonster.enemySquads || [])
+    : null;
   const isCurrentLevelDefeat = currentSim?.outcome === 'DEFEAT';
 
-  const [filterSavedOnly, setFilterSavedOnly] = useState<boolean>(false);
+  const savedLevelsForCurrentTemplate = useMemo(() => currentTemplate
+    ? currentTemplate.levels.filter((level) => level.squads.length > 0).map((level) => level.level).sort((a, b) => a - b)
+    : [], [currentTemplate]);
+  const watchtowerLevels = savedLevelsForCurrentTemplate;
+  const quickPills = useMemo(() => Array.from(new Set([...savedLevelsForCurrentTemplate, monsterLevel])).sort((a, b) => a - b), [monsterLevel, savedLevelsForCurrentTemplate]);
+  const displayedWatchtowerLevels = filterSavedOnly ? watchtowerLevels : Array.from({ length: 45 }, (_, index) => index + 1);
+  const watchtowerRowItems = useMemo(() => displayedWatchtowerLevels.map((level) => ({
+    key: `${level}`,
+    level,
+    isSaved: true,
+    target: buildMonsterTargetFromTemplate(currentTemplate, level),
+  })), [currentTemplate, displayedWatchtowerLevels]);
 
-  // Retrieve all levels configured and saved by user for the current template
-  const savedLevelsForCurrentTemplate = useMemo(() => {
-    const map = getCustomTargetsMap();
-    const prefix = `${currentTemplate.id}_lvl_`;
-    const lvls: number[] = [];
-    Object.keys(map).forEach((key) => {
-      if (key.startsWith(prefix)) {
-        const lvlStr = key.replace(prefix, '');
-        const num = parseInt(lvlStr, 10);
-        if (!isNaN(num)) lvls.push(num);
-      }
-    });
-    return Array.from(new Set(lvls)).sort((a, b) => a - b);
-  }, [currentTemplate.id, saveFeedback, selectedMonster]);
+  const currentLevelRecord = currentTemplate?.levels.find((level) => level.level === monsterLevel);
+  const isCustomSaved = (currentLevelRecord?.squads.length || 0) > 0;
+  const getMonsterAvatarPath = (unitId: string) =>
+    monsters.find((monster) => monster.id === unitId)?.avatarPath || `/assets/monsters/${unitId}_avatar.png`;
 
-  // Watchtower levels list: APENAS níveis salvos pelo usuário
-  const watchtowerLevels = useMemo(() => {
-    return [...savedLevelsForCurrentTemplate].sort((a, b) => a - b);
-  }, [savedLevelsForCurrentTemplate]);
+  useEffect(() => {
+    if (currentTemplate) {
+      onSelectMonster(buildMonsterTargetFromTemplate(currentTemplate, monsterLevel));
+    }
+  }, [currentTemplate, monsterLevel]);
 
-  // Quick levels for horizontal pills: níveis salvos + nível selecionado atual
-  const quickPills = useMemo(() => {
-    const list = Array.from(new Set([...savedLevelsForCurrentTemplate, monsterLevel]));
-    return list.sort((a, b) => a - b);
-  }, [monsterLevel, savedLevelsForCurrentTemplate]);
-
-  const displayedWatchtowerLevels = watchtowerLevels;
-
-  // Builds distinct row items in Watchtower list for every level and saved variant
-  const watchtowerRowItems = useMemo(() => {
-    const items: {
-      key: string;
-      level: number;
-      variantId?: string;
-      variantName?: string;
-      isSaved: boolean;
-      target: MonsterTarget;
-    }[] = [];
-
-    displayedWatchtowerLevels.forEach((lvl) => {
-      const variants = getSavedCustomVariants(currentTemplate.id, lvl);
-      if (variants.length > 0) {
-        variants.forEach((v) => {
-          const target = buildMonsterTargetFromTemplate(currentTemplate, lvl, false, v.id);
-          items.push({
-            key: `${lvl}_${v.id}`,
-            level: lvl,
-            variantId: v.id,
-            variantName: v.name,
-            isSaved: true,
-            target,
-          });
-        });
-      } else {
-        const target = buildMonsterTargetFromTemplate(currentTemplate, lvl, true);
-        items.push({
-          key: `${lvl}_default`,
-          level: lvl,
-          isSaved: false,
-          target,
-        });
-      }
-    });
-
-    return items;
-  }, [displayedWatchtowerLevels, currentTemplate, saveFeedback, selectedMonster]);
+  if (!currentTemplate || !activeFamily) return null;
 
   const handleFamilyChange = (familyId: string) => {
     setActiveFamilyId(familyId);
-    const fam = WATCHTOWER_FAMILIES.find((f) => f.id === familyId) || WATCHTOWER_FAMILIES[0];
-    const famTpls = MONSTER_PRESET_TEMPLATES.filter((tpl) => fam.factions.includes(tpl.faction));
-    const sameModeTpls = famTpls.filter((t) => t.attackMode === activeAttackMode);
-    const chosenTpl = sameModeTpls[0] || famTpls[0] || MONSTER_PRESET_TEMPLATES[0];
-
-    setSelectedTemplateId(chosenTpl.id);
-    setActiveAttackMode(chosenTpl.attackMode);
-    const newLvl = chosenTpl.defaultLevel;
-    setMonsterLevel(newLvl);
-
-    const newTarget = buildMonsterTargetFromTemplate(chosenTpl, newLvl);
-    onSelectMonster(newTarget);
+    const templatesInFamily = templates.filter((template) => template.watchtowerFamilyId === familyId);
+    const chosen = templatesInFamily.find((template) => template.attackMode === activeAttackMode) || templatesInFamily[0];
+    if (!chosen) return;
+    setSelectedTemplateId(chosen.id);
+    setActiveAttackMode(chosen.attackMode);
+    setMonsterLevel(chosen.defaultLevel);
+    setFilterSavedOnly(false);
+    setShowWatchtowerList(true);
+    onSelectMonster(buildMonsterTargetFromTemplate(chosen, chosen.defaultLevel));
   };
 
   const handleModeChange = (mode: AttackMode) => {
+    const chosen = familyTemplates.find((template) => template.attackMode === mode)
+      || templates.find((template) => template.attackMode === mode);
+    if (!chosen) return;
+    setActiveFamilyId(chosen.watchtowerFamilyId);
     setActiveAttackMode(mode);
-    const sameFamModeTpls = familyTemplates.filter((t) => t.attackMode === mode);
-    const chosenTpl = sameFamModeTpls[0] || MONSTER_PRESET_TEMPLATES.find((t) => t.attackMode === mode) || MONSTER_PRESET_TEMPLATES[0];
-
-    setSelectedTemplateId(chosenTpl.id);
-    const newLvl = chosenTpl.defaultLevel;
-    setMonsterLevel(newLvl);
-
-    const newTarget = buildMonsterTargetFromTemplate(chosenTpl, newLvl);
-    onSelectMonster(newTarget);
+    setSelectedTemplateId(chosen.id);
+    setMonsterLevel(chosen.defaultLevel);
+    setFilterSavedOnly(false);
+    setShowWatchtowerList(true);
+    onSelectMonster(buildMonsterTargetFromTemplate(chosen, chosen.defaultLevel));
   };
 
   const handleTemplateChange = (templateId: string) => {
-    setSelectedTemplateId(templateId);
-    const template = MONSTER_PRESET_TEMPLATES.find((t) => t.id === templateId) || MONSTER_PRESET_TEMPLATES[0];
-    const newLvl = template.defaultLevel;
-    setMonsterLevel(newLvl);
-    const newTarget = buildMonsterTargetFromTemplate(template, newLvl);
-    onSelectMonster(newTarget);
+    const template = templates.find((item) => item.id === templateId);
+    if (!template) return;
+    setSelectedTemplateId(template.id);
+    setMonsterLevel(template.defaultLevel);
+    onSelectMonster(buildMonsterTargetFromTemplate(template, template.defaultLevel));
   };
 
   const handleLevelChange = (level: number) => {
-    const validLevel = Math.max(1, Math.min(45, level));
+    const validLevel = Math.max(1, Math.min(45, Math.floor(level)));
     setMonsterLevel(validLevel);
-    const newTarget = buildMonsterTargetFromTemplate(currentTemplate, validLevel);
-    onSelectMonster(newTarget);
+    onSelectMonster(buildMonsterTargetFromTemplate(currentTemplate, validLevel));
   };
 
-  const currentLevelVariants = useMemo(() => {
-    return getSavedCustomVariants(currentTemplate.id, monsterLevel);
-  }, [currentTemplate.id, monsterLevel, saveFeedback, selectedMonster]);
-
-  const activeVariant = useMemo(() => {
-    if (currentLevelVariants.length === 0) return null;
-    return (
-      currentLevelVariants.find((v) => v.id === selectedMonster.activeVariantId) ||
-      currentLevelVariants[0]
-    );
-  }, [currentLevelVariants, selectedMonster.activeVariantId]);
-
-  const isCustomSaved = currentLevelVariants.length > 0 || Boolean(selectedMonster.isCustomConfig);
-
-  const handleSwitchVariant = (variantId: string) => {
-    setActiveCustomVariant(currentTemplate.id, monsterLevel, variantId);
-    const updated = buildMonsterTargetFromTemplate(currentTemplate, monsterLevel, false, variantId);
-    onSelectMonster(updated);
+  const handleSaveFormation = async (squads: EnemySquadUnit[] = selectedMonster.enemySquads || []) => {
+    await saveFormation(currentTemplate.id, monsterLevel, squads);
+    onSelectMonster(updateMonsterTarget(selectedMonster, squads));
+    setSaveFeedbackIsError(false);
+    setSaveFeedback(`Formação do nível ${monsterLevel} salva no banco.`);
   };
 
-  const handleUpdateCurrentVariant = () => {
-    if (!selectedMonster.enemySquads || selectedMonster.enemySquads.length === 0) return;
-    const varName = activeVariant?.name || `Equipe 1`;
-    const savedVar = saveCustomMonsterVariant(
-      currentTemplate.id,
-      monsterLevel,
-      selectedMonster.enemySquads,
-      varName,
-      activeVariant?.id
-    );
-    const updated = buildMonsterTargetFromTemplate(currentTemplate, monsterLevel, false, savedVar.id);
-    onSelectMonster(updated);
-    setSaveFeedback(`${savedVar.name} atualizada com sucesso!`);
-    setTimeout(() => setSaveFeedback(null), 3000);
-  };
-
-  const handleSaveAsNewVariant = () => {
-    if (!selectedMonster.enemySquads || selectedMonster.enemySquads.length === 0) return;
-    const newTeamNum = currentLevelVariants.length + 1;
-    const firstSquad = selectedMonster.enemySquads[0];
-    const defaultName = firstSquad ? `Equipe ${newTeamNum} (${firstSquad.name})` : `Equipe ${newTeamNum}`;
-    const customName = window.prompt(`Nome para a nova equipe do Nível ${monsterLevel}:`, defaultName);
-    if (customName === null) return;
-
-    const savedVar = saveCustomMonsterVariant(
-      currentTemplate.id,
-      monsterLevel,
-      selectedMonster.enemySquads,
-      customName.trim() || defaultName
-    );
-    const updated = buildMonsterTargetFromTemplate(currentTemplate, monsterLevel, false, savedVar.id);
-    onSelectMonster(updated);
-    setSaveFeedback(`Nova equipe "${savedVar.name}" cadastrada no Nv ${monsterLevel}!`);
-    setTimeout(() => setSaveFeedback(null), 3500);
-  };
-
-  const handleDeleteCurrentVariant = () => {
-    if (!activeVariant) return;
-    const confirmDelete = window.confirm(`Deseja excluir a "${activeVariant.name}" do Nível ${monsterLevel}?`);
-    if (!confirmDelete) return;
-
-    removeSavedCustomMonsterVariant(currentTemplate.id, monsterLevel, activeVariant.id);
-    const remaining = getSavedCustomVariants(currentTemplate.id, monsterLevel);
-    if (remaining.length > 0) {
-      const nextTarget = buildMonsterTargetFromTemplate(currentTemplate, monsterLevel, false, remaining[0].id);
-      onSelectMonster(nextTarget);
-      setSaveFeedback(`"${activeVariant.name}" removida. Ativada "${remaining[0].name}".`);
-    } else {
-      const fresh = buildMonsterTargetFromTemplate(currentTemplate, monsterLevel, true);
-      onSelectMonster(fresh);
-      setSaveFeedback('Equipe removida. Restaurado para o padrão do jogo.');
+  const handleSaveFormationSafely = async () => {
+    try {
+      await handleSaveFormation();
+    } catch (error) {
+      setSaveFeedbackIsError(true);
+      setSaveFeedback(error instanceof Error ? error.message : 'Não foi possível salvar a formação no banco.');
     }
-    setTimeout(() => setSaveFeedback(null), 3000);
   };
 
-  const handleDeleteVariantById = (variantId: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    const targetVariant = currentLevelVariants.find((v) => v.id === variantId);
-    const variantName = targetVariant?.name || 'Equipe';
-    const confirmDelete = window.confirm(`Deseja excluir a "${variantName}" do Nível ${monsterLevel}?`);
-    if (!confirmDelete) return;
-
-    removeSavedCustomMonsterVariant(currentTemplate.id, monsterLevel, variantId);
-    const remaining = getSavedCustomVariants(currentTemplate.id, monsterLevel);
-    if (remaining.length > 0) {
-      const nextTarget = buildMonsterTargetFromTemplate(currentTemplate, monsterLevel, false, remaining[0].id);
-      onSelectMonster(nextTarget);
-      setSaveFeedback(`"${variantName}" excluída.`);
-    } else {
-      const fresh = buildMonsterTargetFromTemplate(currentTemplate, monsterLevel, true);
-      onSelectMonster(fresh);
-      setSaveFeedback('Equipe excluída.');
+  const handleDeleteFormation = async () => {
+    if (!isCustomSaved) return;
+    if (!window.confirm(`Excluir a formação de ${currentTemplate.name}, nível ${monsterLevel}?`)) return;
+    try {
+      await handleSaveFormation([]);
+      setSaveFeedbackIsError(false);
+      setSaveFeedback(`Formação do nível ${monsterLevel} removida.`);
+    } catch (error) {
+      setSaveFeedbackIsError(true);
+      setSaveFeedback(error instanceof Error ? error.message : 'Não foi possível remover a formação do banco.');
     }
-    setTimeout(() => setSaveFeedback(null), 3000);
   };
 
-  const handleSaveCustomSquads = (updatedSquads: EnemySquadUnit[]) => {
-    const varName = activeVariant?.name || `Equipe 1`;
-    const savedVar = saveCustomMonsterVariant(
-      currentTemplate.id,
-      monsterLevel,
-      updatedSquads,
-      varName,
-      activeVariant?.id
-    );
-    const updated = buildMonsterTargetFromTemplate(currentTemplate, monsterLevel, false, savedVar.id);
-    onSelectMonster(updated);
-    setSaveFeedback(`${savedVar.name} salva para Nv ${monsterLevel}!`);
-    setTimeout(() => setSaveFeedback(null), 3000);
+  const handleCopyFormation = async () => {
+    if (copyLevelSelection.length === 0) {
+      setCopyError('Selecione pelo menos um nível de destino.');
+      return;
+    }
+    const overwritten = copyLevelSelection.filter((level) => currentTemplate.levels.find((row) => row.level === level)?.squads.length);
+    if (overwritten.length && !window.confirm(`Isso substituirá a formação existente nos níveis ${overwritten.join(', ')}. Continuar?`)) return;
+    setIsCopying(true);
+    setCopyError(null);
+    try {
+      await saveFormation(currentTemplate.id, monsterLevel, selectedMonster.enemySquads || []);
+      const copied = await copyFormation(currentTemplate.id, monsterLevel, copyLevelSelection);
+      setShowCopyLevels(false);
+      setCopyLevelSelection([]);
+      setSaveFeedback(`Formação copiada para ${copied} nível(is).`);
+    } catch (error) {
+      setCopyError(error instanceof Error ? error.message : 'Não foi possível copiar a formação.');
+    } finally {
+      setIsCopying(false);
+    }
   };
 
-  const handleResetToTemplate = () => {
-    removeSavedCustomMonsterSquads(currentTemplate.id, monsterLevel);
-    const fresh = buildMonsterTargetFromTemplate(currentTemplate, monsterLevel, true);
-    onSelectMonster(fresh);
-    setSaveFeedback('Todas as equipes deste nível foram removidas. Padrão original restaurado.');
-    setTimeout(() => setSaveFeedback(null), 3000);
+  const handleLegacyImport = async () => {
+    setIsMigratingLegacy(true);
+    try {
+      const result = await importLegacyFormations();
+      setSaveFeedbackIsError(result.unresolved.length > 0);
+      setSaveFeedback(`${result.imported} formação(ões) importada(s); ${result.skipped} ignorada(s).`);
+      if (result.unresolved.length) {
+        setSaveFeedback(`${result.imported} importada(s); ${result.skipped} ignorada(s). Confira os monstros sem correspondência na mensagem de erro do navegador.`);
+        console.warn('[Migração local de formações] Monstros/alvos sem correspondência:', result.unresolved);
+      }
+    } catch (error) {
+      setSaveFeedbackIsError(true);
+      setSaveFeedback(error instanceof Error ? error.message : 'Não foi possível importar os dados locais.');
+    } finally {
+      setIsMigratingLegacy(false);
+    }
   };
+
+  const handleResetToTemplate = async () => handleSaveFormation([]);
+  const handleSaveCustomSquads = async (updatedSquads: EnemySquadUnit[]) => handleSaveFormation(updatedSquads);
 
   const getTroopClassBadge = (tc: TroopClass) => {
     switch (tc) {
@@ -471,11 +323,8 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
   };
 
   // Dedicated avatar resolver: prioritizes the FIRST enemy squad unit!
-  const monsterAvatarId = getMonsterAvatarForSquads(
-    selectedMonster.enemySquads,
-    currentTemplate.faction,
-    monsterLevel
-  );
+  const monsterAvatarId = getMonsterAvatarForSquads(selectedMonster.enemySquads, currentTemplate.watchtowerAvatarUnitId);
+  const monsterAvatar = monsters.find((monster) => monster.id === monsterAvatarId);
 
   const monsterPowerEstimate = estimateMonsterStrength(selectedMonster.enemySquads || []);
 
@@ -543,7 +392,7 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
 
         {/* Abas de Famílias com Avatares Redondos (Idêntico ao jogo) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-1">
-          {WATCHTOWER_FAMILIES.map((fam) => {
+          {families.map((fam) => {
             const isActive = fam.id === activeFamilyId;
             return (
               <button
@@ -558,6 +407,8 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
               >
                 <TroopAvatar
                   id={fam.avatarId}
+                  avatarPath={getMonsterAvatarPath(fam.avatarId)}
+                  databaseOnly
                   size="sm"
                   className={`rounded-full shrink-0 ring-1 ${
                     isActive ? 'ring-amber-400 border-amber-400' : 'ring-slate-700 border-slate-700'
@@ -665,7 +516,7 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
           <div className="flex items-center gap-1.5 flex-wrap">
             {quickPills.map((lvl) => {
               const isSelected = lvl === monsterLevel;
-              const isSaved = hasSavedCustomSquads(currentTemplate.id, lvl);
+              const isSaved = (currentTemplate.levels.find((row) => row.level === lvl)?.squads.length || 0) > 0;
               const isOptimal = optimalFarm && lvl === optimalFarm.optimalLevel;
 
               return (
@@ -699,7 +550,7 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
           </div>
 
           {/* Dica contextual de Nível Seguro para XP */}
-          {savedLevelsForCurrentTemplate.length > 0 && optimalFarm && optimalFarm.isSafe && optimalFarm.optimalXp > 0 && (
+          {hasEnemyComposition && savedLevelsForCurrentTemplate.length > 0 && optimalFarm && optimalFarm.isSafe && optimalFarm.optimalXp > 0 && (
             <div className="pt-0.5">
               {isCurrentLevelDefeat ? (
                 <div className="text-2xs font-bold text-rose-300 bg-rose-950/80 border border-rose-800 p-2 rounded-lg flex items-center justify-between gap-2 shadow-sm animate-fadeIn">
@@ -749,7 +600,7 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
                       : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-white'
                   }`}
                 >
-                  Todos ({watchtowerLevels.length})
+                  Todos (45)
                 </button>
 
                 {savedLevelsForCurrentTemplate.length > 0 && (
@@ -776,29 +627,21 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
                   Nenhum nível salvo ainda para este monstro.
                 </p>
                 <p className="text-2xs text-slate-400 max-w-sm mx-auto">
-                  Selecione o nível desejado acima, clique em &quot;Ajustar Esquadrões&quot; para cadastrar as tropas que você encontrou no jogo e salve.
+                  Selecione o nível desejado acima e cadastre as tropas que você encontrou no jogo para validar a marcha.
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
                 {watchtowerRowItems.map((item) => {
-                const isSelected =
-                  item.level === monsterLevel &&
-                  (item.variantId === selectedMonster.activeVariantId ||
-                    (!item.variantId && !selectedMonster.activeVariantId) ||
-                    (!selectedMonster.activeVariantId && item.variantId === currentLevelVariants[0]?.id));
+                const isSelected = item.level === monsterLevel;
                 const power = estimateMonsterStrength(item.target.enemySquads || []);
-                const avatar = getMonsterAvatarForSquads(item.target.enemySquads, currentTemplate.faction, item.level);
+                const avatar = getMonsterAvatarForSquads(item.target.enemySquads, currentTemplate.watchtowerAvatarUnitId);
+                const avatarPath = getMonsterAvatarPath(avatar);
 
                 return (
                   <div
                     key={item.key}
-                    onClick={() => {
-                      handleLevelChange(item.level);
-                      if (item.variantId) {
-                        handleSwitchVariant(item.variantId);
-                      }
-                    }}
+                    onClick={() => handleLevelChange(item.level)}
                     className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
                       isSelected
                         ? 'bg-amber-950/60 border-amber-400 shadow-md ring-1 ring-amber-400/40'
@@ -810,6 +653,8 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
                     <div className="flex items-center gap-3 min-w-0">
                       <TroopAvatar
                         id={avatar}
+                        avatarPath={avatarPath}
+                        databaseOnly
                         size="md"
                         levelBadge={item.level}
                         className="shrink-0"
@@ -819,11 +664,6 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
                           <span className="text-xs font-black text-white truncate">
                             {item.target.name}
                           </span>
-                          {item.variantName && (
-                            <span className="px-1.5 py-0.2 rounded text-3xs font-black bg-indigo-950 text-indigo-300 border border-indigo-500/40">
-                              {item.variantName}
-                            </span>
-                          )}
                           {item.isSaved && (
                             <span className="px-1.5 py-0.2 rounded text-3xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
                               <Check className="w-2.5 h-2.5 text-emerald-400 stroke-[3]" />
@@ -851,9 +691,6 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
                       onClick={(e) => {
                         e.stopPropagation();
                         handleLevelChange(item.level);
-                        if (item.variantId) {
-                          handleSwitchVariant(item.variantId);
-                        }
                       }}
                       className={`text-2xs font-black px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
                         isSelected
@@ -882,6 +719,8 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
             {/* O ÚNICO avatar em destaque com o escudo de nível sobreposto */}
             <TroopAvatar
               id={monsterAvatarId}
+              avatarPath={monsterAvatar?.avatarPath || getMonsterAvatarPath(monsterAvatarId)}
+              databaseOnly
               size="xl"
               levelBadge={monsterLevel}
               className="border-2 border-amber-500/60 shadow-xl ring-2 ring-amber-400/20 shrink-0"
@@ -892,12 +731,6 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
                 <span className="text-base sm:text-lg font-black text-white tracking-wide truncate">
                   {selectedMonster.name}
                 </span>
-
-                {selectedMonster.activeVariantName && (
-                  <span className="px-2.5 py-0.5 rounded-lg text-xs font-black bg-indigo-950 text-indigo-300 border border-indigo-500/50 shadow">
-                    🛡️ {selectedMonster.activeVariantName}
-                  </span>
-                )}
 
                 <span
                   className={`px-2 py-0.5 rounded-lg text-2xs font-extrabold border ${
@@ -952,7 +785,7 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
             {/* Botão Atualizar Equipe Atual */}
             <button
               type="button"
-              onClick={handleUpdateCurrentVariant}
+              onClick={() => void handleSaveFormationSafely()}
               className={`text-xs font-black px-3.5 py-2.5 rounded-xl border transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95 ${
                 isCustomSaved
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400 ring-2 ring-emerald-500/30'
@@ -961,18 +794,22 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
               title="Salvar alterações na equipe atual deste nível"
             >
               <Save className="w-4 h-4" />
-              <span>{isCustomSaved ? `Atualizar ${activeVariant?.name || 'Equipe'}` : `Salvar Composição`}</span>
+              <span>{isCustomSaved ? 'Atualizar formação' : 'Salvar formação'}</span>
             </button>
 
-            {/* Botão Salvar Como Nova Equipe no mesmo nível */}
             <button
               type="button"
-              onClick={handleSaveAsNewVariant}
-              className="text-xs font-black px-3.5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 border border-amber-300 shadow-md flex items-center justify-center gap-1.5 transition-all active:scale-95"
-              title="Salvar como outra equipe neste mesmo nível sem perder ou sobrescrever a equipe atual"
+              onClick={() => {
+                setCopyLevelSelection([]);
+                setCopyError(null);
+                setShowCopyLevels(true);
+              }}
+              disabled={!selectedMonster.enemySquads?.length}
+              className="text-xs font-black px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 border border-slate-600 shadow-md flex items-center justify-center gap-1.5 transition-all active:scale-95"
+              title="Copiar esta formação para outros níveis do mesmo alvo"
             >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>Nova Equipe</span>
+              <Copy className="w-4 h-4" />
+              <span>Copiar para níveis</span>
             </button>
 
             {/* Botão Excluir Equipe Ativa ou Limpar */}
@@ -980,9 +817,7 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
               type="button"
               onClick={
                 isCustomSaved
-                  ? currentLevelVariants.length > 1
-                    ? handleDeleteCurrentVariant
-                    : handleResetToTemplate
+                  ? handleDeleteFormation
                   : () => {
                       if (selectedMonster.enemySquads && selectedMonster.enemySquads.length > 0) {
                         onSelectMonster({
@@ -1001,9 +836,7 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
               className="text-xs font-extrabold px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-950/60 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 hover:text-rose-200 border border-slate-700 hover:border-rose-500/50 transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
               title={
                 isCustomSaved
-                  ? currentLevelVariants.length > 1
-                    ? `Excluir "${activeVariant?.name || 'equipe'}" deste nível`
-                    : `Remover equipe do Nível ${monsterLevel}`
+                  ? `Remover formação do Nível ${monsterLevel}`
                   : "Limpar tropas deste nível"
               }
             >
@@ -1018,80 +851,56 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
               className="text-xs text-amber-300 hover:text-white font-extrabold flex items-center justify-center gap-1.5 transition-all bg-slate-800/90 hover:bg-slate-700 px-3.5 py-2.5 rounded-xl border border-slate-600 hover:border-amber-400 shadow-md active:scale-95"
             >
               <Edit3 className="w-4 h-4 text-amber-400" />
-              <span>Ajustar Esquadrões</span>
+              <span>Editar tropas do alvo</span>
             </button>
           </div>
         </div>
 
         {/* Feedback visual de salvamento */}
         {saveFeedback && (
-          <div className="bg-emerald-950/80 border border-emerald-500/60 text-emerald-300 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-fadeIn shadow-md">
-            <Check className="w-4 h-4 text-emerald-400 stroke-[3]" />
+          <div className={`${saveFeedbackIsError ? 'bg-rose-950/80 border-rose-500/60 text-rose-200' : 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300'} border px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-fadeIn shadow-md`}>
+            <Check className={`w-4 h-4 ${saveFeedbackIsError ? 'text-rose-300' : 'text-emerald-400'} stroke-[3]`} />
             <span>{saveFeedback}</span>
           </div>
         )}
 
-        {/* Barra Seletora de Equipes / Variantes Salvas no Nível */}
-        {currentLevelVariants.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-slate-900/90 border border-slate-800 shadow-inner">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-2xs font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-amber-400" />
-                <span>Equipes no Nv {monsterLevel} ({currentLevelVariants.length}):</span>
-              </span>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {currentLevelVariants.map((v) => {
-                  const isAct = v.id === (selectedMonster.activeVariantId || currentLevelVariants[0]?.id);
-                  const firstSq = v.squads[0];
-                  return (
-                    <div
-                      key={v.id}
-                      className={`inline-flex items-center rounded-lg border transition-all shadow-sm ${
-                        isAct
-                          ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md ring-2 ring-amber-400/40 font-black'
-                          : 'bg-slate-950/80 text-slate-300 border-slate-700 hover:border-slate-500 hover:text-white'
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleSwitchVariant(v.id)}
-                        className="px-2.5 py-1.5 text-xs font-extrabold flex items-center gap-1.5"
-                      >
-                        <TroopAvatar
-                          id={firstSq?.id || firstSq?.name || 'esqueleto'}
-                          size="sm"
-                          className="w-5 h-5 rounded-md border-0 shrink-0"
-                        />
-                        <span>{v.name}</span>
-                        {isAct && <Check className="w-3 h-3 text-slate-950 stroke-[3]" />}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteVariantById(v.id, e)}
-                        className={`p-1.5 pr-2 rounded-r-lg transition-colors ${
-                          isAct
-                            ? 'text-slate-700 hover:text-rose-900 hover:bg-amber-500'
-                            : 'text-slate-400 hover:text-rose-400 hover:bg-rose-950/60'
-                        }`}
-                        title={`Excluir "${v.name}" do Nível ${monsterLevel}`}
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                      </button>
-                    </div>
-                  );
-                })}
+        {showCopyLevels && (
+          <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-black text-amber-200">Copiar formação para outros níveis</h4>
+                <p className="text-xs text-slate-400">A formação atual será salva e substituirá os níveis que você selecionar.</p>
               </div>
+              <button type="button" onClick={() => setShowCopyLevels(false)} className="text-xs text-slate-300 hover:text-white">Fechar</button>
             </div>
+            <div className="flex flex-wrap gap-1.5">
+              {Array.from({ length: 45 }, (_, index) => index + 1).filter((level) => level !== monsterLevel).map((level) => (
+                <label key={level} className={`px-2 py-1 rounded-lg border text-xs font-bold cursor-pointer ${copyLevelSelection.includes(level) ? 'bg-amber-500 text-slate-950 border-amber-300' : 'bg-slate-900 text-slate-300 border-slate-700'}`}>
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={copyLevelSelection.includes(level)}
+                    onChange={(event) => setCopyLevelSelection((levels) => event.target.checked ? [...levels, level].sort((a, b) => a - b) : levels.filter((item) => item !== level))}
+                  />
+                  Nv {level}
+                </label>
+              ))}
+            </div>
+            {copyError && <p role="alert" className="text-xs text-rose-300">{copyError}</p>}
+            <button type="button" onClick={() => void handleCopyFormation()} disabled={isCopying || copyLevelSelection.length === 0} className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-black text-slate-950 disabled:opacity-50">
+              {isCopying ? 'Copiando…' : `Copiar para ${copyLevelSelection.length} nível(is)`}
+            </button>
+          </div>
+        )}
 
-            <button
-              type="button"
-              onClick={handleSaveAsNewVariant}
-              className="text-2xs font-black px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex items-center justify-center gap-1 transition-all active:scale-95 shrink-0 self-start sm:self-auto"
-              title="Cadastrar outra formação de esquadrões para este nível sem perder a equipe atual"
-            >
-              <Plus className="w-3.5 h-3.5 text-amber-400 stroke-[3]" />
-              <span>Nova Equipe</span>
+        {legacyFormationCount > 0 && !legacyImportDone && (
+          <div className="rounded-xl border border-blue-500/40 bg-blue-950/20 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-2 text-xs text-blue-100">
+              <Database className="w-4 h-4 mt-0.5 shrink-0" />
+              <p>Encontramos {legacyFormationCount} nível(is) e {legacyVariantCount} formação(ões) antigos neste navegador. Importe a equipe ativa de cada nível para o banco. As demais variantes serão arquivadas.</p>
+            </div>
+            <button type="button" onClick={() => void handleLegacyImport()} disabled={isMigratingLegacy || legacyImporting} className="shrink-0 rounded-lg border border-blue-300/40 bg-blue-500/20 px-3 py-2 text-xs font-bold text-blue-100 disabled:opacity-50">
+              {isMigratingLegacy || legacyImporting ? 'Importando…' : 'Importar dados antigos'}
             </button>
           </div>
         )}
@@ -1172,6 +981,8 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
                 >
                   <TroopAvatar
                     id={sq.id || sq.name}
+                    avatarPath={monsters.find((monster) => monster.id === sq.id)?.avatarPath || sq.avatarUrl}
+                    databaseOnly
                     size="md"
                     className="border-amber-500/40 ring-1 ring-black/50 shrink-0"
                   />

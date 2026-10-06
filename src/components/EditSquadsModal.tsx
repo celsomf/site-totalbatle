@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { EnemySquadUnit, TroopClass } from '../types';
-import { MONSTER_UNITS_CATALOG } from '../data/monsters';
-import { X, Plus, Trash2, RotateCcw, Save, ShieldAlert, Sparkles, AlertCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { EnemySquadUnit } from '../types';
+import { X, Plus, Trash2, RotateCcw, Save, ShieldAlert, Sparkles, AlertCircle, ClipboardPaste, ChevronDown } from 'lucide-react';
 import { SearchableMonsterSelect } from './SearchableMonsterSelect';
 import { TroopAvatar } from './TroopAvatar';
+import { useGameCatalog } from '../context/GameCatalogContext';
+
+const BULK_INPUT_TEMPLATE = '[Nome ou ID do monstro]; [quantidade]\n[Nome ou ID do monstro]; [quantidade]';
 
 interface EditSquadsModalProps {
   isOpen: boolean;
@@ -11,8 +13,8 @@ interface EditSquadsModalProps {
   initialSquads: EnemySquadUnit[];
   monsterName: string;
   monsterLevel: number;
-  onSaveSquads: (updatedSquads: EnemySquadUnit[]) => void;
-  onResetToTemplate?: () => void;
+  onSaveSquads: (updatedSquads: EnemySquadUnit[]) => void | Promise<void>;
+  onResetToTemplate?: () => void | Promise<void>;
 }
 
 export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
@@ -24,7 +26,22 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
   onSaveSquads,
   onResetToTemplate,
 }) => {
+  const { monsters } = useGameCatalog();
   const [squads, setSquads] = useState<EnemySquadUnit[]>(() => JSON.parse(JSON.stringify(initialSquads)));
+  const [bulkInput, setBulkInput] = useState(BULK_INPUT_TEMPLATE);
+  const [isBulkImportExpanded, setIsBulkImportExpanded] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSquads(JSON.parse(JSON.stringify(initialSquads)));
+      setBulkInput(BULK_INPUT_TEMPLATE);
+      setBulkError(null);
+      setSaveError(null);
+    }
+  }, [initialSquads, isOpen]);
 
   if (!isOpen) return null;
 
@@ -40,14 +57,19 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
   };
 
   const handleSelectCatalogUnit = (index: number, unitId: string) => {
-    const catalogUnit = MONSTER_UNITS_CATALOG.find((u) => u.id === unitId);
+    const catalogUnit = monsters.find((u) => u.id === unitId);
     if (!catalogUnit) return;
+
+    if (squads.some((squad, squadIndex) => squadIndex !== index && squad.id === catalogUnit.id)) {
+      setBulkError(`${catalogUnit.name} já está nesta formação. Ajuste a quantidade na linha existente.`);
+      return;
+    }
 
     setSquads((prev) => {
       const next = [...prev];
       const currentCount = next[index]?.count || 100;
       next[index] = {
-        id: `${catalogUnit.id}_${Date.now()}_${index}`,
+        id: catalogUnit.id,
         name: catalogUnit.name,
         tier: catalogUnit.tier,
         troopClass: catalogUnit.troopClass,
@@ -59,15 +81,21 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
         initiative: catalogUnit.initiative,
         count: currentCount,
         aspects: catalogUnit.aspects,
+        avatarUrl: catalogUnit.avatarPath,
       };
       return next;
     });
+    setBulkError(null);
   };
 
   const handleAddSquad = () => {
-    const defaultCatalog = MONSTER_UNITS_CATALOG[0];
+    const defaultCatalog = monsters.find((monster) => !squads.some((squad) => squad.id === monster.id));
+    if (!defaultCatalog) {
+      setBulkError('Todos os monstros do catálogo já estão nesta formação. Remova um esquadrão para adicionar outro.');
+      return;
+    }
     const newSquad: EnemySquadUnit = {
-      id: `custom_squad_${Date.now()}`,
+      id: defaultCatalog.id,
       name: defaultCatalog.name,
       tier: defaultCatalog.tier,
       troopClass: defaultCatalog.troopClass,
@@ -79,21 +107,120 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
       initiative: defaultCatalog.initiative,
       count: 100,
       aspects: defaultCatalog.aspects,
+      avatarUrl: defaultCatalog.avatarPath,
     };
     setSquads((prev) => [...prev, newSquad]);
+    setBulkError(null);
   };
 
   const handleRemoveSquad = (index: number) => {
     setSquads((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSave = () => {
-    if (squads.length === 0) {
-      alert('Adicione pelo menos 1 esquadrão inimigo.');
+  const handleBulkImport = () => {
+    const normalized = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const lines = bulkInput.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    if (lines.length === 0) {
+      setBulkError('Preencha ao menos uma linha do modelo com o nome ou ID e a quantidade.');
       return;
     }
-    onSaveSquads(squads);
-    onClose();
+
+    const additions = new Map<string, number>();
+    const errors: string[] = [];
+    let completedLines = 0;
+    lines.forEach((line, index) => {
+      const parts = line.split(/[;,\t]/).map((part) => part.trim());
+      if (parts.length >= 2 && normalized(parts[0]) === '[nome ou id do monstro]' && normalized(parts[1]) === '[quantidade]') {
+        return;
+      }
+      completedLines += 1;
+      if (parts.length < 2) {
+        errors.push(`Linha ${index + 1}: use Nome ou ID; quantidade.`);
+        return;
+      }
+      const search = normalized(parts[0]);
+      const quantity = Number(parts[1].replace(/\s/g, '').replace(/\./g, ''));
+      const matches = monsters.filter((monster) => [monster.id, monster.name, ...(monster.aliases || [])]
+        .some((value) => normalized(value) === search));
+      if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+        errors.push(`Linha ${index + 1}: a quantidade deve ser um inteiro maior que zero.`);
+      } else if (matches.length !== 1) {
+        errors.push(`Linha ${index + 1}: “${parts[0]}” não corresponde a um único monstro do catálogo.`);
+      } else {
+        additions.set(matches[0].id, (additions.get(matches[0].id) || 0) + quantity);
+      }
+    });
+
+    if (completedLines === 0) {
+      setBulkError('Preencha ao menos uma linha do modelo com o nome ou ID e a quantidade.');
+      return;
+    }
+
+    if (errors.length > 0) {
+      setBulkError(errors.slice(0, 4).join(' '));
+      return;
+    }
+
+    setSquads((previous) => {
+      const next = [...previous];
+      for (const [monsterId, quantity] of additions) {
+        const index = next.findIndex((squad) => squad.id === monsterId);
+        if (index >= 0) {
+          next[index] = { ...next[index], count: next[index].count + quantity };
+          continue;
+        }
+        const monster = monsters.find((unit) => unit.id === monsterId)!;
+        next.push({
+          id: monster.id,
+          name: monster.name,
+          tier: monster.tier,
+          troopClass: monster.troopClass,
+          family: monster.family,
+          subType: monster.subType,
+          unitAttack: monster.unitAttack,
+          unitHealth: monster.unitHealth,
+          leadership: monster.leadership,
+          initiative: monster.initiative,
+          count: quantity,
+          aspects: monster.aspects,
+          avatarUrl: monster.avatarPath,
+        });
+      }
+      return next;
+    });
+    setBulkInput(BULK_INPUT_TEMPLATE);
+    setBulkError(null);
+  };
+
+  const handleSave = async () => {
+    if (squads.length === 0) {
+      const confirmed = window.confirm('Salvar uma formação vazia para este nível?');
+      if (!confirmed) return;
+    }
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await onSaveSquads(squads);
+      onClose();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Não foi possível salvar no banco.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!onResetToTemplate) return;
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await onResetToTemplate();
+      onClose();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Não foi possível remover a formação do banco.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const totalCalculatedHp = squads.reduce((sum, s) => sum + (s.unitHealth * s.count), 0);
@@ -143,16 +270,48 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
             {onResetToTemplate && (
               <button
                 type="button"
-                onClick={() => {
-                  onResetToTemplate();
-                  onClose();
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600 text-xs font-bold transition-colors"
+                onClick={() => void handleReset()}
+                disabled={isSaving}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 hover:text-white border border-slate-600 text-xs font-bold transition-colors"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Restaurar Padrão do Nível</span>
+                <span>Remover formação salva</span>
               </button>
             )}
+          </div>
+
+          <div className="rounded-xl border border-blue-500/30 bg-blue-950/20 p-3">
+            <button
+              type="button"
+              aria-expanded={isBulkImportExpanded}
+              aria-controls="bulk-import-panel"
+              onClick={() => setIsBulkImportExpanded((expanded) => !expanded)}
+              className="w-full flex items-center justify-between gap-3 text-left text-xs font-bold text-blue-200"
+            >
+              <span className="flex items-center gap-2">
+                <ClipboardPaste className="w-4 h-4" />
+                Adicionar vários monstros de uma vez
+              </span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${isBulkImportExpanded ? 'rotate-180' : ''}`} />
+            </button>
+            <div id="bulk-import-panel" hidden={!isBulkImportExpanded} className="mt-2 space-y-2">
+              <p className="text-2xs text-slate-400">Preencha uma linha por monstro. Use <code>nome ou ID; quantidade</code> e mantenha o ponto e vírgula.</p>
+              <textarea
+                aria-label="Monstros e quantidades para adicionar"
+                value={bulkInput}
+                onChange={(event) => setBulkInput(event.target.value)}
+                rows={3}
+                className="w-full resize-y rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"
+              />
+              <button
+                type="button"
+                onClick={handleBulkImport}
+                className="rounded-lg border border-blue-400/40 bg-blue-500/15 px-3 py-1.5 text-xs font-bold text-blue-100 hover:bg-blue-500/25"
+              >
+                Adicionar linhas à formação
+              </button>
+            </div>
+            {bulkError && <p role="alert" className="mt-2 text-2xs text-rose-300">{bulkError}</p>}
           </div>
 
           {squads.length === 0 ? (
@@ -189,6 +348,8 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
                     <div className="flex items-center gap-3">
                       <TroopAvatar
                         id={sq.id || sq.name}
+                        avatarPath={sq.avatarUrl}
+                        databaseOnly
                         size="md"
                         className="border-amber-500/50 shadow-md ring-1 ring-amber-500/30"
                       />
@@ -222,136 +383,30 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
                   </div>
 
                   {/* Preset Quick Select from Monster Catalog */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_160px] gap-3 items-end">
                     <div className="space-y-1">
-                      <label className="text-2xs font-bold text-slate-400">
-                        Carregar Monstro do Catálogo:
-                      </label>
+                      <label className="text-2xs font-bold text-slate-400">Monstro do catálogo:</label>
                       <SearchableMonsterSelect
                         onSelect={(unitId) => handleSelectCatalogUnit(idx, unitId)}
                         selectedMonsterName={sq.name}
-                        placeholder={sq.name ? `Monstro: ${sq.name} (Trocar)` : '-- Selecionar Monstro por Classe / Nome --'}
+                        placeholder={`Monstro: ${sq.name} (trocar)`}
                       />
                     </div>
-
                     <div className="space-y-1">
-                      <label className="text-2xs font-bold text-slate-400">Nome do Monstro:</label>
-                      <input
-                        type="text"
-                        value={sq.name}
-                        onChange={(e) => handleUpdateField(idx, 'name', e.target.value)}
-                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-bold focus:outline-none focus:border-amber-400"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Squad Stats: Tier, Class, Count, Attack, Health */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                    <div className="space-y-1">
-                      <label className="text-2xs text-slate-400 font-bold">Tier:</label>
-                      <select
-                        value={sq.tier}
-                        onChange={(e) => handleUpdateField(idx, 'tier', Number(e.target.value))}
-                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2 py-1 text-xs text-amber-300 font-bold"
-                      >
-                        <option value={1}>Tier I</option>
-                        <option value={2}>Tier II</option>
-                        <option value={3}>Tier III</option>
-                        <option value={4}>Tier IV</option>
-                        <option value={5}>Tier V</option>
-                        <option value={6}>Tier VI</option>
-                        <option value={7}>Tier VII</option>
-                        <option value={8}>Tier VIII</option>
-                        <option value={9}>Tier IX</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-2xs text-slate-400 font-bold">Classe:</label>
-                      <select
-                        value={sq.troopClass}
-                        onChange={(e) => handleUpdateField(idx, 'troopClass', e.target.value as TroopClass)}
-                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200 font-bold"
-                      >
-                        <option value="ranged">🏹 Longo Alcance</option>
-                        <option value="melee">⚔️ Corpo a Corpo</option>
-                        <option value="mounted">🐎 Montadas</option>
-                        <option value="flying">🦅 Voadores</option>
-                        <option value="siege">🛡️ Cerco</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-2xs font-bold text-rose-300">Quantidade (un.):</label>
+                      <label className="text-2xs font-bold text-rose-300">Quantidade:</label>
                       <input
                         type="number"
                         min="1"
                         value={sq.count}
                         onChange={(e) => handleUpdateField(idx, 'count', Math.max(1, Number(e.target.value)))}
-                        className="w-full bg-[#111827] border border-rose-500/40 rounded-lg px-2 py-1 text-xs text-rose-300 font-mono font-black text-center"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-2xs text-amber-300 font-bold">Força Unitária:</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={sq.unitAttack}
-                        onChange={(e) => handleUpdateField(idx, 'unitAttack', Math.max(1, Number(e.target.value)))}
-                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2 py-1 text-xs text-amber-300 font-mono font-bold text-center"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-2xs text-emerald-400 font-bold">Saúde Unitária:</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={sq.unitHealth}
-                        onChange={(e) => handleUpdateField(idx, 'unitHealth', Math.max(1, Number(e.target.value)))}
-                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2 py-1 text-xs text-emerald-400 font-mono font-bold text-center"
+                        className="w-full bg-[#111827] border border-rose-500/40 rounded-lg px-2 py-2 text-sm text-rose-300 font-mono font-black text-center"
                       />
                     </div>
                   </div>
-
-                  {/* SubType & Aspect Text */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-2xs">
-                    <div className="space-y-1">
-                      <label className="text-2xs text-slate-400">Subtipo / Descrição (ex: Amaldiçoado, Voador):</label>
-                      <input
-                        type="text"
-                        value={sq.subType || ''}
-                        onChange={(e) => handleUpdateField(idx, 'subType', e.target.value)}
-                        placeholder="Ex: Fera, Amaldiçoado, Unidade voadora"
-                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-300"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-2xs text-amber-400 font-bold">Aspecto de Bônus / Habilidade:</label>
-                      <input
-                        type="text"
-                        value={sq.aspects?.description || ''}
-                        onChange={(e) => {
-                          const desc = e.target.value;
-                          setSquads((prev) => {
-                            const next = [...prev];
-                            next[idx] = {
-                              ...next[idx],
-                              aspects: {
-                                ...next[idx].aspects,
-                                description: desc,
-                              },
-                            };
-                            return next;
-                          });
-                        }}
-                        placeholder="Ex: Força contra unidades corpo a corpo: +30%"
-                        className="w-full bg-[#111827] border border-slate-700 rounded-lg px-2 py-1 text-xs text-amber-200"
-                      />
-                    </div>
-                  </div>
+                  <p className="text-2xs text-slate-400">
+                    T{sq.tier} · {sq.troopClass} · Força {sq.unitAttack.toLocaleString('pt-BR')} · Saúde {sq.unitHealth.toLocaleString('pt-BR')} por unidade
+                    {sq.aspects?.description ? ` · ${sq.aspects.description}` : ''}
+                  </p>
                 </div>
               );
             })}
@@ -387,12 +442,14 @@ export const EditSquadsModal: React.FC<EditSquadsModalProps> = ({
             <button
               type="button"
               onClick={handleSave}
-              className="flex-1 sm:flex-initial px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-lg transition-all"
+              disabled={isSaving}
+              className="flex-1 sm:flex-initial px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-60 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-lg transition-all"
             >
               <Save className="w-4 h-4" />
-              <span>Salvar & Recalcular</span>
+              <span>{isSaving ? 'Salvando no banco…' : 'Salvar & Recalcular'}</span>
             </button>
           </div>
+          {saveError && <p role="alert" className="text-xs text-rose-300">{saveError}</p>}
         </div>
       </div>
     </div>

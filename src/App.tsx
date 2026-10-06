@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePlayerProfile } from './hooks/usePlayerProfile';
+import { useGameCatalog } from './context/GameCatalogContext';
 import { Header } from './components/Header';
 import { BarracksView } from './components/BarracksView';
 import { CaptainsView } from './components/CaptainsView';
@@ -7,13 +8,14 @@ import { MonsterSelector } from './components/MonsterSelector';
 import { MarchBookView } from './components/MarchBookView';
 import { CryptOptimizer } from './components/CryptOptimizer';
 import { TroopEncyclopedia } from './components/TroopEncyclopedia';
-import { DEFAULT_MONSTERS } from './data/monsters';
 import { DEFAULT_CAPTAINS } from './data/captains';
 import { MonsterTarget, Captain } from './types';
 import { BookOpen, Shield, Crown, Compass, Library, Sparkles, SlidersHorizontal } from 'lucide-react';
 import { ProfileConfig } from './components/ProfileConfig';
+import { buildMonsterTargetFromTemplate } from './domain/monsterTargets';
 
 export function App() {
+  const { loading: catalogLoading, error: catalogError, templates: monsterTemplates, refresh: refreshCatalog } = useGameCatalog();
   const {
     profile,
     activeProfileId,
@@ -40,14 +42,50 @@ export function App() {
   } = usePlayerProfile();
 
   const [activeTab, setActiveTab] = useState<'march_book' | 'barracks' | 'captains' | 'crypts' | 'encyclopedia'>('march_book');
-  const [selectedMonster, setSelectedMonster] = useState<MonsterTarget>(DEFAULT_MONSTERS[0]);
+  const [selectedMonster, setSelectedMonster] = useState<MonsterTarget | null>(null);
+  const [showTargetSelector, setShowTargetSelector] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  useEffect(() => {
+    if (!selectedMonster && monsterTemplates.length > 0) {
+      const firstTemplate = monsterTemplates[0];
+      setSelectedMonster(buildMonsterTargetFromTemplate(firstTemplate, firstTemplate.defaultLevel));
+    }
+  }, [monsterTemplates, selectedMonster]);
 
   const hydratedTroops = getHydratedTroops();
   const selectedCaptains = (profile.selectedCaptainIds || ['brunhild', 'aydae', 'farhad'])
     .map((id) => DEFAULT_CAPTAINS.find((c) => c.id === id))
     .filter(Boolean) as Captain[];
   const selectedCaptain = selectedCaptains[0] || DEFAULT_CAPTAINS[0];
+
+  if (catalogLoading) {
+    return (
+      <main className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-slate-100">
+        <div className="max-w-lg text-center space-y-3">
+          <div className="text-3xl">⚔️</div>
+          <h1 className="text-xl font-black">Conectando ao catálogo do Total Battle</h1>
+          <p className="text-sm text-slate-400">Tropas, monstros e formações são carregados do banco de dados.</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (catalogError || monsterTemplates.length === 0 || !selectedMonster) {
+    return (
+      <main className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-slate-100">
+        <div className="max-w-xl text-center space-y-4 rounded-2xl border border-rose-500/40 bg-slate-900 p-6">
+          <div className="text-3xl">🛡️</div>
+          <h1 className="text-xl font-black">O catálogo do banco não está disponível</h1>
+          <p className="text-sm text-slate-300">{catalogError || 'O catálogo ainda não foi carregado.'}</p>
+          <p className="text-xs text-slate-400">A aplicação não vai usar uma cópia local dos dados. Verifique a API e o banco e tente novamente.</p>
+          <button onClick={() => void refreshCatalog()} className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400">
+            Tentar novamente
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   const displayName = profile.playerName || profile.heroName || 'Comandante';
   const displayClan = profile.clanTag ? `[${profile.clanTag.replace(/^\[|\]$/g, '')}] ` : '';
@@ -179,13 +217,68 @@ export function App() {
         {/* Tab 1: Livro de Marcha (Oficial) */}
         {activeTab === 'march_book' && (
           <div className="space-y-6">
-            <MonsterSelector
-              selectedMonster={selectedMonster}
-              onSelectMonster={setSelectedMonster}
-              troops={hydratedTroops}
-              profile={profile}
-              captain={DEFAULT_CAPTAINS.find((c) => c.id === (profile.selectedCaptainId || profile.selectedCaptainIds?.[0] || 'farhad')) || DEFAULT_CAPTAINS[0]}
-            />
+            <section className="flex flex-col gap-3 rounded-2xl border border-slate-700/80 bg-[#111827] p-4 shadow-lg sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <span className="text-2xs font-black uppercase tracking-wider text-slate-400">Alvo atual</span>
+                <h2 className="truncate text-base font-black text-white sm:text-lg">{selectedMonster.name}</h2>
+                <p className={`mt-1 text-xs font-bold ${selectedMonster.enemySquads?.some((squad) => squad.count > 0) ? 'text-emerald-300' : 'text-amber-300'}`}>
+                  {selectedMonster.enemySquads?.some((squad) => squad.count > 0)
+                    ? `${selectedMonster.enemySquads.filter((squad) => squad.count > 0).length} tipos de tropas inimigas cadastrados • Nível ${selectedMonster.level}`
+                    : `Tropas inimigas não cadastradas • Nível ${selectedMonster.level}`}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {(profile.activeMarches?.length || 0) > 0 && (
+                  <a
+                    href="#active-marches"
+                    className="rounded-xl border border-sky-500/50 bg-sky-950/70 px-3.5 py-2 text-xs font-bold text-sky-200 transition hover:bg-sky-900"
+                  >
+                    Em ataque: {profile.activeMarches?.length}
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowTargetSelector((isOpen) => !isOpen)}
+                  aria-expanded={showTargetSelector}
+                  className={`rounded-xl border px-4 py-2.5 text-xs font-black shadow transition ${
+                    !selectedMonster.enemySquads?.some((squad) => squad.count > 0)
+                      ? 'border-amber-300 bg-amber-500 text-slate-950 hover:bg-amber-400'
+                      : 'border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700'
+                  }`}
+                >
+                  {showTargetSelector
+                    ? 'Fechar seleção'
+                    : selectedMonster.enemySquads?.some((squad) => squad.count > 0)
+                      ? 'Trocar alvo'
+                      : 'Cadastrar tropas do alvo'}
+                </button>
+              </div>
+            </section>
+
+            {showTargetSelector && (
+              <div id="target-selector-panel" className="space-y-3">
+                <div className="flex flex-col gap-2 rounded-xl border border-slate-700 bg-slate-900/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-sm font-black text-white">Escolha do alvo e tropas inimigas</h3>
+                    <p className="text-xs text-slate-400">Ajustes desta área ficam fechados enquanto você monta a marcha.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowTargetSelector(false)}
+                    className="self-start rounded-lg px-3 py-1.5 text-xs font-bold text-slate-300 transition hover:bg-slate-800 hover:text-white sm:self-auto"
+                  >
+                    Concluir
+                  </button>
+                </div>
+                <MonsterSelector
+                  selectedMonster={selectedMonster}
+                  onSelectMonster={setSelectedMonster}
+                  troops={hydratedTroops}
+                  profile={profile}
+                  captain={DEFAULT_CAPTAINS.find((c) => c.id === (profile.selectedCaptainId || profile.selectedCaptainIds?.[0] || 'farhad')) || DEFAULT_CAPTAINS[0]}
+                />
+              </div>
+            )}
 
             <MarchBookView
               profile={profile}

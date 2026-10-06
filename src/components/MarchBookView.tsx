@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { TroopUnit, Captain, MonsterTarget, PlayerProfile, EnemySquadUnit } from '../types';
-import { EditSquadsModal } from './EditSquadsModal';
-import { updateMonsterSquads, MONSTER_PRESET_TEMPLATES, buildMonsterTargetFromTemplate } from '../data/monsters';
+import React, { useMemo, useState } from 'react';
+import { TroopUnit, Captain, MonsterTarget, PlayerProfile, ActiveMarch, AttackHistoryEntry } from '../types';
+import { buildMonsterTargetFromTemplate } from '../domain/monsterTargets';
+import { useGameCatalog } from '../context/GameCatalogContext';
 import { simulateCombat, DispatchedTroop, findOptimalFarmLevel, buildDispatchedTroops } from '../utils/combatSimulator';
 import { getCaptainMonsterAttackBonus, getCaptainComputedStats, getHeroAttackBonus } from '../utils/captainStats';
 import { TroopAvatar } from './TroopAvatar';
@@ -10,10 +10,8 @@ import {
   Copy,
   Check,
   Zap,
-  ShieldAlert,
   Sparkles,
   CheckCircle2,
-  Edit3,
   ChevronDown,
   ChevronUp,
   Crown,
@@ -23,7 +21,7 @@ import {
   XCircle,
   Skull,
   Hammer,
-  RotateCw
+  RotateCw,
 } from 'lucide-react';
 
 interface MarchBookViewProps {
@@ -47,29 +45,22 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   onUpdateMonsterTarget,
   onUpdateProfile,
 }) => {
+  const { templates } = useGameCatalog();
   const [copied, setCopied] = useState(false);
-  const [copiedNumber, setCopiedNumber] = useState<string | null>(null);
   const [sendDragon, setSendDragon] = useState(true);
-  const [showEnemyDetails, setShowEnemyDetails] = useState(false);
   const [showCombatLog, setShowCombatLog] = useState(false);
-  const [isEditingSquads, setIsEditingSquads] = useState(false);
-  const [isRecalculating, setIsRecalculating] = useState(false);
-  const [lastCalculatedAt, setLastCalculatedAt] = useState<Date>(new Date());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const handleRecalculate = () => {
-    setIsRecalculating(true);
-    setTimeout(() => {
-      setIsRecalculating(false);
-      setLastCalculatedAt(new Date());
-      setToastMessage('Marcha e simulação recalculadas com sucesso com base no estoque atual do Quartel!');
-      setTimeout(() => setToastMessage(null), 3500);
-    }, 400);
-  };
+  const [recalculationVersion, setRecalculationVersion] = useState(0);
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const [editingReturnMarchId, setEditingReturnMarchId] = useState<string | null>(null);
+  const [deathCountDrafts, setDeathCountDrafts] = useState<Record<string, Record<string, string>>>({});
+  const activeMarches = profile.activeMarches || [];
+  const attackHistory = profile.attackHistory || [];
 
   const isRare = targetMonster.attackMode === 'rare';
   const isCommon = targetMonster.attackMode === 'common';
   const isEpic = targetMonster.attackMode === 'epic';
+  const hasEnemyComposition = Boolean(targetMonster.enemySquads?.some((squad) => squad.count > 0));
 
   // Capitão Ativo selecionado para a marcha
   const activeCapId = selectedCaptainId || profile.selectedCaptainId || profile.selectedCaptainIds?.[0] || 'farhad';
@@ -86,8 +77,10 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
 
   const templateId = targetMonster.id.split('_lvl_')[0];
   const currentTemplate =
-    MONSTER_PRESET_TEMPLATES.find((t) => t.id === templateId) || MONSTER_PRESET_TEMPLATES[0];
-  const optimalFarm = findOptimalFarmLevel(currentTemplate, troops, profile, activeCaptain, sendDragon);
+    templates.find((t) => t.id === templateId) || templates[0];
+  const optimalFarm = currentTemplate
+    ? findOptimalFarmLevel(currentTemplate, troops, profile, activeCaptain, sendDragon)
+    : null;
 
   const dragonBonusPercent = sendDragon ? 15 : 0;
   const academyBonusPercent = profile.academyBonus?.guardsmenAttack || 25;
@@ -98,12 +91,23 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   const maxMonsters = profile.specialCapacity || targetMonster.marchCapacities?.monsters || 500;
 
   // 1. Preparar unidades enviadas através do motor tático inteligente
-  const dispatchedTroopsList = buildDispatchedTroops(
+  const dispatchedTroopsList = useMemo(() => buildDispatchedTroops(
     troops,
     profile,
     targetMonster,
     activeCaptain,
     sendDragon
+  ), [troops, profile, targetMonster, activeCaptain, sendDragon, recalculationVersion]);
+
+  const hasStackedGuardTiers = dispatchedTroopsList.some((troop) =>
+    troop.category === 'guardsman' &&
+    troop.tier >= 2 &&
+    dispatchedTroopsList.some((other) =>
+      other.category === 'guardsman' &&
+      other.troopClass === troop.troopClass &&
+      other.tier >= 2 &&
+      other.tier !== troop.tier
+    )
   );
 
   const allocatedGuards = dispatchedTroopsList
@@ -118,8 +122,11 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
     .reduce((sum, t) => sum + t.count, 0);
 
   // 2. EXECUTAR SIMULAÇÃO REAL DE COMBATE
-  const simResult = simulateCombat(dispatchedTroopsList, targetMonster.enemySquads || []);
-  const isDefeat = simResult.outcome === 'DEFEAT';
+  const simResult = useMemo(
+    () => simulateCombat(dispatchedTroopsList, targetMonster.enemySquads || []),
+    [dispatchedTroopsList, targetMonster.enemySquads, recalculationVersion]
+  );
+  const isDefeat = hasEnemyComposition && simResult.outcome === 'DEFEAT';
   const g1Casualties = simResult.playerCasualties
     .filter((p) => p.tier === 1)
     .reduce((sum, p) => sum + p.lostCount, 0);
@@ -128,8 +135,18 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
     .reduce((sum, p) => sum + p.lostCount, 0);
 
   // 3. Recompensas recalculadas com os bônus do Capitão Ativo
-  const projectedXP = isDefeat ? 0 : Math.round((targetMonster.xpReward || 50000) * (1 + activeCaptainLevel * 0.015));
-  const projectedVP = isDefeat ? 0 : Math.round((targetMonster.valorReward || 18000) * (1 + activeCaptainLevel * 0.01));
+  const projectedXP = !hasEnemyComposition || isDefeat ? 0 : Math.round((targetMonster.xpReward || 50000) * (1 + activeCaptainLevel * 0.015));
+  const projectedVP = !hasEnemyComposition || isDefeat ? 0 : Math.round((targetMonster.valorReward || 18000) * (1 + activeCaptainLevel * 0.01));
+
+  const handleRecalculate = () => {
+    if (isRecalculating) return;
+
+    setIsRecalculating(true);
+    setRecalculationVersion((version) => version + 1);
+    setToastMessage(`Marcha para ${targetMonster.name} recalculada com o estoque e os ajustes atuais.`);
+    window.setTimeout(() => setIsRecalculating(false), 400);
+    window.setTimeout(() => setToastMessage(null), 3500);
+  };
 
   // Lista de capitães para seleção rápida
   const displayedCaptains = (profile.selectedCaptainIds || ['farhad', 'aurora', 'xi_guiying'])
@@ -141,7 +158,9 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
       ? `👑 Líder: Herói ${profile.playerName || profile.heroName || 'Comandante'} (Nv ${profile.heroLevel || 16})`
       : `👑 Capitão: ${activeCaptain.name} (Nv ${activeCaptainLevel} - +${captainBonusPercent}% Bônus)`;
 
-    const verdictText = isDefeat
+    const verdictText = !hasEnemyComposition
+      ? '⚠️ SIMULAÇÃO PENDENTE: cadastre as tropas do alvo antes de marchar.'
+      : isDefeat
       ? `🚨 ALERTA: DERROTA PREVISTA! Dano insuficiente (${simResult.totalPlayerDamage.toLocaleString('pt-BR')} vs ${simResult.initialEnemyHp.toLocaleString('pt-BR')} HP). NÃO MARCHAR!`
       : simResult.safetyLevel === 'COSTLY_VICTORY'
       ? `⚠️ ATENÇÃO: Vitória com Perda de Nobres (${t2Casualties.toLocaleString('pt-BR')} mortos em T2+)!`
@@ -182,10 +201,115 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const handleCopySingleNumber = (label: string, count: number) => {
-    navigator.clipboard.writeText(count.toString());
-    setCopiedNumber(label);
-    setTimeout(() => setCopiedNumber(null), 1800);
+  const handleReserveMarch = () => {
+    if (!onUpdateProfile || dispatchedTroopsList.length === 0) return;
+
+    const squadCounts = new Map<string, { unitId: string; unitName: string; count: number }>();
+    for (const unit of dispatchedTroopsList) {
+      if (unit.count <= 0) continue;
+      const existing = squadCounts.get(unit.id);
+      squadCounts.set(unit.id, {
+        unitId: unit.id,
+        unitName: unit.name,
+        count: (existing?.count || 0) + unit.count,
+      });
+    }
+
+    const squads = Array.from(squadCounts.values());
+    const nextOwnedCounts = { ...profile.ownedTroopCounts };
+    for (const squad of squads) {
+      const availableCount = nextOwnedCounts[squad.unitId] || 0;
+      if (availableCount < squad.count) {
+        setToastMessage(`Estoque insuficiente para reservar ${squad.unitName}. Recalcule a marcha e tente novamente.`);
+        return;
+      }
+      nextOwnedCounts[squad.unitId] = availableCount - squad.count;
+    }
+
+    const march: ActiveMarch = {
+      id: `march_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      targetId: targetMonster.id,
+      targetName: targetMonster.name,
+      targetLevel: targetMonster.level,
+      createdAt: new Date().toISOString(),
+      attackMode: targetMonster.attackMode,
+      captainId: activeCaptain.id,
+      captainName: isRare ? `Herói ${profile.playerName || profile.heroName || 'Comandante'}` : activeCaptain.name,
+      captainLevel: isRare ? profile.heroLevel || 16 : activeCaptainLevel,
+      dragonSent: sendDragon,
+      enemySquads: targetMonster.enemySquads?.map((squad) => ({ ...squad })) || [],
+      predictedOutcome: simResult.outcome,
+      predictedSafetyLevel: simResult.safetyLevel,
+      predictedCasualties: simResult.playerCasualties.map((casualty) => ({ ...casualty })),
+      predictedPlayerDamage: simResult.totalPlayerDamage,
+      predictedEnemyHp: simResult.initialEnemyHp,
+      predictedXp: projectedXP,
+      predictedVp: projectedVP,
+      squads,
+    };
+    const historyEntry: AttackHistoryEntry = { ...march, status: 'in_progress' };
+
+    onUpdateProfile({
+      ownedTroopCounts: nextOwnedCounts,
+      activeMarches: [...activeMarches, march],
+      attackHistory: [historyEntry, ...attackHistory],
+    });
+    setDeathCountDrafts((previous) => ({
+      ...previous,
+      [march.id]: Object.fromEntries(squads.map((squad) => [squad.unitId, '0'])),
+    }));
+    setToastMessage(`Marcha para ${targetMonster.name} reservada. As tropas foram descontadas do estoque disponível.`);
+    window.setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleConfirmMarchReturn = (march: ActiveMarch) => {
+    if (!onUpdateProfile) return;
+
+    const drafts = deathCountDrafts[march.id] || {};
+    const returnedCounts: Record<string, number> = {};
+    const actualDeaths: AttackHistoryEntry['actualDeaths'] = [];
+    for (const squad of march.squads) {
+      const rawDeathCount = drafts[squad.unitId] ?? '0';
+      const deathCount = Number(rawDeathCount);
+      if (rawDeathCount.trim() === '' || !Number.isInteger(deathCount) || deathCount < 0 || deathCount > squad.count) {
+        setToastMessage(`Informe um número inteiro entre 0 e ${squad.count.toLocaleString('pt-BR')} para ${squad.unitName}.`);
+        return;
+      }
+      actualDeaths.push({ unitId: squad.unitId, unitName: squad.unitName, count: deathCount });
+      returnedCounts[squad.unitId] = (returnedCounts[squad.unitId] || 0) + squad.count - deathCount;
+    }
+
+    const nextOwnedCounts = { ...profile.ownedTroopCounts };
+    for (const [unitId, count] of Object.entries(returnedCounts)) {
+      nextOwnedCounts[unitId] = (nextOwnedCounts[unitId] || 0) + count;
+    }
+
+    const completedHistoryEntry: AttackHistoryEntry = {
+      ...march,
+      status: 'completed',
+      completedAt: new Date().toISOString(),
+      actualDeaths,
+      returnedSquads: march.squads.map((squad) => ({
+        ...squad,
+        count: returnedCounts[squad.unitId] || 0,
+      })),
+    };
+
+    onUpdateProfile({
+      ownedTroopCounts: nextOwnedCounts,
+      activeMarches: activeMarches.filter((activeMarch) => activeMarch.id !== march.id),
+      attackHistory: attackHistory.some((entry) => entry.id === march.id)
+        ? attackHistory.map((entry) => entry.id === march.id ? completedHistoryEntry : entry)
+        : [completedHistoryEntry, ...attackHistory],
+    });
+    setEditingReturnMarchId(null);
+    setDeathCountDrafts((previous) => {
+      const next = { ...previous };
+      delete next[march.id];
+      return next;
+    });
+    setToastMessage(`Baixas registradas. As tropas sobreviventes de ${march.targetName} voltaram ao estoque.`);
+    window.setTimeout(() => setToastMessage(null), 4000);
   };
 
   const classLabelMap: Record<string, string> = {
@@ -249,88 +373,15 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
       key: unit.id,
       tier: unit.tier,
       avatarIcon: unit.avatarIcon || originalTroop?.avatarIcon || unit.id,
+      avatarPath: originalTroop?.avatarPath,
+      catalogManaged: originalTroop?.catalogManaged,
     };
   });
 
   const nobleCasualties = t2Casualties;
 
-  // Resumo de sincronização por tipo
-  const summaryByTier = dispatchedTroopsList.reduce<Record<string, number>>((acc, t) => {
-    const key = t.isMercenary ? 'Mercs' : `T${t.tier}`;
-    acc[key] = (acc[key] || 0) + t.count;
-    return acc;
-  }, {});
-
-  const summaryString = Object.entries(summaryByTier)
-    .map(([key, count]) => `${count.toLocaleString('pt-BR')} ${key}`)
-    .join(' • ');
-
   return (
     <div className="bg-[#111827] text-slate-100 rounded-2xl p-5 sm:p-6 shadow-2xl border border-slate-700/80 space-y-6">
-      
-      {/* 1. Header: Quick Actions Bar (Recalculate, Sincronização, Clan copy & Enemy squads view) */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-[#0b0f19] p-4 rounded-xl border border-slate-700/80 shadow-md">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-            <span className={`w-2.5 h-2.5 rounded-full ${isDefeat ? 'bg-rose-500 animate-ping' : 'bg-emerald-400 animate-pulse'}`}></span>
-            <span>
-              {isDefeat ? '⚠️ Exército Insuficiente!' : 'Simulação Validada Turno a Turno'}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-2xs font-bold shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Sincronizado com Quartel</span>
-            <span className="font-mono text-slate-200">
-              ({summaryString || '0 Tropas'})
-            </span>
-            <span className="text-slate-400 font-mono hidden sm:inline">
-              • {lastCalculatedAt.toLocaleTimeString('pt-BR')}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {/* BOTÃO DE RECALCULAR COM ANIMAÇÃO TÁTICA */}
-          <button
-            type="button"
-            onClick={handleRecalculate}
-            disabled={isRecalculating}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
-            title="Recalcular simulação e forçar atualização com base no estoque atual do Quartel"
-          >
-            <RotateCw className={`w-3.5 h-3.5 ${isRecalculating ? 'animate-spin' : ''}`} />
-            <span>{isRecalculating ? 'Recalculando...' : 'Recalcular Marcha'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowEnemyDetails(!showEnemyDetails)}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-600 text-xs font-bold transition-all shadow"
-          >
-            <ShieldAlert className="w-4 h-4 text-amber-400" />
-            <span>{showEnemyDetails ? 'Ocultar Inimigos' : 'Ajustar Esquadrões'}</span>
-            {showEnemyDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleCopy}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-extrabold text-xs shadow-lg transition-all ${
-              copied
-                ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
-                : isDefeat
-                ? 'bg-rose-700 hover:bg-rose-600 text-white'
-                : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-amber-500/20'
-            }`}
-            title="Copia um resumo em texto para compartilhar no Chat do Clã ou Discord"
-          >
-            {copied ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
-            <span>{copied ? 'Copiado!' : '💬 Copiar para o Clã'}</span>
-          </button>
-        </div>
-      </div>
-
       {/* TOAST DE RECALCULADO */}
       {toastMessage && (
         <div className="bg-emerald-950 border border-emerald-500 text-emerald-200 text-xs px-4 py-2.5 rounded-xl flex items-center justify-between shadow-xl animate-fadeIn">
@@ -344,23 +395,24 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
         </div>
       )}
 
-      {/* AVISO QUANDO MONSTRO NÃO TEM TROPAS CADASTRADAS */}
-      {(!targetMonster.enemySquads || targetMonster.enemySquads.length === 0) && (
-        <div className="bg-amber-950/60 border border-amber-500/60 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-200 shadow-xl animate-fadeIn">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">⚠️</span>
-            <div>
-              <h4 className="text-sm font-black text-amber-300">
-                Alvo Selecionado sem Tropas Cadastradas ({targetMonster.name})
-              </h4>
-              <p className="text-xs text-amber-200/90 font-medium">
-                As combinações fictícias foram removidas. Adicione os monstros e quantidades reais no painel do monstro acima para simular a marcha contra o inimigo real.
-              </p>
-            </div>
+      {!hasEnemyComposition && (
+        <div role="status" className="flex flex-col gap-2 rounded-xl border border-amber-500/50 bg-amber-950/40 p-4 text-amber-100 sm:flex-row sm:items-center">
+          <span className="text-xl" aria-hidden="true">⚠️</span>
+          <div>
+            <h3 className="text-sm font-black text-amber-200">Cadastre as tropas inimigas para validar a marcha</h3>
+            <p className="text-xs text-amber-100/80">A simulação, as baixas previstas e as recompensas ficam ocultas até haver uma composição para {targetMonster.name}.</p>
           </div>
         </div>
       )}
 
+      <details className="group rounded-xl border border-slate-700 bg-[#0b0f19]">
+        <summary className="flex cursor-pointer list-none flex-col gap-1 p-4 marker:hidden sm:flex-row sm:items-center sm:justify-between [&::-webkit-details-marker]:hidden">
+          <span className="text-sm font-black text-white">⚙️ Ajustes da marcha</span>
+          <span className="text-xs text-slate-400">
+            Guardas {maxGuards.toLocaleString('pt-BR')} • Mercenários {maxMercs.toLocaleString('pt-BR')} • Monstros {maxMonsters.toLocaleString('pt-BR')} • {isRare ? 'Herói' : activeCaptain.name} • Dragão {sendDragon ? 'ativo' : 'inativo'}
+          </span>
+        </summary>
+        <div className="space-y-4 border-t border-slate-700 p-4">
       {/* PAINEL DE SLOTS DE CAPACIDADE DE MARCHA (TOTAL BATTLE) */}
       <div className="bg-[#0b0f19] p-4 sm:p-5 rounded-2xl border border-amber-500/40 shadow-xl space-y-3.5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/80 pb-2.5">
@@ -577,79 +629,10 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Collapsible Enemy Squads Drawer with In-place Editing */}
-      {showEnemyDetails && (
-        <div className="bg-[#0b0f19] p-4 sm:p-5 rounded-2xl border border-slate-700 space-y-3.5 animate-fadeIn">
-          <div className="flex items-center justify-between border-b border-slate-700/80 pb-2.5">
-            <span className="text-xs sm:text-sm font-bold text-slate-300 flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-amber-400" />
-              Esquadrões Inimigos ({targetMonster.enemySquads?.length || 0} tipos) • HP Total: <strong className="text-rose-400 font-extrabold">{targetMonster.totalHealth.toLocaleString('pt-BR')} HP</strong>
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsEditingSquads(true)}
-              className="flex items-center gap-1.5 text-xs font-black text-amber-300 bg-amber-950/80 hover:bg-amber-900 px-3 py-1.5 rounded-lg border border-amber-500/50 transition-all shadow"
-            >
-              <Edit3 className="w-4 h-4 text-amber-400" />
-              <span>✏️ Modal de Esquadrões</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {targetMonster.enemySquads?.map((sq) => {
-              const tierRoman = ['I', 'II', 'III', 'IV', 'V'][sq.tier - 1] || `${sq.tier}`;
-              return (
-                <div
-                  key={sq.id}
-                  className="bg-slate-900 p-3.5 rounded-xl border border-slate-700 hover:border-amber-400 space-y-2 transition-all shadow-md"
-                >
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-black text-white flex items-center gap-1.5 truncate">
-                      <span className="px-2 py-0.5 rounded text-xs bg-slate-800 text-amber-300 border border-slate-600 font-bold">
-                        {tierRoman}
-                      </span>
-                      {sq.name}
-                    </span>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <input
-                        type="number"
-                        min="0"
-                        value={sq.count}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value, 10);
-                          const updated = (targetMonster.enemySquads || []).map((s) =>
-                            s.id === sq.id ? { ...s, count: isNaN(val) ? 0 : val } : s
-                          );
-                          if (onUpdateMonsterTarget) {
-                            onUpdateMonsterTarget(updateMonsterSquads(targetMonster, updated));
-                          }
-                        }}
-                        className="w-24 bg-[#0b0f19] border border-amber-500/50 focus:border-amber-400 text-amber-300 font-mono font-black text-xs px-2 py-1 rounded-lg text-right outline-none shadow-inner"
-                      />
-                      <span className="text-2xs text-slate-400 font-bold">un.</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5 text-xs text-slate-300 bg-slate-950/80 p-2 rounded-lg border border-slate-800">
-                    <div>Força: <strong className="text-amber-300 font-bold">{sq.unitAttack.toLocaleString('pt-BR')}</strong></div>
-                    <div>Saúde: <strong className="text-rose-400 font-bold">{sq.unitHealth.toLocaleString('pt-BR')}</strong></div>
-                  </div>
-                  {sq.aspects?.description && (
-                    <div className="text-2xs text-amber-300/90 bg-amber-950/30 px-2 py-1 rounded border border-amber-500/20 truncate">
-                      {sq.aspects.description}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* 3. STEP 1: LIDERANÇA & DRAGÃO */}
       <div className="bg-[#0b0f19] p-4 sm:p-5 rounded-2xl border border-slate-700 space-y-4">
         <div className="flex items-center justify-between border-b border-slate-700/80 pb-2.5">
           <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-300 flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-xs font-black shadow">1</span>
             {isRare ? 'Comandante da Marcha (Herói)' : 'Capitão da Marcha'}
           </span>
           <span className="text-xs font-extrabold text-emerald-300 bg-emerald-950/80 px-3 py-1 rounded-xl border border-emerald-500/50 shadow-sm">
@@ -748,9 +731,11 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
           </div>
         </div>
       </div>
+        </div>
+      </details>
 
       {/* 4. VEREDITO TÁTICO & TRAVA DE SEGURANÇA CONTRA DERROTAS */}
-      {isDefeat ? (
+      {!hasEnemyComposition ? null : isDefeat ? (
         <div className="bg-gradient-to-r from-red-950 via-rose-950 to-red-950 border-2 border-red-500 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4 animate-fadeIn">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-red-800/80 pb-3">
             <div className="flex items-center gap-3.5">
@@ -817,7 +802,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                   💡 Alternativa para farmar XP rápido sem perdas nobres: <strong>Nv {optimalFarm.optimalLevel}</strong> ({optimalFarm.optimalXp.toLocaleString('pt-BR')} XP com vitória segura).
                 </span>
               </div>
-              {onUpdateMonsterTarget && (
+              {onUpdateMonsterTarget && currentTemplate && (
                 <button
                   type="button"
                   onClick={() => onUpdateMonsterTarget(buildMonsterTargetFromTemplate(currentTemplate, optimalFarm.optimalLevel))}
@@ -879,32 +864,59 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
         </div>
       )}
 
-      {/* PRÉVIA OFICIAL DA BATALHA (ARENA VISUAL & REPRODUTOR) */}
-      <BattlePreview
-        simResult={simResult}
-        profile={profile}
-        captain={activeCaptain}
-        sendDragon={sendDragon}
-        targetMonster={targetMonster}
-      />
-
-      {/* 5. STEP 2: O QUE COLOCAR NO JOGO (List View with Zero Clutter) */}
+      {/* Composição pronta para enviar no jogo */}
       <div className={`bg-[#0b0f19] p-4 sm:p-6 rounded-2xl border ${isDefeat ? 'border-red-600/70' : 'border-amber-500/40'} space-y-4 shadow-xl`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-700/80 pb-3 gap-2">
           <div>
             <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-300 flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-xs font-black shadow">2</span>
-              Composição de Marcha (Digite estes valores na tela do jogo)
+              Composição da marcha
             </span>
             <span className="text-xs font-semibold text-slate-400 block pt-1">
-              {isDefeat
+              {!hasEnemyComposition
+                ? 'Sugestão baseada no seu estoque. Cadastre as tropas inimigas para validar antes de marchar.'
+                : isDefeat
                 ? '⚠️ ATENÇÃO: As tropas abaixo NÃO são suficientes para vencer. Treine mais soldados antes de marchar!'
                 : '⌨️ Digite ou deslize os campos no Total Battle com as quantidades exatas abaixo:'}
             </span>
+            {hasStackedGuardTiers && (
+              <span className="text-[11px] font-medium text-cyan-300 block pt-1">
+                Empilhamento aplicado: a camada inferior é dimensionada por (ataque estimado do nível superior × quantidade superior) ÷ ataque estimado do nível inferior. Estoque, capacidade e simulação limitam as quantidades.
+              </span>
+            )}
           </div>
-          <span className="text-xs sm:text-sm font-extrabold text-slate-200 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700">
-            Capacidade de Guardas: <strong className="text-amber-300 font-black">{allocatedGuards.toLocaleString('pt-BR')}</strong> / {maxGuards.toLocaleString('pt-BR')}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs sm:text-sm font-extrabold text-slate-200 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700">
+              Capacidade de Guardas: <strong className="text-amber-300 font-black">{allocatedGuards.toLocaleString('pt-BR')}</strong> / {maxGuards.toLocaleString('pt-BR')}
+            </span>
+            <button
+              type="button"
+              onClick={handleRecalculate}
+              disabled={isRecalculating}
+              className="flex items-center justify-center gap-2 rounded-xl border border-amber-500/70 bg-amber-950 px-3.5 py-2 text-xs font-black text-amber-100 shadow transition hover:border-amber-300 hover:bg-amber-900 disabled:cursor-wait disabled:opacity-70"
+              title="Recalcula a composição e a simulação com o estoque e os ajustes atuais"
+            >
+              <RotateCw className={`h-4 w-4 ${isRecalculating ? 'animate-spin' : ''}`} />
+              {isRecalculating ? 'Recalculando…' : 'Recalcular marcha'}
+            </button>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="flex items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800 px-3.5 py-2 text-xs font-black text-slate-100 shadow transition hover:border-amber-400 hover:bg-slate-700"
+              title="Copia a composição completa da marcha"
+            >
+              {copied ? <Check className="h-4 w-4 text-emerald-300" /> : <Copy className="h-4 w-4 text-amber-300" />}
+              {copied ? 'Copiada' : hasEnemyComposition ? 'Copiar marcha' : 'Copiar sugestão'}
+            </button>
+            <button
+              type="button"
+              onClick={handleReserveMarch}
+              disabled={!onUpdateProfile || dispatchedTroopsList.length === 0 || !hasEnemyComposition}
+              className="flex items-center justify-center gap-2 rounded-xl border border-emerald-400/70 bg-emerald-700 px-4 py-2 text-xs font-black text-white shadow-lg transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+              title={hasEnemyComposition ? 'Desconta estas tropas do estoque e registra a marcha em ataque' : 'Cadastre as tropas inimigas antes de reservar a marcha'}
+            >
+              <Swords className="h-4 w-4" /> {hasEnemyComposition ? 'Reservar marcha' : 'Valide para reservar'}
+            </button>
+          </div>
         </div>
 
         {/* Clean, spacious Troop Dispatch List */}
@@ -916,7 +928,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
             >
               {/* Unit Info */}
               <div className="flex items-center gap-4 min-w-0">
-                <TroopAvatar id={unit.avatarIcon || unit.id} tier={unit.tier} size="md" />
+                <TroopAvatar id={unit.avatarIcon || unit.id} avatarPath={unit.avatarPath} databaseOnly={unit.catalogManaged} tier={unit.tier} size="md" />
 
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -938,7 +950,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                 </div>
               </div>
 
-              {/* Action: Quantity Chip & Copy Button */}
+              {/* Quantidade sugerida para digitar no jogo */}
               <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800 flex-shrink-0">
                 <div className="text-left sm:text-right">
                   <span className="text-2xs font-extrabold text-slate-400 block uppercase tracking-wider">
@@ -948,31 +960,191 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                     {unit.count.toLocaleString('pt-BR')}
                   </span>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleCopySingleNumber(unit.key, unit.count)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow ${
-                    copiedNumber === unit.key
-                      ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
-                      : 'bg-slate-800 hover:bg-slate-700 border border-slate-600 text-amber-300 hover:text-white'
-                  }`}
-                  title="Copiar número para a área de transferência"
-                >
-                  {copiedNumber === unit.key ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  <span>{copiedNumber === unit.key ? 'Copiado!' : 'Copiar'}</span>
-                </button>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* 6. STEP 3: SEGURANÇA CONTRA PERDAS & RECOMPENSAS */}
+      {/* Prévia da batalha logo após a composição da marcha */}
+      {hasEnemyComposition && (
+        <BattlePreview
+          simResult={simResult}
+          profile={profile}
+          captain={activeCaptain}
+          sendDragon={sendDragon}
+          targetMonster={targetMonster}
+        />
+      )}
+
+      {activeMarches.length > 0 && (
+        <section id="active-marches" className="space-y-4 rounded-2xl border border-sky-500/40 bg-slate-950/80 p-4 shadow-xl sm:p-5">
+          <div className="flex flex-col gap-2 border-b border-slate-700 pb-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-sky-200">
+                <Swords className="h-4 w-4 text-sky-300" /> Tropas em ataque
+                <span className="rounded-full bg-sky-950 px-2 py-0.5 text-xs text-sky-200">{activeMarches.length}</span>
+              </h2>
+              <p className="mt-1 text-xs text-slate-400">Informe quantas morreram. As tropas sobreviventes voltam ao estoque automaticamente.</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {activeMarches.map((march) => {
+              const isEditingReturn = editingReturnMarchId === march.id;
+              const drafts = deathCountDrafts[march.id] || {};
+              const sentCount = march.squads.reduce((sum, squad) => sum + squad.count, 0);
+
+              return (
+                <article key={march.id} className="rounded-xl border border-slate-700 bg-slate-900/90 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <h3 className="font-black text-white">{march.targetName} • Nv {march.targetLevel}</h3>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Reservada em {new Date(march.createdAt).toLocaleString('pt-BR')} • {sentCount.toLocaleString('pt-BR')} tropas enviadas
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {march.squads.map((squad) => (
+                          <span key={squad.unitId} className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1 text-xs text-slate-200">
+                            {squad.unitName}: <strong className="text-amber-300">{squad.count.toLocaleString('pt-BR')}</strong>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditingReturnMarchId(isEditingReturn ? null : march.id)}
+                      className="shrink-0 rounded-xl border border-sky-500/60 bg-sky-950 px-3.5 py-2 text-xs font-black text-sky-200 transition hover:bg-sky-900"
+                    >
+                      {isEditingReturn ? 'Fechar' : 'Registrar baixas'}
+                    </button>
+                  </div>
+
+                  {isEditingReturn && (
+                    <div className="mt-4 space-y-3 border-t border-slate-700 pt-4">
+                      <p className="text-xs font-semibold text-slate-300">Informe quantas morreram de cada tipo. O campo começa em 0; as sobreviventes retornam ao estoque.</p>
+                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        {march.squads.map((squad) => (
+                          <label key={squad.unitId} className="flex items-center justify-between gap-3 rounded-lg border border-slate-700 bg-slate-950 p-3">
+                            <span className="min-w-0 text-xs font-bold text-slate-200">{squad.unitName}<span className="mt-0.5 block font-normal text-slate-500">Enviadas: {squad.count.toLocaleString('pt-BR')} • Mortos</span></span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={squad.count}
+                              step={1}
+                              inputMode="numeric"
+                              aria-label={`Quantidade de ${squad.unitName} que morreu`}
+                              value={drafts[squad.unitId] ?? '0'}
+                              onChange={(event) => setDeathCountDrafts((previous) => ({
+                                ...previous,
+                                [march.id]: { ...(previous[march.id] || {}), [squad.unitId]: event.target.value },
+                              }))}
+                              className="w-28 rounded-lg border border-slate-600 bg-slate-900 px-2.5 py-2 text-right font-mono text-sm font-black text-rose-300 outline-none focus:border-rose-400"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleConfirmMarchReturn(march)}
+                          className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-black text-white shadow-lg transition hover:bg-emerald-500"
+                        >
+                          <CheckCircle2 className="h-4 w-4" /> Confirmar baixas e atualizar estoque
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <details className="rounded-2xl border border-slate-700 bg-slate-950/70 shadow-lg">
+        <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 p-4 marker:hidden [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-slate-100">
+            Histórico de ataques
+            <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">{attackHistory.length}</span>
+          </span>
+          <span className="text-xs text-slate-400">Compare a previsão da simulação com as baixas reais</span>
+        </summary>
+        <div className="space-y-2 border-t border-slate-800 p-3 sm:p-4">
+          {attackHistory.length === 0 ? (
+            <p className="rounded-lg bg-slate-900/80 p-3 text-xs text-slate-400">
+              Cada ataque reservado aparecerá aqui. Registre as baixas no retorno para comparar o resultado real com a previsão.
+            </p>
+          ) : (
+            attackHistory.map((entry) => {
+              const predictedDeathTotal = (entry.predictedCasualties || []).reduce((total, casualty) => total + casualty.lostCount, 0);
+              const actualDeathTotal = (entry.actualDeaths || []).reduce((total, casualty) => total + casualty.count, 0);
+              const returnedTotal = (entry.returnedSquads || []).reduce((total, squad) => total + squad.count, 0);
+              const hasActualReport = entry.status === 'completed';
+
+              return (
+                <details key={entry.id} className="rounded-xl border border-slate-700 bg-slate-900/80">
+                  <summary className="flex cursor-pointer list-none flex-col gap-2 p-3 marker:hidden sm:flex-row sm:items-center sm:justify-between [&::-webkit-details-marker]:hidden">
+                    <div>
+                      <h3 className="text-sm font-black text-white">{entry.targetName} • Nv {entry.targetLevel}</h3>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Marcha reservada {new Date(entry.createdAt).toLocaleString('pt-BR')}
+                        {entry.completedAt ? ` • Retorno ${new Date(entry.completedAt).toLocaleString('pt-BR')}` : ''}
+                        {' • '}{entry.captainName || 'Capitão não registrado'}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-2xs font-bold">
+                      <span className="rounded-lg border border-indigo-500/30 bg-indigo-950/60 px-2 py-1 text-indigo-200">
+                        Previstas: {predictedDeathTotal.toLocaleString('pt-BR')}
+                      </span>
+                      {hasActualReport ? (
+                        <>
+                          <span className="rounded-lg border border-rose-500/30 bg-rose-950/60 px-2 py-1 text-rose-200">
+                            Mortas: {actualDeathTotal.toLocaleString('pt-BR')}
+                          </span>
+                          <span className="rounded-lg border border-emerald-500/30 bg-emerald-950/60 px-2 py-1 text-emerald-200">
+                            Voltaram: {returnedTotal.toLocaleString('pt-BR')}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="rounded-lg border border-sky-500/30 bg-sky-950/60 px-2 py-1 text-sky-200">Em andamento</span>
+                      )}
+                    </div>
+                  </summary>
+                  <div className="space-y-3 border-t border-slate-800 p-3">
+                    <p className="text-xs text-slate-300">
+                      Simulação: {entry.predictedOutcome === 'VICTORY' ? 'vitória' : entry.predictedOutcome === 'DEFEAT' ? 'derrota' : 'sem resultado'}
+                      {entry.predictedSafetyLevel ? ` • ${entry.predictedSafetyLevel}` : ''}
+                      {entry.predictedPlayerDamage !== undefined && entry.predictedEnemyHp !== undefined
+                        ? ` • Dano previsto ${entry.predictedPlayerDamage.toLocaleString('pt-BR')} / ${entry.predictedEnemyHp.toLocaleString('pt-BR')} HP`
+                        : ''}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {entry.squads.map((squad) => {
+                        const predictedDeaths = entry.predictedCasualties?.find((casualty) => casualty.id === squad.unitId)?.lostCount || 0;
+                        const actualDeaths = entry.actualDeaths?.find((casualty) => casualty.unitId === squad.unitId)?.count || 0;
+                        const returned = entry.returnedSquads?.find((returnedSquad) => returnedSquad.unitId === squad.unitId)?.count || 0;
+
+                        return (
+                          <span key={squad.unitId} className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-300">
+                            {squad.unitName}: enviados {squad.count.toLocaleString('pt-BR')} • previsão {predictedDeaths.toLocaleString('pt-BR')} mortos • reais {hasActualReport ? `${actualDeaths.toLocaleString('pt-BR')} mortos` : 'baixas pendentes'} • {hasActualReport ? `voltaram ${returned.toLocaleString('pt-BR')}` : 'retorno pendente'}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </details>
+              );
+            })
+          )}
+        </div>
+      </details>
+
+      {/* Segurança e recompensas da simulação */}
+      {hasEnemyComposition && (
       <div className="bg-[#0b0f19] p-4 sm:p-5 rounded-2xl border border-slate-700 space-y-3">
         <div className="flex items-center justify-between border-b border-slate-700/80 pb-2.5">
           <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-300 flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-xs font-black shadow">3</span>
             Segurança de Marcha & Recompensas Estimadas
           </span>
           <span className={`text-xs font-extrabold flex items-center gap-1.5 ${isDefeat ? 'text-rose-400' : 'text-emerald-300'}`}>
@@ -1023,8 +1195,10 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
           </div>
         </div>
       </div>
+      )}
 
       {/* 7. INTERACTIVE COMBAT LOG PREVIEW (Informações da Batalha Turno a Turno) */}
+      {hasEnemyComposition && (
       <div className="bg-[#0b0f19] border border-slate-700/80 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
         <button
           type="button"
@@ -1082,22 +1256,8 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
           </div>
         )}
       </div>
-
-      {/* Edit Squads Modal */}
-      {isEditingSquads && (
-        <EditSquadsModal
-          isOpen={isEditingSquads}
-          onClose={() => setIsEditingSquads(false)}
-          initialSquads={targetMonster.enemySquads || []}
-          monsterName={targetMonster.name}
-          monsterLevel={targetMonster.level}
-          onSaveSquads={(updatedSquads) => {
-            const updated = updateMonsterSquads(targetMonster, updatedSquads);
-            if (onUpdateMonsterTarget) onUpdateMonsterTarget(updated);
-          }}
-          onResetToTemplate={() => {}}
-        />
       )}
+
     </div>
   );
 };

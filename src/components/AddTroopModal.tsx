@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { TroopUnit, TroopCategory, TroopClass } from '../types';
-import { DEFAULT_TROOPS } from '../data/troops';
+import { useGameCatalog } from '../context/GameCatalogContext';
 import { TroopAvatar } from './TroopAvatar';
 import { X, Plus, Swords, Heart, Users, Shield, Zap, Crosshair, Filter } from 'lucide-react';
 
@@ -19,6 +19,7 @@ export const AddTroopModal: React.FC<AddTroopModalProps> = ({
   onClose,
   onAddTroop,
 }) => {
+  const { troops } = useGameCatalog();
   const [selectedCategory, setSelectedCategory] = useState<TroopCategory>(initialCategory);
   const [selectedClass, setSelectedClass] = useState<TroopClass | 'all'>('all');
   const [selectedTroopId, setSelectedTroopId] = useState<string>('');
@@ -29,21 +30,21 @@ export const AddTroopModal: React.FC<AddTroopModalProps> = ({
     if (isOpen) {
       setSelectedCategory(initialCategory);
       setSelectedClass('all');
-      const firstInCat = DEFAULT_TROOPS.find((t) => t.category === initialCategory);
+      const firstInCat = troops.find((t) => t.category === initialCategory);
       if (firstInCat) {
         setSelectedTroopId(firstInCat.id);
       }
     }
-  }, [isOpen, initialCategory]);
+  }, [isOpen, initialCategory, troops]);
 
   // Filter available troops STRICTLY by selected category and optional class filter
   const availableTroopsInCategory = useMemo(() => {
-    return DEFAULT_TROOPS.filter((t) => {
+    return troops.filter((t) => {
       if (t.category !== selectedCategory) return false;
       if (selectedClass !== 'all' && t.troopClass !== selectedClass) return false;
       return true;
     });
-  }, [selectedCategory, selectedClass]);
+  }, [selectedCategory, selectedClass, troops]);
 
   // Ensure activeTroop is always from the filtered list
   const activeTroop = useMemo(() => {
@@ -55,7 +56,7 @@ export const AddTroopModal: React.FC<AddTroopModalProps> = ({
   const handleCategorySelect = (cat: TroopCategory) => {
     setSelectedCategory(cat);
     setSelectedClass('all');
-    const first = DEFAULT_TROOPS.find((t) => t.category === cat);
+    const first = troops.find((t) => t.category === cat);
     if (first) {
       setSelectedTroopId(first.id);
     }
@@ -63,7 +64,7 @@ export const AddTroopModal: React.FC<AddTroopModalProps> = ({
 
   const handleClassSelect = (cls: TroopClass | 'all') => {
     setSelectedClass(cls);
-    const filtered = DEFAULT_TROOPS.filter((t) => {
+    const filtered = troops.filter((t) => {
       if (t.category !== selectedCategory) return false;
       if (cls !== 'all' && t.troopClass !== cls) return false;
       return true;
@@ -201,7 +202,7 @@ export const AddTroopModal: React.FC<AddTroopModalProps> = ({
           {activeTroop && (
             <div className="bg-[#0b0f19] p-3.5 rounded-xl border border-slate-700 flex items-center gap-3.5 shadow-inner">
               <div className="flex-shrink-0">
-                <TroopAvatar id={activeTroop.avatarIcon || activeTroop.id} tier={activeTroop.tier} size="md" />
+                <TroopAvatar id={activeTroop.avatarIcon || activeTroop.id} avatarPath={activeTroop.avatarPath} databaseOnly={activeTroop.catalogManaged} tier={activeTroop.tier} size="md" />
               </div>
               <div className="min-w-0 flex-1 space-y-1 text-xs">
                 <div className="flex items-center justify-between">

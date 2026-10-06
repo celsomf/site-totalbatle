@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "allowSyntheticDefaultImports": true
+  },
+  "include": [
+    "server/**/*.ts",
+    "api/**/*.ts",
+    "src/types/**/*.ts",
+    "src/data/monsters.ts",
+    "src/data/troops.ts",
+    "src/data/troopAvatarPaths.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

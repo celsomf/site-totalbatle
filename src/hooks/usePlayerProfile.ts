@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { PlayerProfile, ProfileSummary, TroopUnit } from '../types';
-import { DEFAULT_TROOPS } from '../data/troops';
+import { useGameCatalog } from '../context/GameCatalogContext';
 import {
   fetchProfileFromDb,
   saveProfileToDb,
@@ -32,7 +32,8 @@ export const createCleanProfile = (
   id: string,
   playerName: string = 'Comandante',
   kingdom: string = 'K:310',
-  clanTag: string = ''
+  clanTag: string = '',
+  troopIds: string[] = []
 ): PlayerProfile => ({
   id,
   playerName,
@@ -69,8 +70,10 @@ export const createCleanProfile = (
     carter: 1,
     cleopatra: 1,
   },
-  unlockedTroopIds: DEFAULT_TROOPS.map((t) => t.id),
+  unlockedTroopIds: troopIds,
   ownedTroopCounts: {}, // Tropas zeradas por padrão para novo jogador
+  activeMarches: [],
+  attackHistory: [],
   customTroopStats: {},
   customTroops: [],
   academyBonus: {
@@ -84,6 +87,7 @@ export const createCleanProfile = (
 });
 
 export function usePlayerProfile() {
+  const { troops: catalogTroops, loading: catalogLoading } = useGameCatalog();
   const [dbStatus, setDbStatus] = useState<'connected' | 'offline' | 'checking'>('checking');
   const [activeProfileId, setActiveProfileId] = useState<string>(() => {
     try {
@@ -209,6 +213,7 @@ export function usePlayerProfile() {
       isSwitchingProfile.current = false;
       return;
     }
+    if (catalogLoading) return;
 
     // Salva perfil no LocalStorage
     try {
@@ -255,7 +260,17 @@ export function usePlayerProfile() {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [profile, activeProfileId]);
+  }, [profile, activeProfileId, catalogLoading]);
+
+  useEffect(() => {
+    if (catalogLoading || catalogTroops.length === 0) return;
+    let hasStoredProfile = false;
+    try { hasStoredProfile = Boolean(localStorage.getItem(PROFILES_STORAGE_PREFIX + activeProfileId)); } catch { /* storage unavailable */ }
+    if (hasStoredProfile) return;
+    setProfile((prev) => prev.unlockedTroopIds.length > 0
+      ? prev
+      : { ...prev, unlockedTroopIds: catalogTroops.map((troop) => troop.id) });
+  }, [activeProfileId, catalogLoading, catalogTroops]);
 
   // Ações de gerenciamento de perfis
   const switchProfile = useCallback(async (targetId: string) => {
@@ -270,7 +285,7 @@ export function usePlayerProfile() {
       try {
         const parsed = JSON.parse(localData);
         setProfile({
-          ...createCleanProfile(targetId),
+          ...createCleanProfile(targetId, 'Comandante', 'K:310', '', catalogTroops.map((troop) => troop.id)),
           ...parsed,
           id: targetId,
         });
@@ -279,7 +294,7 @@ export function usePlayerProfile() {
       }
     } else {
       // Criar limpo se não existir localmente
-      setProfile(createCleanProfile(targetId));
+      setProfile(createCleanProfile(targetId, 'Comandante', 'K:310', '', catalogTroops.map((troop) => troop.id)));
     }
 
     // Tentar buscar do PostgreSQL
@@ -291,12 +306,12 @@ export function usePlayerProfile() {
         id: targetId,
       }));
     }
-  }, [activeProfileId]);
+  }, [activeProfileId, catalogTroops]);
 
   const createNewProfile = useCallback(async (name: string, kingdom: string = 'K:310', clanTag: string = '') => {
     const cleanName = name.trim() || 'Novo Jogador';
     const slug = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now().toString(36);
-    const newProfile = createCleanProfile(slug, cleanName, kingdom.trim() || 'K:310', clanTag.trim());
+    const newProfile = createCleanProfile(slug, cleanName, kingdom.trim() || 'K:310', clanTag.trim(), catalogTroops.map((troop) => troop.id));
 
     // Salva localmente
     localStorage.setItem(PROFILES_STORAGE_PREFIX + slug, JSON.stringify(newProfile));
@@ -323,7 +338,7 @@ export function usePlayerProfile() {
 
     // Salva no banco
     saveProfileToDb(newProfile, slug);
-  }, []);
+  }, [catalogTroops]);
 
   const deleteProfile = useCallback(async (profileIdToDelete: string) => {
     if (availableProfiles.length <= 1) {
@@ -442,7 +457,7 @@ export function usePlayerProfile() {
   };
 
   const getHydratedTroops = (): TroopUnit[] => {
-    const allTroops = [...DEFAULT_TROOPS, ...(profile.customTroops || [])];
+    const allTroops = [...catalogTroops, ...(profile.customTroops || [])];
     return allTroops.map((t) => {
       const isUnlocked = profile.unlockedTroopIds.includes(t.id);
       const custom = profile.customTroopStats[t.id];
@@ -513,7 +528,7 @@ export function usePlayerProfile() {
   };
 
   const resetToDefaults = () => {
-    const clean = createCleanProfile(activeProfileId, profile.playerName, profile.kingdom, profile.clanTag);
+    const clean = createCleanProfile(activeProfileId, profile.playerName, profile.kingdom, profile.clanTag, catalogTroops.map((troop) => troop.id));
     setProfile(clean);
   };
 
@@ -544,4 +559,3 @@ export function usePlayerProfile() {
     reconnectDb: () => syncWithDb(true),
   };
 }
-

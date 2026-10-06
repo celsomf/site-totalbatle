@@ -126,7 +126,7 @@ export const TroopDetailModal: React.FC<TroopDetailModalProps> = ({
         {/* Banner Top */}
         <div className="bg-[#0b0f19] p-4 border-b border-slate-700/80 flex items-center justify-between">
           <div className="flex items-center gap-3.5">
-            <TroopAvatar id={troop.avatarIcon || troop.id} tier={troop.tier} size="md" />
+            <TroopAvatar id={troop.avatarIcon || troop.id} avatarPath={troop.avatarPath} databaseOnly={troop.catalogManaged} tier={troop.tier} size="md" />
             <div>
               <h2 className="text-base sm:text-lg font-black text-white tracking-wide uppercase">
                 {troop.name}

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { MONSTER_UNITS_CATALOG, MonsterUnitDefinition } from '../data/monsters';
+import type { MonsterUnitDefinition } from '../data/monsters';
+import { useGameCatalog } from '../context/GameCatalogContext';
 import { Search, X, ChevronDown, Check, Shield } from 'lucide-react';
 import { TroopClass } from '../types';
 import { TroopAvatar } from './TroopAvatar';
@@ -16,6 +17,7 @@ export const SearchableMonsterSelect: React.FC<SearchableMonsterSelectProps> = (
   selectedMonsterName,
   placeholder = '-- Selecionar Monstro por Classe / Nome --',
 }) => {
+  const { monsters } = useGameCatalog();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState<'all' | TroopClass>('all');
@@ -136,14 +138,14 @@ export const SearchableMonsterSelect: React.FC<SearchableMonsterSelectProps> = (
 
     const rawQuery = searchTerm.trim();
     if (!rawQuery) {
-      if (classFilter === 'all') return MONSTER_UNITS_CATALOG;
-      return MONSTER_UNITS_CATALOG.filter((m) => m.troopClass === classFilter);
+      if (classFilter === 'all') return monsters;
+      return monsters.filter((m) => m.troopClass === classFilter);
     }
 
     const query = normalize(rawQuery);
     const searchTokens = query.split(/\s+/).filter(Boolean);
 
-    return MONSTER_UNITS_CATALOG.filter((monster) => {
+    return monsters.filter((monster) => {
       if (classFilter !== 'all' && monster.troopClass !== classFilter) {
         return false;
       }
@@ -179,7 +181,7 @@ export const SearchableMonsterSelect: React.FC<SearchableMonsterSelectProps> = (
 
       return tokensMatch || tierMatch || classMatch;
     });
-  }, [searchTerm, classFilter]);
+  }, [searchTerm, classFilter, monsters]);
 
   const handleSelectMonster = (monster: MonsterUnitDefinition) => {
     onSelect(monster.id);
@@ -289,7 +291,7 @@ export const SearchableMonsterSelect: React.FC<SearchableMonsterSelectProps> = (
                     : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
                 }`}
               >
-                Todos ({MONSTER_UNITS_CATALOG.length})
+                Todos ({monsters.length})
               </button>
               <button
                 type="button"
@@ -360,7 +362,7 @@ export const SearchableMonsterSelect: React.FC<SearchableMonsterSelectProps> = (
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <TroopAvatar id={monster.id} size="sm" className="shrink-0 border-amber-500/30" />
+                        <TroopAvatar id={monster.id} avatarPath={monster.avatarPath} databaseOnly size="sm" className="shrink-0 border-amber-500/30" />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-xs">{getClassIcon(monster.troopClass)}</span>

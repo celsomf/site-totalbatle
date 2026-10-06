@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TroopUnit, PlayerProfile, TroopCategory, TroopClass } from '../types';
 import { TroopAvatar } from './TroopAvatar';
 import { TroopDetailModal } from './TroopDetailModal';
-import { MONSTER_UNITS_CATALOG } from '../data/monsters';
+import { useGameCatalog } from '../context/GameCatalogContext';
 import {
   BookOpen,
   Zap,
@@ -23,6 +23,7 @@ export const TroopEncyclopedia: React.FC<TroopEncyclopediaProps> = ({
   troops,
   profile,
 }) => {
+  const { monsters } = useGameCatalog();
   const [mainView, setMainView] = useState<'troops' | 'monsters'>('troops');
   const [selectedCategory, setSelectedCategory] = useState<TroopCategory | 'all'>('all');
   const [selectedClass, setSelectedClass] = useState<TroopClass | 'all'>('all');
@@ -44,7 +45,7 @@ export const TroopEncyclopedia: React.FC<TroopEncyclopediaProps> = ({
   });
 
   // Filter monsters
-  const filteredMonsters = MONSTER_UNITS_CATALOG.filter((m) => {
+  const filteredMonsters = monsters.filter((m) => {
     if (monsterFamily !== 'all' && m.family !== monsterFamily) return false;
     return true;
   });
@@ -175,7 +176,7 @@ export const TroopEncyclopedia: React.FC<TroopEncyclopediaProps> = ({
                       </span>
                     )}
                     <div className="flex justify-center mb-2 mt-1">
-                      <TroopAvatar id={unit.avatarIcon || unit.id} tier={unit.tier} size="md" />
+                      <TroopAvatar id={unit.avatarIcon || unit.id} avatarPath={unit.avatarPath} databaseOnly={unit.catalogManaged} tier={unit.tier} size="md" />
                     </div>
                     <h4 className="text-xs font-black text-white truncate">{unit.name}</h4>
                     <div className="text-2xs text-slate-400 mt-2 space-y-1">
@@ -260,7 +261,7 @@ export const TroopEncyclopedia: React.FC<TroopEncyclopediaProps> = ({
                     className="bg-[#0b0f19] border border-slate-700/80 hover:border-amber-400 rounded-xl p-4 transition-all cursor-pointer space-y-2.5 group shadow-md"
                   >
                     <div className="flex items-center gap-3">
-                      <TroopAvatar id={unit.avatarIcon || unit.id} tier={unit.tier} size="md" />
+                      <TroopAvatar id={unit.id} avatarPath={unit.avatarPath} databaseOnly size="md" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-black text-white truncate">{unit.name}</span>

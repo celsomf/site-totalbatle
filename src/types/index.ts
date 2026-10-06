@@ -1,5 +1,6 @@
 export type TroopCategory = 'guardsman' | 'specialist' | 'monster' | 'mercenary';
 export type TroopClass = 'melee' | 'ranged' | 'mounted' | 'flying' | 'siege';
+export type TroopTrait = 'beast' | 'giant' | 'dragon' | 'elemental' | 'fortification' | 'human';
 
 export interface TroopAspects {
   bonusVsMeleePercent?: number;
@@ -23,6 +24,7 @@ export interface TroopUnit {
   category: TroopCategory;
   tier: number;
   troopClass: TroopClass;
+  traits?: TroopTrait[];
   baseAttack: number;
   baseHealth: number;
   customAttack?: number;
@@ -37,6 +39,8 @@ export interface TroopUnit {
   aspects?: TroopAspects;
   isUnlocked: boolean;
   avatarIcon?: string;
+  avatarPath?: string;
+  catalogManaged?: boolean;
 }
 
 export type CaptainSpecialty = 'monsters' | 'crypts' | 'pvp' | 'economy' | 'speed';
@@ -63,6 +67,7 @@ export interface EnemySquadUnit {
   tier: number;
   troopClass: TroopClass;
   family: 'inferno' | 'cursed' | 'undead' | 'barbarian' | 'elemental' | 'epic' | 'elfos' | 'dragons';
+  traits?: TroopTrait[];
   subType?: string; // Ex: 'Elfos, Unidade de longo alcance' ou 'Demônio, Unidade montada'
   unitAttack: number;
   unitHealth: number;
@@ -199,6 +204,8 @@ export interface PlayerProfile {
   captainStars?: Record<string, number>;
   unlockedTroopIds: string[];
   ownedTroopCounts: Record<string, number>;
+  activeMarches?: ActiveMarch[];
+  attackHistory?: AttackHistoryEntry[];
   customTroopStats: Record<string, { attack: number; health: number }>;
   customTroops?: TroopUnit[];      // Tropas personalizadas criadas pelo jogador
   academyBonus: {
@@ -209,6 +216,39 @@ export interface PlayerProfile {
     monstersAttack: number;
     monstersHealth: number;
   };
+}
+
+export interface ActiveMarch {
+  id: string;
+  targetId: string;
+  targetName: string;
+  targetLevel: number;
+  createdAt: string;
+  attackMode?: AttackMode;
+  captainId?: string;
+  captainName?: string;
+  captainLevel?: number;
+  dragonSent?: boolean;
+  enemySquads?: EnemySquadUnit[];
+  predictedOutcome?: CombatSimulationResult['outcome'];
+  predictedSafetyLevel?: CombatSimulationResult['safetyLevel'];
+  predictedCasualties?: SquadCasualty[];
+  predictedPlayerDamage?: number;
+  predictedEnemyHp?: number;
+  predictedXp?: number;
+  predictedVp?: number;
+  squads: Array<{
+    unitId: string;
+    unitName: string;
+    count: number;
+  }>;
+}
+
+export interface AttackHistoryEntry extends ActiveMarch {
+  status: 'in_progress' | 'completed';
+  completedAt?: string;
+  actualDeaths?: Array<{ unitId: string; unitName: string; count: number }>;
+  returnedSquads?: Array<{ unitId: string; unitName: string; count: number }>;
 }
 
 export interface MarchSquadAllocation {

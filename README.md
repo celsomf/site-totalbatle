@@ -45,10 +45,11 @@ A aplicação simula fielmente as regras reais de combate do Total Battle, aplic
 - Suporte aos Heróis iniciais (**Garvel** e **Julia**) com nível configurável.
 - Seleção de até **3 Capitães simultâneos** com somatório real de bônus e elenco recolhível (acordeom).
 
-### 6. 💾 Persistência Dupla (PostgreSQL 17 + LocalStorage)
-- Servidor de API backend com banco **PostgreSQL 17 local** (`localhost:5432`).
-- Criação e migração automática de tabelas (`player_profiles`, `captain_levels`, `troop_inventory`, `custom_troops`).
-- Fallback automático e instantâneo com cache local no navegador.
+### 6. 💾 Catálogos compartilhados no PostgreSQL
+- Os catálogos de tropas, monstros, alvos e formações vêm do PostgreSQL.
+- O navegador mantém dados do perfil e pode conter formações antigas aguardando importação; esses dados locais não são usados como catálogo ativo.
+- O editor aceita listas coladas no formato `nome ou ID; quantidade`, salva a equipe do nível e copia uma formação para outros níveis.
+- As formações antigas do navegador podem ser importadas uma vez; o conteúdo original fica arquivado no banco.
 
 ---
 
@@ -59,9 +60,12 @@ site-totalbatle/
 ├── public/
 │   └── assets/
 │       └── troops/          # Retratos oficiais das unidades e capitães (.png)
+├── api/                     # Funções de API para implantação Vercel
 ├── server/
-│   ├── db.ts                # Conexão e pooling PostgreSQL 17 + schema DDL
-│   └── index.ts             # API REST Express (Health check e CRUD de Perfil)
+│   ├── db.ts                # Conexão, pooling e criação aditiva do schema PostgreSQL
+│   ├── gameCatalog.ts       # Leitura e gravação dos catálogos e formações
+│   ├── migrate-game-data.ts # Importação segura e repetível dos dados iniciais
+│   └── index.ts             # API REST Express para desenvolvimento local
 ├── src/
 │   ├── components/          # Componentes visuais React (UI Total Battle Fantasy)
 │   │   ├── AddTroopModal.tsx        # Modal de recrutamento dinâmico
@@ -76,7 +80,7 @@ site-totalbatle/
 │   │   ├── TroopCustomizer.tsx      # Quartel e gerenciamento de estoque
 │   │   ├── TroopDetailModal.tsx     # Ficha técnica oficial da unidade
 │   │   └── TroopEncyclopedia.tsx   # Enciclopédia & Otimizador de combinações
-│   ├── data/                # Catálogo oficial de tropas, monstros e capitães
+│   ├── data/                # Dados iniciais usados somente pela migração; runtime lê do banco
 │   │   ├── captains.ts
 │   │   ├── monsters.ts
 │   │   └── troops.ts
@@ -113,18 +117,27 @@ npm install
 ```
 
 ### 3. Configurar o Banco de Dados (PostgreSQL 17)
-Crie um banco de dados local ou utilize o banco padrão `postgres`:
+Crie um banco de dados local:
 ```sql
 CREATE DATABASE total_battle_db;
 ```
-As variáveis de ambiente padrão conectam em `postgresql://postgres:postgres@localhost:5432/postgres` (ajustável via `server/db.ts` ou `.env`).
+Copie `.env.example` para `.env` e informe os dados de conexão. Em produção, configure `DATABASE_URL` (ou os campos `PG*`) e `CATALOG_WRITE_TOKEN` no provedor.
 
-### 4. Iniciar a Aplicação em Modo Desenvolvimento
+### 4. Migrar os catálogos iniciais
+Execute uma vez para criar as tabelas e inserir os dados iniciais que ainda não existem:
+```bash
+npm run db:migrate-game-data
+```
+A migração pode ser repetida. Ela não substitui atributos de monstros ou tropas existentes; adiciona registros ausentes, preenche caminhos de imagem vazios e consolida dois IDs duplicados como aliases sem perder referências das equipes. `server/monster-catalog-seed.ts` contém os 66 monstros distintos para iniciar um banco novo. `src/data/monsters.ts` e `src/data/troops.ts` fornecem os dados iniciais de alvos e tropas. A aplicação carrega os catálogos ativos do banco; os arquivos de imagem continuam em `public/assets/` e seus caminhos ficam no banco.
+
+### 5. Iniciar a Aplicação em Modo Desenvolvimento
 O comando inicia simultaneamente o servidor backend Express na porta `3001` e o frontend Vite na porta `5173`:
 ```bash
 npm run dev
 ```
 Acesse no navegador: **`http://localhost:5173`**
+
+Ao abrir o seletor de monstros, use **Importar dados antigos** para trazer as formações guardadas no navegador atual. A importação arquiva o conteúdo antigo no banco e não substitui uma formação que já exista lá. Para outras instalações ou navegadores, a importação precisa ser feita onde os dados locais estiverem.
 
 ---
 
@@ -169,4 +182,3 @@ Siga as boas práticas de desenvolvimento:
 ## 📜 Licença
 
 Distribuído sob a licença MIT. Consulte `LICENSE` para obter mais informações.
-

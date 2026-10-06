@@ -1,5 +1,4 @@
 import { TroopUnit, Captain, PlayerProfile, CryptRecommendation, MarchSquadAllocation } from '../types';
-import { DEFAULT_MONSTERS } from '../data/monsters';
 
 /**
  * Calculates the required attack power and optimal troops to 1-hit KO (one-shot) a crypt.
@@ -10,7 +9,7 @@ export function calculateCryptOneShot(
   captain: Captain,
   cryptLevel: number
 ): CryptRecommendation {
-  const crypt = DEFAULT_MONSTERS.find((m) => m.type === 'crypt' && m.level === cryptLevel) || {
+  const crypt = {
     id: `crypt_${cryptLevel}`,
     name: `Cripta Nível ${cryptLevel}`,
     type: 'crypt' as const,
