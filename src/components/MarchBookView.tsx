@@ -1,10 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { TroopUnit, Captain, MonsterTarget, PlayerProfile, ActiveMarch, AttackHistoryEntry } from '../types';
 import { buildMonsterTargetFromTemplate } from '../domain/monsterTargets';
+import { getEstimatedLosses } from '../domain/estimatedLosses';
+import { createCombatSnapshot } from '../domain/combatSnapshot';
+import { compareCasualtyEstimate } from '../domain/estimateComparison';
 import { useGameCatalog } from '../context/GameCatalogContext';
 import { simulateCombat, DispatchedTroop, findOptimalFarmLevel, buildDispatchedTroops } from '../utils/combatSimulator';
-import { getCaptainMonsterAttackBonus, getCaptainComputedStats, getHeroAttackBonus } from '../utils/captainStats';
+import { getCaptainValorBonus, getCaptainComputedStats, getCombatCaptainDefinition } from '../utils/combatCaptainStats';
 import { TroopAvatar } from './TroopAvatar';
+import { CaptainAvatar } from './CaptainAvatar';
 import { BattlePreview } from './BattlePreview';
 import {
   Copy,
@@ -33,6 +37,7 @@ interface MarchBookViewProps {
   targetMonster: MonsterTarget;
   onUpdateMonsterTarget?: (monster: MonsterTarget) => void;
   onUpdateProfile?: (updates: Partial<PlayerProfile>) => void;
+  onCancelMarch?: (marchId: string) => void;
 }
 
 export const MarchBookView: React.FC<MarchBookViewProps> = ({
@@ -44,6 +49,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   targetMonster,
   onUpdateMonsterTarget,
   onUpdateProfile,
+  onCancelMarch,
 }) => {
   const { templates } = useGameCatalog();
   const [copied, setCopied] = useState(false);
@@ -67,28 +73,38 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   const activeCaptain = captains.find((c) => c.id === activeCapId) || captains[0];
   const activeCaptainLevel = profile.captainLevels[activeCaptain.id] || activeCaptain.level || 1;
   const activeCaptainStars = profile.captainStars?.[activeCaptain.id] || activeCaptain.stars || 1;
+  const cityValorCaptain = captains.find((captain) =>
+    captain.specialty === 'valor' &&
+    ((profile.selectedCaptainIds || []).includes(captain.id) || profile.selectedCaptainId === captain.id)
+  ) || (activeCaptain.specialty === 'valor' ? activeCaptain : undefined);
+  const cityValorBonusPercent = cityValorCaptain
+    ? getCaptainValorBonus(
+        cityValorCaptain,
+        profile.captainLevels[cityValorCaptain.id] || cityValorCaptain.level || 1,
+        profile.captainStars?.[cityValorCaptain.id] || cityValorCaptain.stars || 1
+      )
+    : 0;
 
-  // Bônus do Capitão Ativo calculado centralizadamente
-  const captainBonusPercent = getCaptainMonsterAttackBonus(
+  const captainAbilitySummary = getCaptainComputedStats(
     activeCaptain,
     activeCaptainLevel,
     activeCaptainStars
-  );
+  ).primaryBonusFormatted;
 
   const templateId = targetMonster.id.split('_lvl_')[0];
   const currentTemplate =
     templates.find((t) => t.id === templateId) || templates[0];
-  const optimalFarm = currentTemplate
+  const optimalFarm = useMemo(() => currentTemplate
     ? findOptimalFarmLevel(currentTemplate, troops, profile, activeCaptain, sendDragon)
-    : null;
+    : null, [currentTemplate, troops, profile, activeCaptain, sendDragon]);
 
   const dragonBonusPercent = sendDragon ? 15 : 0;
   const academyBonusPercent = profile.academyBonus?.guardsmenAttack || 25;
 
   // Capacidades de marcha do perfil do jogador (persistidas no banco)
-  const maxGuards = profile.maxMarchCapacity || targetMonster.marchCapacities?.guards || 2000;
-  const maxMercs = profile.mercenaryCapacity || targetMonster.marchCapacities?.mercenaries || 1000;
-  const maxMonsters = profile.specialCapacity || targetMonster.marchCapacities?.monsters || 500;
+  const maxGuards = profile.maxMarchCapacity ?? targetMonster.marchCapacities?.guards ?? 2000;
+  const maxMercs = profile.mercenaryCapacity ?? targetMonster.marchCapacities?.mercenaries ?? 1000;
+  const maxMonsters = profile.specialCapacity ?? targetMonster.marchCapacities?.monsters ?? 500;
 
   // 1. Preparar unidades enviadas através do motor tático inteligente
   const dispatchedTroopsList = useMemo(() => buildDispatchedTroops(
@@ -99,27 +115,37 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
     sendDragon
   ), [troops, profile, targetMonster, activeCaptain, sendDragon, recalculationVersion]);
 
-  const hasStackedGuardTiers = dispatchedTroopsList.some((troop) =>
-    troop.category === 'guardsman' &&
-    troop.tier >= 2 &&
-    dispatchedTroopsList.some((other) =>
-      other.category === 'guardsman' &&
-      other.troopClass === troop.troopClass &&
-      other.tier >= 2 &&
-      other.tier !== troop.tier
-    )
-  );
+  const getStackGroupKey = (troop: DispatchedTroop): string | undefined => {
+    if (troop.category === 'guardsman') return `guardsman:${troop.troopClass}`;
+    const tieredFamily = troop.id.match(/^(?:s|m)(\d+)_(.+)$/i);
+    if (tieredFamily && (troop.category === 'specialist' || troop.category === 'monster')) {
+      return `${troop.category}:${tieredFamily[2].toLowerCase()}`;
+    }
+    return undefined;
+  };
+
+  const hasStackedTroopLayers = dispatchedTroopsList.some((troop) => {
+    const groupKey = getStackGroupKey(troop);
+    return Boolean(groupKey && dispatchedTroopsList.some((other) =>
+      getStackGroupKey(other) === groupKey && other.tier !== troop.tier
+    ));
+  });
+
+  const catalogTroopIds = new Set(troops.map((troop) => troop.id));
+  const unmodeledOwnedTroops = Object.entries(profile.ownedTroopCounts || {})
+    .filter(([troopId, count]) => count > 0 && !catalogTroopIds.has(troopId))
+    .map(([troopId, count]) => ({ troopId, count }));
 
   const allocatedGuards = dispatchedTroopsList
     .filter((t) => !t.isMercenary && t.category !== 'monster')
-    .reduce((sum, t) => sum + t.count, 0);
+    .reduce((sum, t) => sum + t.count * (t.leadershipCost || 1), 0);
 
   const mercTroops = dispatchedTroopsList.filter((t) => t.isMercenary || t.category === 'mercenary');
-  const mercRecommended = mercTroops.reduce((sum, t) => sum + t.count, 0);
+  const mercRecommended = mercTroops.reduce((sum, t) => sum + t.count * (t.leadershipCost || 1), 0);
 
   const allocatedMonsters = dispatchedTroopsList
     .filter((t) => t.category === 'monster')
-    .reduce((sum, t) => sum + t.count, 0);
+    .reduce((sum, t) => sum + t.count * (t.leadershipCost || 1), 0);
 
   // 2. EXECUTAR SIMULAÇÃO REAL DE COMBATE
   const simResult = useMemo(
@@ -127,6 +153,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
     [dispatchedTroopsList, targetMonster.enemySquads, recalculationVersion]
   );
   const isDefeat = hasEnemyComposition && simResult.outcome === 'DEFEAT';
+  const estimatedLosses = getEstimatedLosses(dispatchedTroopsList, simResult.playerCasualties);
   const g1Casualties = simResult.playerCasualties
     .filter((p) => p.tier === 1)
     .reduce((sum, p) => sum + p.lostCount, 0);
@@ -136,7 +163,10 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
 
   // 3. Recompensas recalculadas com os bônus do Capitão Ativo
   const projectedXP = !hasEnemyComposition || isDefeat ? 0 : Math.round((targetMonster.xpReward || 50000) * (1 + activeCaptainLevel * 0.015));
-  const projectedVP = !hasEnemyComposition || isDefeat ? 0 : Math.round((targetMonster.valorReward || 18000) * (1 + activeCaptainLevel * 0.01));
+  const activeCaptainVpLevelBonus = activeCaptain.specialty === 'valor' ? 0 : activeCaptainLevel;
+  const projectedVP = !hasEnemyComposition || isDefeat
+    ? 0
+    : Math.round((targetMonster.valorReward || 18000) * (1 + (activeCaptainVpLevelBonus + cityValorBonusPercent) / 100));
 
   const handleRecalculate = () => {
     if (isRecalculating) return;
@@ -156,7 +186,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   const handleCopy = () => {
     const leaderText = isRare
       ? `👑 Líder: Herói ${profile.playerName || profile.heroName || 'Comandante'} (Nv ${profile.heroLevel || 16})`
-      : `👑 Capitão: ${activeCaptain.name} (Nv ${activeCaptainLevel} - +${captainBonusPercent}% Bônus)`;
+      : `👑 Capitão: ${activeCaptain.name} (Nv ${activeCaptainLevel} - ${captainAbilitySummary})`;
 
     const verdictText = !hasEnemyComposition
       ? '⚠️ SIMULAÇÃO PENDENTE: cadastre as tropas do alvo antes de marchar.'
@@ -164,7 +194,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
       ? `🚨 ALERTA: DERROTA PREVISTA! Dano insuficiente (${simResult.totalPlayerDamage.toLocaleString('pt-BR')} vs ${simResult.initialEnemyHp.toLocaleString('pt-BR')} HP). NÃO MARCHAR!`
       : simResult.safetyLevel === 'COSTLY_VICTORY'
       ? `⚠️ ATENÇÃO: Vitória com Perda de Nobres (${t2Casualties.toLocaleString('pt-BR')} mortos em T2+)!`
-      : `✅ Vitória Confirmada por Simulação (${simResult.safetyLevel === 'CLEAN_VICTORY' ? '0 Baixas' : 'Baixas absorvidas pela bucha G1'})`;
+      : `✅ Vitória prevista na simulação (${simResult.safetyLevel === 'CLEAN_VICTORY' ? '0 Baixas' : 'Perdas previstas apenas no nível 1'})`;
 
     const regularTroops = dispatchedTroopsList.filter((t) => !t.isMercenary);
 
@@ -177,7 +207,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
 
     const armyText =
       regularTroops.length > 0
-        ? `⚔️ EXÉRCITO (${allocatedGuards.toLocaleString('pt-BR')} / ${maxGuards.toLocaleString('pt-BR')}):\n` +
+        ? `⚔️ LIDERANÇA DO EXÉRCITO (${allocatedGuards.toLocaleString('pt-BR')} / ${maxGuards.toLocaleString('pt-BR')}):\n` +
           regularTroops
             .map((r) => {
               const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'][r.tier - 1] || `${r.tier}`;
@@ -188,7 +218,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
         : '';
 
     const text =
-      `📜 ORDEM DE MARCHA TOTAL BATTLE\n` +
+      `📜 COMPOSIÇÃO EXPERIMENTAL TOTAL BATTLE — precisão ainda não validada\n` +
       `🎯 Alvo: ${targetMonster.name}\n` +
       `${leaderText}\n` +
       `🐉 Dragão: ${sendDragon ? 'Sim (⚡ 50 Energia)' : 'Não'}\n\n` +
@@ -245,6 +275,9 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
       predictedEnemyHp: simResult.initialEnemyHp,
       predictedXp: projectedXP,
       predictedVp: projectedVP,
+      simulationSnapshot: createCombatSnapshot({ profile, captain: activeCaptain, sendDragon, troops,
+        dispatchedTroops: dispatchedTroopsList, enemies: targetMonster.enemySquads || [], result: simResult,
+        capacities: { guards: maxGuards, mercenaries: maxMercs, monsters: maxMonsters } }),
       squads,
     };
     const historyEntry: AttackHistoryEntry = { ...march, status: 'in_progress' };
@@ -259,6 +292,19 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
       [march.id]: Object.fromEntries(squads.map((squad) => [squad.unitId, '0'])),
     }));
     setToastMessage(`Marcha para ${targetMonster.name} reservada. As tropas foram descontadas do estoque disponível.`);
+    window.setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleCancelMarch = (march: ActiveMarch) => {
+    if (!onCancelMarch) return;
+    onCancelMarch(march.id);
+    if (editingReturnMarchId === march.id) setEditingReturnMarchId(null);
+    setDeathCountDrafts((previous) => {
+      const next = { ...previous };
+      delete next[march.id];
+      return next;
+    });
+    setToastMessage(`Marcha removida. Todas as tropas de ${march.targetName} voltaram ao estoque, sem baixas e sem registro no histórico.`);
     window.setTimeout(() => setToastMessage(null), 4000);
   };
 
@@ -324,7 +370,13 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
   const marchSquadList = dispatchedTroopsList.map((unit) => {
     const originalTroop = troops.find((t) => t.id === unit.id);
     const isMerc = unit.isMercenary || unit.category === 'mercenary';
-    const isBucha = unit.tier === 1;
+    const groupKey = originalTroop
+      ? getStackGroupKey({ ...unit, category: originalTroop.category })
+      : undefined;
+    const isStackLayer = Boolean(groupKey && dispatchedTroopsList.some((other) =>
+      other.id !== unit.id && other.tier !== unit.tier && getStackGroupKey(other) === groupKey
+    ));
+    const isBucha = unit.tier === 1 && !isStackLayer;
 
     let role = 'Dano Principal';
     let roleColor = 'text-emerald-400';
@@ -334,6 +386,10 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
       role = 'Mercenário de Elite';
       roleColor = 'text-amber-400';
       badgeColor = 'bg-amber-950/80 text-amber-300 border-amber-500/40';
+    } else if (isStackLayer) {
+      role = 'Camada de empilhamento';
+      roleColor = 'text-cyan-300';
+      badgeColor = 'bg-cyan-950/80 text-cyan-200 border-cyan-500/40';
     } else if (isBucha) {
       role = '🛡️ Bucha de Absorção de Baixas';
       roleColor = 'text-amber-300';
@@ -343,7 +399,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
       roleColor = 'text-rose-400';
       badgeColor = 'bg-rose-950/80 text-rose-300 border-rose-500/40';
     } else if (unit.troopClass === 'ranged') {
-      role = 'Dano Principal Seguro';
+      role = 'Dano principal no cenário';
       roleColor = 'text-emerald-400';
       badgeColor = 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40';
     } else if (unit.troopClass === 'mounted') {
@@ -450,7 +506,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                     Guardas
                   </span>
                   <span className="text-2xs text-red-300 font-bold block">
-                    Tropas Regulares T1-T6
+                    Liderança das tropas regulares
                   </span>
                 </div>
               </div>
@@ -487,7 +543,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
             {/* Barra de Alocação de Guardas */}
             <div className="space-y-1 pt-1 border-t border-slate-800">
               <div className="flex items-center justify-between text-2xs font-bold">
-                <span className="text-slate-400">Alocação Atual:</span>
+                <span className="text-slate-400">Liderança usada:</span>
                 <span className="font-mono text-red-300 font-black">
                   {allocatedGuards.toLocaleString('pt-BR')} / {maxGuards.toLocaleString('pt-BR')}
                 </span>
@@ -513,7 +569,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                     Mercenários
                   </span>
                   <span className="text-2xs text-amber-300 font-bold block">
-                    Elite & Atiradores
+                    Autoridade de mercenários
                   </span>
                 </div>
               </div>
@@ -550,7 +606,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
             {/* Barra de Alocação de Mercenários */}
             <div className="space-y-1 pt-1 border-t border-slate-800">
               <div className="flex items-center justify-between text-2xs font-bold">
-                <span className="text-slate-400">Alocação Atual:</span>
+                <span className="text-slate-400">Autoridade usada:</span>
                 <span className="font-mono text-amber-300 font-black">
                   {mercRecommended.toLocaleString('pt-BR')} / {maxMercs.toLocaleString('pt-BR')}
                 </span>
@@ -576,7 +632,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                     Monstros
                   </span>
                   <span className="text-2xs text-purple-300 font-bold block">
-                    Convocados & Dragões
+                    Dominância dos monstros
                   </span>
                 </div>
               </div>
@@ -613,7 +669,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
             {/* Barra de Alocação de Monstros */}
             <div className="space-y-1 pt-1 border-t border-slate-800">
               <div className="flex items-center justify-between text-2xs font-bold">
-                <span className="text-slate-400">Alocação Atual:</span>
+                <span className="text-slate-400">Dominância usada:</span>
                 <span className="font-mono text-purple-300 font-black">
                   {allocatedMonsters.toLocaleString('pt-BR')} / {maxMonsters.toLocaleString('pt-BR')}
                 </span>
@@ -636,7 +692,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
             {isRare ? 'Comandante da Marcha (Herói)' : 'Capitão da Marcha'}
           </span>
           <span className="text-xs font-extrabold text-emerald-300 bg-emerald-950/80 px-3 py-1 rounded-xl border border-emerald-500/50 shadow-sm">
-            {isRare ? `👑 Herói Ativo (Nv ${profile.heroLevel || 18})` : `👑 Líder: ${activeCaptain.name} (+${captainBonusPercent}%)`}
+            {isRare ? `👑 Herói Ativo (Nv ${profile.heroLevel || 18})` : `👑 Líder: ${activeCaptain.name} · ${captainAbilitySummary}`}
           </span>
         </div>
 
@@ -680,14 +736,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                       }`}
                     >
                       <div className="w-11 h-11 rounded-lg border border-amber-400/60 bg-slate-950 flex items-center justify-center overflow-hidden flex-shrink-0 shadow">
-                        <img
-                          src={`/assets/troops/${cap.id}.png`}
-                          alt={cap.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as any).src = '/assets/troops/alexander.png';
-                          }}
-                        />
+                        <CaptainAvatar captain={getCombatCaptainDefinition(cap)} className="w-full h-full object-cover" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <span className="text-xs sm:text-sm font-black text-white block truncate">
@@ -721,7 +770,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
               />
               <div className="min-w-0">
                 <span className="text-xs sm:text-sm font-black text-white block">
-                  🐉 Dragão (+15% Dano)
+                  🐉 Dragão (+15% assumidos; bônus não conferido)
                 </span>
                 <span className="text-xs font-semibold text-slate-300 block">
                   ⚡ 50 / 750 de Energia
@@ -735,7 +784,13 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
       </details>
 
       {/* 4. VEREDITO TÁTICO & TRAVA DE SEGURANÇA CONTRA DERROTAS */}
-      {!hasEnemyComposition ? null : isDefeat ? (
+      {!hasEnemyComposition ? null : simResult.model?.validationStatus === 'experimental' ? (
+        <div role="alert" className="rounded-2xl border-2 border-amber-500 bg-amber-950/40 p-5 space-y-2">
+          <h2 className="text-lg font-black text-amber-200">Estimativa aproximada de combate</h2>
+          <p className="text-sm text-slate-200">{isDefeat ? 'Derrota' : 'Vitória'} neste cenário calculado. O resultado do jogo pode variar; não há garantia de vitória nem de perdas máximas.</p>
+          <p className="text-xs text-amber-100">O modelo avalia cenários conservadores. No caso de referência, estimou mais baixas que o jogo; isso não garante a mesma margem em outras batalhas.</p>
+        </div>
+      ) : isDefeat ? (
         <div className="bg-gradient-to-r from-red-950 via-rose-950 to-red-950 border-2 border-red-500 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4 animate-fadeIn">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-red-800/80 pb-3">
             <div className="flex items-center gap-3.5">
@@ -744,7 +799,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
               </div>
               <div>
                 <h2 className="text-lg sm:text-xl font-black text-red-100 tracking-wide uppercase flex items-center gap-2">
-                  <span>DERROTA CERTA (100% de Baixas)</span>
+                  <span>Nenhuma formação vencedora encontrada na busca</span>
                   <span className="text-xs bg-red-700 text-white px-2 py-0.5 rounded-md font-bold">NÃO MARCHAR</span>
                 </h2>
                 <p className="text-xs sm:text-sm font-bold text-red-300">
@@ -753,7 +808,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
               </div>
             </div>
             <span className="px-3 py-1.5 rounded-xl bg-red-900 border border-red-500 text-red-200 text-xs font-black">
-              Perdas Previstas: 100%
+              Resultado previsto: derrota
             </span>
           </div>
 
@@ -794,12 +849,12 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
           )}
 
           {/* ALTERNATIVA RÁPIDA: NÍVEL INDICADO PARA SUBIR DE NÍVEL RÁPIDO */}
-          {optimalFarm && (
+          {optimalFarm?.isSafe && (
             <div className="mt-2 pt-3 border-t border-red-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-red-950/70 p-3.5 rounded-xl border border-red-700/50">
               <div className="text-xs text-amber-200 font-bold flex items-center gap-2">
                 <Zap className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0 animate-pulse" />
                 <span>
-                  💡 Alternativa para farmar XP rápido sem perdas nobres: <strong>Nv {optimalFarm.optimalLevel}</strong> ({optimalFarm.optimalXp.toLocaleString('pt-BR')} XP com vitória segura).
+                  💡 Nível sem perdas previstas encontrado: <strong>Nv {optimalFarm.optimalLevel}</strong> ({optimalFarm.optimalXp.toLocaleString('pt-BR')} XP). Busca limitada; confira a simulação ao trocar de alvo.
                 </span>
               </div>
               {onUpdateMonsterTarget && currentTemplate && (
@@ -822,10 +877,10 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-black text-emerald-100 tracking-wide uppercase">
-                Vitória Perfeita — Hit K.O. (0 Baixas em Todo o Exército)
+                Vitória prevista sem perdas
               </h2>
               <p className="text-xs font-semibold text-emerald-300">
-                Dano massivo suficiente para aniquilar o alvo na primeira rodada sem contra-ataque.
+                A formação venceu na simulação sem perder tropas. Confira a prévia antes de marchar.
               </p>
             </div>
           </div>
@@ -841,7 +896,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                 Atenção: Vitória com Perda de Nobres (T2+)
               </h2>
               <p className="text-xs font-semibold text-rose-300">
-                Esta marcha causará <strong>{t2Casualties.toLocaleString('pt-BR')} mortos</strong> em tropas T2+! Ajuste a composição com Mercenários ou bucha adequada para evitar perda de nobres.
+                A simulação estima <strong>{t2Casualties.toLocaleString('pt-BR')} mortos</strong> em tropas T2+. Confira os atributos e a previsão do jogo antes de iniciar a marcha.
               </p>
             </div>
           </div>
@@ -854,10 +909,10 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-black text-amber-100 tracking-wide uppercase">
-                Vitória Garantida com Bucha de Absorção (G1)
+                Vitória prevista com perdas apenas no nível 1
               </h2>
               <p className="text-xs font-semibold text-slate-300">
-                Tropas T2+ e Mercenários 100% protegidos! Baixas absorvidas pela bucha G1 ({g1Casualties.toLocaleString('pt-BR')} mortos).
+                A simulação não prevê perdas no nível 2 ou superior. Perdas de nível 1: {g1Casualties.toLocaleString('pt-BR')}.
               </p>
             </div>
           </div>
@@ -865,28 +920,47 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
       )}
 
       {/* Composição pronta para enviar no jogo */}
+      <p className="rounded-xl border border-slate-700 bg-slate-950/80 p-3 text-xs text-slate-300">
+        Busca limitada de formações: prioriza vitória, depois preserva monstros e mercenários do maior nível para o menor; em seguida preserva guardas e especialistas por nível.
+        Essa prioridade é qualitativa, sem estimativa de preço ou pesos monetários. A melhor opção é escolhida entre as formações avaliadas.
+        {' '}A simulação usa regras simplificadas de iniciativa, escolha de alvo e dragão. O dano parcial é acumulado entre golpes no mesmo grupo como modelo conservador, ainda pendente de validação com relatórios do jogo. O resultado pode diferir do jogo.
+        {isDefeat && ' Nenhuma vitória foi encontrada; isso não prova que vencer seja impossível.'}
+        {optimalFarm && !optimalFarm.zeroLossesInModel && ' A busca de níveis não encontrou vitória sem perdas.'}
+      </p>
       <div className={`bg-[#0b0f19] p-4 sm:p-6 rounded-2xl border ${isDefeat ? 'border-red-600/70' : 'border-amber-500/40'} space-y-4 shadow-xl`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-700/80 pb-3 gap-2">
           <div>
             <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-300 flex items-center gap-2">
               Composição da marcha
             </span>
+            <div role="status" aria-live="polite" className="mt-2 rounded-lg border border-amber-500/40 bg-slate-900 px-3 py-2 text-sm text-slate-200">
+              <span className="block font-semibold">Perdas estimadas pelo simulador</span>
+              <strong className="text-lg text-amber-300">
+                {!hasEnemyComposition ? 'Indisponível: faltam tropas inimigas' : estimatedLosses.percent === null ? 'Sem tropas enviadas' : `${estimatedLosses.percent.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% — ${estimatedLosses.totalLost.toLocaleString('pt-BR')} de ${estimatedLosses.totalSent.toLocaleString('pt-BR')} unidades`}
+              </strong>
+              <span className="block text-xs text-slate-400">Baixas previstas ÷ tropas enviadas. Capitão e dragão ficam fora da contagem. Pode diferir do jogo.</span>
+            </div>
             <span className="text-xs font-semibold text-slate-400 block pt-1">
               {!hasEnemyComposition
                 ? 'Sugestão baseada no seu estoque. Cadastre as tropas inimigas para validar antes de marchar.'
                 : isDefeat
                 ? '⚠️ ATENÇÃO: As tropas abaixo NÃO são suficientes para vencer. Treine mais soldados antes de marchar!'
-                : '⌨️ Digite ou deslize os campos no Total Battle com as quantidades exatas abaixo:'}
+                : 'Composição calculada com estimativa aproximada. Confira o alvo, as tropas e os bônus antes de usar.'}
             </span>
-            {hasStackedGuardTiers && (
+            {hasStackedTroopLayers && (
               <span className="text-[11px] font-medium text-cyan-300 block pt-1">
-                Empilhamento aplicado: a camada inferior é dimensionada por (ataque estimado do nível superior × quantidade superior) ÷ ataque estimado do nível inferior. Estoque, capacidade e simulação limitam as quantidades.
+                Empilhamento do vídeo: base de 100 unidades do nível mais alto; cada nível inferior usa (ataque estimado do nível mais alto × 100) ÷ ataque estimado do nível inferior. Estoque e capacidade limitam a escala.
               </span>
+            )}
+            {unmodeledOwnedTroops.length > 0 && (
+              <div role="alert" className="mt-2 rounded-lg border border-amber-500/50 bg-amber-950/40 px-3 py-2 text-[11px] font-semibold text-amber-200">
+                O estoque tem tropas sem dados de combate no catálogo; elas ficam fora deste cálculo: {unmodeledOwnedTroops.map(({ troopId, count }) => `${troopId} (${count.toLocaleString('pt-BR')})`).join(', ')}. Informe ataque e vida dessas unidades para incluí-las no plano.
+              </div>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs sm:text-sm font-extrabold text-slate-200 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700">
-              Capacidade de Guardas: <strong className="text-amber-300 font-black">{allocatedGuards.toLocaleString('pt-BR')}</strong> / {maxGuards.toLocaleString('pt-BR')}
+              Liderança usada: <strong className="text-amber-300 font-black">{allocatedGuards.toLocaleString('pt-BR')}</strong> / {maxGuards.toLocaleString('pt-BR')}
             </span>
             <button
               type="button"
@@ -954,7 +1028,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
               <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800 flex-shrink-0">
                 <div className="text-left sm:text-right">
                   <span className="text-2xs font-extrabold text-slate-400 block uppercase tracking-wider">
-                    Digitar no Jogo
+                    Quantidade calculada
                   </span>
                   <span className={`text-xl sm:text-2xl font-mono font-black ${isDefeat ? 'text-rose-400' : 'text-amber-300'}`}>
                     {unit.count.toLocaleString('pt-BR')}
@@ -985,7 +1059,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                 <Swords className="h-4 w-4 text-sky-300" /> Tropas em ataque
                 <span className="rounded-full bg-sky-950 px-2 py-0.5 text-xs text-sky-200">{activeMarches.length}</span>
               </h2>
-              <p className="mt-1 text-xs text-slate-400">Informe quantas morreram. As tropas sobreviventes voltam ao estoque automaticamente.</p>
+              <p className="mt-1 text-xs text-slate-400">Registre as baixas após o combate ou remova uma reserva feita por engano. Remover devolve todas as tropas e apaga a marcha do histórico.</p>
             </div>
           </div>
 
@@ -1011,6 +1085,16 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                         ))}
                       </div>
                     </div>
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={!onCancelMarch}
+                      onClick={() => handleCancelMarch(march)}
+                      title="Desfaz a reserva, devolve todas as tropas e remove esta marcha do histórico"
+                      className="rounded-xl border border-rose-500/60 bg-rose-950 px-3.5 py-2 text-xs font-black text-rose-200 transition hover:bg-rose-900 disabled:opacity-50"
+                    >
+                      Remover marcha
+                    </button>
                     <button
                       type="button"
                       onClick={() => setEditingReturnMarchId(isEditingReturn ? null : march.id)}
@@ -1018,6 +1102,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                     >
                       {isEditingReturn ? 'Fechar' : 'Registrar baixas'}
                     </button>
+                    </div>
                   </div>
 
                   {isEditingReturn && (
@@ -1079,6 +1164,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
             attackHistory.map((entry) => {
               const predictedDeathTotal = (entry.predictedCasualties || []).reduce((total, casualty) => total + casualty.lostCount, 0);
               const actualDeathTotal = (entry.actualDeaths || []).reduce((total, casualty) => total + casualty.count, 0);
+              const savedComparison = compareCasualtyEstimate(predictedDeathTotal, actualDeathTotal);
               const returnedTotal = (entry.returnedSquads || []).reduce((total, squad) => total + squad.count, 0);
               const hasActualReport = entry.status === 'completed';
 
@@ -1119,6 +1205,12 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
                         ? ` • Dano previsto ${entry.predictedPlayerDamage.toLocaleString('pt-BR')} / ${entry.predictedEnemyHp.toLocaleString('pt-BR')} HP`
                         : ''}
                     </p>
+                    <p className="text-xs text-amber-200">{entry.simulationSnapshot
+                      ? `Contexto completo salvo • motor ${entry.simulationSnapshot.engineVersion} • atributos, bônus, tropas e turnos preservados`
+                      : 'Registro antigo: contexto completo da previsão indisponível; atributos e bônus históricos não podem ser reconstruídos com certeza.'}</p>
+                    {hasActualReport && <p className="text-xs text-slate-300">{savedComparison.direction === 'equal'
+                      ? 'A previsão salva coincidiu com o total real de baixas.'
+                      : `A previsão salva ficou ${savedComparison.direction === 'above' ? 'acima' : 'abaixo'} do real em ${Math.abs(savedComparison.difference).toLocaleString('pt-BR')} unidades. Essa comparação não garante a margem de outra batalha.`}</p>}
                     <div className="flex flex-wrap gap-2">
                       {entry.squads.map((squad) => {
                         const predictedDeaths = entry.predictedCasualties?.find((casualty) => casualty.id === squad.unitId)?.lostCount || 0;
@@ -1145,11 +1237,11 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
       <div className="bg-[#0b0f19] p-4 sm:p-5 rounded-2xl border border-slate-700 space-y-3">
         <div className="flex items-center justify-between border-b border-slate-700/80 pb-2.5">
           <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-300 flex items-center gap-2">
-            Segurança de Marcha & Recompensas Estimadas
+            Resultado experimental & Recompensas Estimadas
           </span>
           <span className={`text-xs font-extrabold flex items-center gap-1.5 ${isDefeat ? 'text-rose-400' : 'text-emerald-300'}`}>
             {isDefeat ? <XCircle className="w-4 h-4 text-rose-400" /> : <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-            {isDefeat ? 'Risco Fatal de Baixas' : '100% Protegido contra Baixas Pesadas'}
+            {isDefeat ? 'Derrota neste cenário' : 'Vitória neste cenário; precisão pendente'}
           </span>
         </div>
 
@@ -1164,7 +1256,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
               <div>
                 <span className="text-xs font-bold text-slate-300 block">Baixas em Tropas T2/T5</span>
                 <span className={`font-mono font-black text-base ${isDefeat ? 'text-rose-400' : 'text-emerald-300'}`}>
-                  {isDefeat ? '100% Perdidas (Derrota)' : nobleCasualties > 0 ? `${nobleCasualties} Perdidas` : '0 Tropas Perdidas'}
+                  {nobleCasualties > 0 ? `${nobleCasualties} Perdidas` : '0 Tropas Perdidas'}
                 </span>
               </div>
             </div>
@@ -1211,7 +1303,7 @@ export const MarchBookView: React.FC<MarchBookViewProps> = ({
           </span>
           <div className="flex items-center gap-2">
             <span className={`text-2xs font-bold px-2 py-0.5 rounded border ${isDefeat ? 'bg-red-950 text-red-300 border-red-700' : 'bg-emerald-950 text-emerald-300 border-emerald-700'}`}>
-              {isDefeat ? 'Resultado: DERROTA' : 'Resultado: VITÓRIA'}
+              {isDefeat ? 'Cenário: DERROTA' : 'Cenário: VITÓRIA (não validada)'}
             </span>
             {showCombatLog ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
           </div>

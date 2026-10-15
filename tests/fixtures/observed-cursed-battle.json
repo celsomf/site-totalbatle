@@ -1,0 +1,268 @@
+{
+  "description": "Anonymized observed battle benchmark. No account profile, stock, personal identifiers, timestamps or raw snapshots.",
+  "troops": [
+    {
+      "id": "g2_mounted",
+      "name": "Cavalgante II",
+      "tier": 2,
+      "troopClass": "mounted",
+      "category": "guardsman",
+      "isMercenary": false,
+      "count": 1020,
+      "baseAttack": 180,
+      "baseHealth": 540,
+      "unitAttack": 252,
+      "unitHealth": 648,
+      "leadershipCost": 2,
+      "aspects": {
+        "bonusVsSiegePercent": 81,
+        "bonusVsRangedPercent": 98,
+        "nativeCriticalPercent": 5
+      }
+    },
+    {
+      "id": "g3_ranged",
+      "name": "Arqueiro III",
+      "tier": 3,
+      "troopClass": "ranged",
+      "category": "guardsman",
+      "isMercenary": false,
+      "count": 241,
+      "baseAttack": 160,
+      "baseHealth": 480,
+      "unitAttack": 285,
+      "unitHealth": 758,
+      "leadershipCost": 1,
+      "aspects": {
+        "bonusVsMeleePercent": 117,
+        "bonusVsFlyingPercent": 151
+      }
+    },
+    {
+      "id": "g3_mounted",
+      "name": "Cavalgante III",
+      "tier": 3,
+      "troopClass": "mounted",
+      "category": "guardsman",
+      "isMercenary": false,
+      "count": 166,
+      "baseAttack": 320,
+      "baseHealth": 960,
+      "unitAttack": 448,
+      "unitHealth": 1152,
+      "leadershipCost": 2,
+      "aspects": {
+        "bonusVsSiegePercent": 122,
+        "bonusVsRangedPercent": 146,
+        "nativeCriticalPercent": 5
+      }
+    },
+    {
+      "id": "g3_melee",
+      "name": "Lanceiro III",
+      "tier": 3,
+      "troopClass": "melee",
+      "category": "guardsman",
+      "isMercenary": false,
+      "count": 1108,
+      "baseAttack": 160,
+      "baseHealth": 480,
+      "unitAttack": 224,
+      "unitHealth": 576,
+      "leadershipCost": 1,
+      "aspects": {
+        "bonusVsBeastsPercent": 180,
+        "bonusVsMountedPercent": 88
+      }
+    },
+    {
+      "id": "epic_monster_hunter_vi",
+      "name": "Caçador de Monstro Épico VI",
+      "tier": 6,
+      "troopClass": "melee",
+      "category": "mercenary",
+      "isMercenary": true,
+      "count": 15,
+      "baseAttack": 2030,
+      "baseHealth": 6090,
+      "unitAttack": 2842,
+      "unitHealth": 7308,
+      "leadershipCost": 1,
+      "aspects": {
+        "combatClassUnverified": true,
+        "revivalCostsUnverified": true,
+        "receivesGuardsmenBonuses": true,
+        "bonusVsEpicMonstersPercent": 609
+      }
+    },
+    {
+      "id": "emerald_dragon",
+      "name": "Dragão Esmeralda (Emerald Dragon)",
+      "tier": 3,
+      "troopClass": "flying",
+      "category": "monster",
+      "isMercenary": false,
+      "count": 128,
+      "baseAttack": 4500,
+      "baseHealth": 13500,
+      "unitAttack": 6075,
+      "unitHealth": 16200,
+      "leadershipCost": 7,
+      "aspects": {
+        "bonusVsGiantsPercent": 72,
+        "bonusVsMountedPercent": 185
+      }
+    },
+    {
+      "id": "stone_gargoyle",
+      "name": "Gárgula de Pedra (Stone Gargoyle)",
+      "tier": 3,
+      "troopClass": "flying",
+      "category": "monster",
+      "isMercenary": false,
+      "count": 25,
+      "baseAttack": 5200,
+      "baseHealth": 15600,
+      "unitAttack": 7020,
+      "unitHealth": 18720,
+      "leadershipCost": 8,
+      "aspects": {
+        "bonusVsMeleePercent": 185,
+        "bonusVsBeastsPercent": 72
+      }
+    }
+  ],
+  "enemies": [
+    {
+      "id": "licantropo",
+      "name": "Licantropo",
+      "tier": 2,
+      "troopClass": "melee",
+      "family": "cursed",
+      "subType": "Fera, Amaldiçoado, Unidade corpo a corpo",
+      "count": 2400,
+      "unitAttack": 360,
+      "unitHealth": 1080,
+      "leadership": 4,
+      "initiative": 10,
+      "aspects": {
+        "description": "Força contra unidades montadas: +45%",
+        "bonusVsMountedPercent": 45
+      }
+    },
+    {
+      "id": "feiticeiro",
+      "name": "Feiticeiro",
+      "tier": 1,
+      "troopClass": "ranged",
+      "family": "cursed",
+      "subType": "Amaldiçoado, Unidade de longo alcance",
+      "count": 2400,
+      "unitAttack": 150,
+      "unitHealth": 450,
+      "leadership": 3,
+      "initiative": 10,
+      "aspects": {
+        "description": "Força contra unidades corpo a corpo: +25%",
+        "bonusVsMeleePercent": 25
+      }
+    }
+  ],
+  "historical": {
+    "totalSent": 2703,
+    "predictedDeaths": 382,
+    "losses": [
+      {
+        "id": "g2_mounted",
+        "lostCount": 293
+      },
+      {
+        "id": "g3_ranged",
+        "lostCount": 0
+      },
+      {
+        "id": "g3_mounted",
+        "lostCount": 0
+      },
+      {
+        "id": "g3_melee",
+        "lostCount": 0
+      },
+      {
+        "id": "epic_monster_hunter_vi",
+        "lostCount": 0
+      },
+      {
+        "id": "emerald_dragon",
+        "lostCount": 89
+      },
+      {
+        "id": "stone_gargoyle",
+        "lostCount": 0
+      }
+    ]
+  },
+  "observed": {
+    "outcome": "VICTORY",
+    "totalDeaths": 1605,
+    "losses": [
+      {
+        "id": "g2_mounted",
+        "lostCount": 648
+      },
+      {
+        "id": "g3_melee",
+        "lostCount": 914
+      },
+      {
+        "id": "emerald_dragon",
+        "lostCount": 43
+      }
+    ],
+    "firstFive": [
+      {
+        "step": 1,
+        "attacker": "licantropo",
+        "defender": "emerald_dragon",
+        "damage": 864000,
+        "killed": 43,
+        "attackers": 2400
+      },
+      {
+        "step": 2,
+        "attacker": "emerald_dragon",
+        "defender": "licantropo",
+        "damage": 587137,
+        "killed": 543,
+        "attackers": 85
+      },
+      {
+        "step": 3,
+        "attacker": "feiticeiro",
+        "defender": "g3_melee",
+        "damage": 450000,
+        "extraDamage": 90000,
+        "killed": 644,
+        "attackers": 2400
+      },
+      {
+        "step": 4,
+        "attacker": "g2_mounted",
+        "defender": "feiticeiro",
+        "damage": 467262,
+        "extraDamage": 179928,
+        "killed": 1038,
+        "attackers": 1020
+      },
+      {
+        "step": 5,
+        "attacker": "stone_gargoyle",
+        "defender": "licantropo",
+        "damage": 533650,
+        "extraDamage": 334100,
+        "killed": 494,
+        "attackers": 25
+      }
+    ]
+  }
+}

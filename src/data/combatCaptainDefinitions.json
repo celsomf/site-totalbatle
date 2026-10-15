@@ -1,0 +1,964 @@
+{
+  "brunhild": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força das unidades voadoras",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          15,
+          15,
+          45,
+          45,
+          105,
+          105
+        ],
+        "target": "flying"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde das unidades voadoras",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          0,
+          15,
+          15,
+          45,
+          45,
+          105
+        ],
+        "target": "flying"
+      }
+    ],
+    "avatarIcon": "/assets/troops/brunhild.png"
+  },
+  "xi_guiying": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força de batedores",
+        "perLevelPercent": 2,
+        "starBonusByLevel": [
+          0,
+          0,
+          5,
+          5,
+          15,
+          15,
+          35,
+          35
+        ],
+        "target": "scouts"
+      },
+      {
+        "stat": "strength",
+        "label": "Força de unidades de longo alcance",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          5,
+          5,
+          15,
+          15,
+          35,
+          35
+        ],
+        "target": "ranged"
+      }
+    ],
+    "avatarIcon": "/assets/troops/xi_guiying.png"
+  },
+  "aydae": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força dos guardas",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          15,
+          15,
+          45,
+          45,
+          105,
+          105
+        ],
+        "target": "guardsmen"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde dos guardas",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          0,
+          15,
+          15,
+          45,
+          45,
+          105
+        ],
+        "target": "guardsmen"
+      }
+    ],
+    "avatarIcon": "/assets/troops/aydae.png"
+  },
+  "farhad": {
+    "bonuses": [
+      {
+        "stat": "research_speed",
+        "label": "Velocidade de pesquisa",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          5,
+          10,
+          20,
+          30,
+          50,
+          70
+        ]
+      }
+    ],
+    "avatarIcon": "/assets/troops/farhad.png"
+  },
+  "alexander": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força das unidades montadas",
+        "perLevelPercent": 2,
+        "starBonusByLevel": [
+          0,
+          0,
+          40,
+          40,
+          120,
+          120,
+          280,
+          280
+        ],
+        "target": "mounted"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde das unidades montadas",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          0,
+          40,
+          40,
+          120,
+          120,
+          280
+        ],
+        "target": "mounted"
+      }
+    ],
+    "avatarIcon": "/assets/troops/alexander.png"
+  },
+  "amanitore": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força da tropa em marchas de grupo",
+        "perLevelPercent": 1.5,
+        "starBonusByLevel": [
+          0,
+          0,
+          15,
+          30,
+          60,
+          90,
+          150,
+          210
+        ],
+        "target": "group_marches"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde da tropa em marchas de grupo",
+        "perLevelPercent": 1.5,
+        "starBonusByLevel": [
+          0,
+          0,
+          15,
+          30,
+          60,
+          90,
+          150,
+          210
+        ],
+        "target": "group_marches"
+      }
+    ],
+    "avatarIcon": "/assets/troops/amanitore.png"
+  },
+  "aurora": {
+    "bonuses": [
+      {
+        "stat": "construction_speed",
+        "label": "Velocidade de construção",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          5,
+          10,
+          20,
+          30,
+          50,
+          70
+        ]
+      }
+    ],
+    "avatarIcon": "/assets/troops/aurora.png"
+  },
+  "beowulf": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força de toda a tropa",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          70,
+          140,
+          210,
+          280,
+          350,
+          420
+        ],
+        "target": "all"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde de toda a tropa",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          70,
+          140,
+          210,
+          280,
+          350,
+          420
+        ],
+        "target": "all"
+      }
+    ],
+    "avatarIcon": "/assets/troops/beowulf.png"
+  },
+  "bernard": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força das unidades de longo alcance",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          15,
+          15,
+          45,
+          45,
+          105,
+          105
+        ],
+        "target": "ranged"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde das unidades de longo alcance",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          0,
+          15,
+          15,
+          45,
+          45,
+          105
+        ],
+        "target": "ranged"
+      }
+    ],
+    "avatarIcon": "/assets/troops/bernard.png"
+  },
+  "brann": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força do corpo de engenheiros",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          5,
+          5,
+          15,
+          15,
+          35,
+          35
+        ],
+        "target": "engineers"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde do corpo de engenheiros",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          0,
+          5,
+          5,
+          15,
+          15,
+          35
+        ],
+        "target": "engineers"
+      }
+    ],
+    "avatarIcon": "/assets/troops/brann.png"
+  },
+  "carter": {
+    "bonuses": [
+      {
+        "stat": "tar_capacity",
+        "label": "Capacidade de alcatrão",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          5,
+          10,
+          20,
+          30,
+          50,
+          70
+        ],
+        "levelCap": 300
+      },
+      {
+        "stat": "crypt_efficiency",
+        "label": "Eficiência em criptas",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          5,
+          10,
+          20,
+          30,
+          50,
+          70
+        ],
+        "levelCap": 300
+      }
+    ],
+    "avatarIcon": "/assets/troops/carter.png"
+  },
+  "cleopatra": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força de toda a tropa",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          15,
+          30,
+          60,
+          90,
+          150,
+          210
+        ],
+        "target": "all"
+      }
+    ],
+    "avatarIcon": "/assets/troops/cleopatra.png"
+  },
+  "dustan": {
+    "bonuses": [
+      {
+        "stat": "conquest_points",
+        "label": "Pontos de Conquista",
+        "perLevelPercent": 0.5,
+        "starBonusByLevel": [
+          0,
+          0,
+          2.5,
+          5,
+          10,
+          15,
+          25,
+          35
+        ]
+      }
+    ],
+    "avatarIcon": "/assets/troops/dustan.png"
+  },
+  "doria": {
+    "bonuses": [
+      {
+        "stat": "valor_points",
+        "label": "Pontos de Bravura após vitória",
+        "perLevelPercent": 0.5,
+        "starBonusByLevel": [
+          0,
+          0,
+          2.5,
+          5,
+          10,
+          15,
+          25,
+          35
+        ],
+        "levelCap": 300
+      }
+    ],
+    "avatarIcon": "/assets/troops/doria.png"
+  },
+  "heimdall": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força de toda a tropa",
+        "perLevelPercent": 1.5,
+        "starBonusByLevel": [
+          0,
+          0,
+          110,
+          220,
+          330,
+          440,
+          550,
+          660
+        ],
+        "target": "all"
+      }
+    ],
+    "avatarIcon": "/assets/troops/heimdall.png"
+  },
+  "helen": {
+    "bonuses": [
+      {
+        "stat": "training_speed",
+        "label": "Velocidade de treinamento",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          30,
+          80,
+          150,
+          230,
+          320,
+          420
+        ]
+      },
+      {
+        "stat": "food_production",
+        "label": "Produção de alimento",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          40,
+          120,
+          240,
+          440,
+          680,
+          1000
+        ]
+      }
+    ],
+    "avatarIcon": "/assets/troops/helen.png"
+  },
+  "hercules": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força da tropa contra monstros épicos",
+        "perLevelPercent": 2,
+        "starBonusByLevel": [
+          0,
+          0,
+          30,
+          90,
+          180,
+          300,
+          510,
+          860
+        ],
+        "target": "epic_monsters"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde da tropa contra monstros épicos",
+        "target": "epic_monsters"
+      }
+    ],
+    "avatarIcon": "/assets/troops/hercules.png"
+  },
+  "ingrid": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força dos monstros",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          15,
+          15,
+          45,
+          45,
+          105,
+          105
+        ],
+        "target": "monsters"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde dos monstros",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          0,
+          15,
+          15,
+          45,
+          45,
+          105
+        ],
+        "target": "monsters"
+      }
+    ],
+    "avatarIcon": "/assets/troops/ingrid.png"
+  },
+  "leonidas": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força das unidades corpo a corpo",
+        "perLevelPercent": 2,
+        "starBonusByLevel": [
+          0,
+          0,
+          40,
+          40,
+          120,
+          120,
+          280,
+          280
+        ],
+        "target": "melee"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde das unidades corpo a corpo",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          0,
+          40,
+          40,
+          120,
+          120,
+          280
+        ],
+        "target": "melee"
+      }
+    ],
+    "avatarIcon": "/assets/troops/leonidas.png"
+  },
+  "logos": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força dos especialistas",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          5,
+          5,
+          15,
+          15,
+          35,
+          35
+        ],
+        "target": "specialists"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde dos especialistas",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          0,
+          5,
+          5,
+          15,
+          15,
+          35
+        ],
+        "target": "specialists"
+      }
+    ],
+    "avatarIcon": "/assets/troops/logos.png"
+  },
+  "lucius": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força das unidades montadas",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          15,
+          15,
+          45,
+          45,
+          105,
+          105
+        ],
+        "target": "mounted"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde das unidades montadas",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          0,
+          15,
+          15,
+          45,
+          45,
+          105
+        ],
+        "target": "mounted"
+      }
+    ],
+    "avatarIcon": "/assets/troops/lucius.png"
+  },
+  "minamoto": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força das unidades de longo alcance",
+        "perLevelPercent": 2,
+        "starBonusByLevel": [
+          0,
+          0,
+          40,
+          40,
+          120,
+          120,
+          280,
+          280
+        ],
+        "target": "ranged"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde das unidades de longo alcance",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          0,
+          40,
+          40,
+          120,
+          120,
+          280
+        ],
+        "target": "ranged"
+      }
+    ],
+    "avatarIcon": "/assets/troops/minamoto.png"
+  },
+  "proscope": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força dos batedores",
+        "perLevelPercent": 2,
+        "starBonusByLevel": [
+          0,
+          0,
+          15,
+          15,
+          45,
+          45,
+          105,
+          105
+        ],
+        "target": "scouts"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde dos batedores",
+        "perLevelPercent": 2,
+        "starBonusByLevel": [
+          0,
+          0,
+          0,
+          15,
+          15,
+          45,
+          45,
+          105
+        ],
+        "target": "scouts"
+      }
+    ],
+    "avatarIcon": "/assets/troops/proscope.png"
+  },
+  "ramses_II": {
+    "bonuses": [
+      {
+        "stat": "health",
+        "label": "Saúde de toda a tropa",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          15,
+          30,
+          60,
+          90,
+          150,
+          210
+        ],
+        "target": "all"
+      }
+    ],
+    "avatarIcon": "/assets/troops/ramses_II.png"
+  },
+  "skadi": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força dos guardas",
+        "perLevelPercent": 2,
+        "starBonusByLevel": [
+          0,
+          0,
+          200,
+          400,
+          600,
+          800,
+          1000,
+          1200
+        ],
+        "target": "guardsmen"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde dos guardas",
+        "perLevelPercent": 2,
+        "starBonusByLevel": [
+          0,
+          0,
+          200,
+          400,
+          600,
+          800,
+          1000,
+          1200
+        ],
+        "target": "guardsmen"
+      }
+    ],
+    "avatarIcon": "/assets/troops/skadi.png"
+  },
+  "sofia": {
+    "bonuses": [
+      {
+        "stat": "health",
+        "label": "Saúde de toda a tropa",
+        "perLevelPercent": 0.5,
+        "starBonusByLevel": [
+          0,
+          0,
+          2.5,
+          5,
+          10,
+          15,
+          25,
+          35
+        ],
+        "target": "all"
+      }
+    ],
+    "avatarIcon": "/assets/troops/sofia.png"
+  },
+  "stror": {
+    "bonuses": [
+      {
+        "stat": "carrying_capacity",
+        "label": "Capacidade de carga",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          15,
+          30,
+          60,
+          90,
+          150,
+          210
+        ]
+      },
+      {
+        "stat": "resource_gathering",
+        "label": "Velocidade de coleta",
+        "perLevelPercent": 2.5,
+        "starBonusByLevel": [
+          0,
+          0,
+          15,
+          30,
+          60,
+          90,
+          150,
+          210
+        ]
+      }
+    ],
+    "avatarIcon": "/assets/troops/stror.png"
+  },
+  "tengel": {
+    "bonuses": [
+      {
+        "stat": "march_distance",
+        "label": "Distância de marcha",
+        "perLevelPercent": 0.2,
+        "starBonusByLevel": [
+          0,
+          0,
+          5,
+          10,
+          20,
+          30,
+          50,
+          70
+        ]
+      },
+      {
+        "stat": "march_speed",
+        "label": "Velocidade de marcha",
+        "perLevelPercent": 0.5,
+        "starBonusByLevel": [
+          0,
+          0,
+          5,
+          10,
+          20,
+          30,
+          50,
+          70
+        ]
+      }
+    ],
+    "avatarIcon": "/assets/troops/tengel.png"
+  },
+  "wu_zetian": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força das unidades voadoras",
+        "perLevelPercent": 2,
+        "starBonusByLevel": [
+          0,
+          0,
+          40,
+          40,
+          120,
+          120,
+          280,
+          280
+        ],
+        "target": "flying"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde das unidades voadoras",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          0,
+          40,
+          40,
+          120,
+          120,
+          280
+        ],
+        "target": "flying"
+      }
+    ],
+    "avatarIcon": "/assets/troops/wu_zetian.png"
+  },
+  "ye_ho_sung": {
+    "bonuses": [
+      {
+        "stat": "strength",
+        "label": "Força das unidades corpo a corpo",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          15,
+          15,
+          45,
+          45,
+          105,
+          105
+        ],
+        "target": "melee"
+      },
+      {
+        "stat": "health",
+        "label": "Saúde das unidades corpo a corpo",
+        "perLevelPercent": 1,
+        "starBonusByLevel": [
+          0,
+          0,
+          0,
+          15,
+          15,
+          45,
+          45,
+          105
+        ],
+        "target": "melee"
+      }
+    ],
+    "avatarIcon": "/assets/troops/ye_ho_sung.png"
+  }
+}

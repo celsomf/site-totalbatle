@@ -25,6 +25,7 @@ export function App() {
     createNewProfile,
     deleteProfile,
     updateProfile,
+    cancelActiveMarch,
     updateCaptainLevel,
     updateCaptainStars,
     toggleSelectCaptain,
@@ -290,6 +291,7 @@ export function App() {
               }}
               targetMonster={selectedMonster}
               onUpdateMonsterTarget={setSelectedMonster}
+              onCancelMarch={cancelActiveMarch}
               onUpdateProfile={updateProfile}
             />
           </div>

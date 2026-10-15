@@ -67,6 +67,69 @@ describe('Motor de Despacho Dinâmico de Tropas e Combate', () => {
     expect(g1Dispatched?.count).toBeGreaterThan(0);
   });
 
+  it('respeita os custos de Liderança, Autoridade e Dominância ao preencher cada limite', () => {
+    const constrainedProfile: PlayerProfile = {
+      ...profile,
+      maxMarchCapacity: 5,
+      mercenaryCapacity: 2,
+      specialCapacity: 4,
+    };
+    const target = {
+      ...targetMonster,
+      enemySquads: [
+        {
+          id: 'chimera_capacity_test',
+          name: 'Chimera de teste',
+          tier: 6,
+          family: 'epic' as const,
+          troopClass: 'melee' as const,
+          unitAttack: 100000,
+          unitHealth: 300000,
+          count: 100000,
+          initiative: 10,
+          leadership: 74,
+        },
+        {
+          id: 'harpy_capacity_test',
+          name: 'Harpy de teste',
+          tier: 3,
+          family: 'epic' as const,
+          troopClass: 'ranged' as const,
+          unitAttack: 100000,
+          unitHealth: 300000,
+          count: 100000,
+          initiative: 10,
+          leadership: 10,
+        },
+      ],
+    };
+    const troops = DEFAULT_TROOPS.map((troop) => ({
+      ...troop,
+      ownedCount: troop.id === 'g1_ranged' ? 1
+        : troop.id === 'g2_mounted' ? 10
+        : troop.id === 'epic_monster_hunter_v' ? 10
+        : troop.id === 'm3_golem' ? 10
+        : 0,
+      isUnlocked: true,
+    }));
+
+    const dispatched = buildDispatchedTroops(troops, constrainedProfile, target, captain, false);
+    const usedByCategory = (category: 'guardsman' | 'specialist' | 'mercenary' | 'monster') =>
+      dispatched
+        .filter((troop) => troop.category === category)
+        .reduce((sum, troop) => sum + troop.count * (troop.leadershipCost || 1), 0);
+
+    expect(usedByCategory('guardsman') + usedByCategory('specialist')).toBeLessThanOrEqual(5);
+    expect(usedByCategory('mercenary')).toBeLessThanOrEqual(2);
+    expect(usedByCategory('monster')).toBeLessThanOrEqual(4);
+    // A busca pode deixar capacidade livre se o resultado não piorar.
+    expect(simulateCombat(dispatched, target.enemySquads).outcome).toBe('DEFEAT');
+    for (const sent of dispatched) {
+      expect(Number.isInteger(sent.count)).toBe(true);
+      expect(sent.count).toBeLessThanOrEqual(troops.find((troop) => troop.id === sent.id)!.ownedCount);
+    }
+  });
+
   it('deve utilizar tropas customizadas criadas pelo usuário', () => {
     const customTroop: TroopUnit = {
       id: 'custom_dragon_knight',

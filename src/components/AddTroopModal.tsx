@@ -19,11 +19,13 @@ export const AddTroopModal: React.FC<AddTroopModalProps> = ({
   onClose,
   onAddTroop,
 }) => {
-  const { troops } = useGameCatalog();
+  const { troops, refreshInBackground } = useGameCatalog();
   const [selectedCategory, setSelectedCategory] = useState<TroopCategory>(initialCategory);
   const [selectedClass, setSelectedClass] = useState<TroopClass | 'all'>('all');
   const [selectedTroopId, setSelectedTroopId] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(500);
+
+  useEffect(() => { if (isOpen) void refreshInBackground(); }, [isOpen, refreshInBackground]);
 
   // Sync initialCategory when modal opens
   useEffect(() => {
@@ -32,7 +34,7 @@ export const AddTroopModal: React.FC<AddTroopModalProps> = ({
       setSelectedClass('all');
       const firstInCat = troops.find((t) => t.category === initialCategory);
       if (firstInCat) {
-        setSelectedTroopId(firstInCat.id);
+        setSelectedTroopId(previous => troops.some(unit => unit.id === previous && unit.category === initialCategory) ? previous : firstInCat.id);
       }
     }
   }, [isOpen, initialCategory, troops]);
@@ -220,10 +222,13 @@ export const AddTroopModal: React.FC<AddTroopModalProps> = ({
                     <Heart className="w-3 h-3 text-emerald-400" /> {activeTroop.baseHealth.toLocaleString('pt-BR')}
                   </span>
                   <span>•</span>
-                  <span>Lid: <strong className="text-white font-mono">{activeTroop.leadershipCost}</strong></span>
+                  <span>{activeTroop.category === 'mercenary' ? 'Autoridade' : 'Lid'}: <strong className="text-white font-mono">{activeTroop.leadershipCost}</strong></span>
                   <span>•</span>
                   <span>Vel: <strong className="text-white font-mono">{activeTroop.speed || 50}</strong></span>
                 </div>
+                {activeTroop.aspects?.bonusVsEpicMonstersPercent ? <p className="text-xs text-amber-300">+{activeTroop.aspects.bonusVsEpicMonstersPercent}% de força somente contra monstros épicos.</p> : null}
+                {activeTroop.aspects?.receivesGuardsmenBonuses ? <p className="text-xs text-slate-300">Recebe bônus de Guardas. Consome autoridade de Mercenários.</p> : null}
+                {activeTroop.aspects?.combatClassUnverified ? <p className="text-xs text-amber-300">Classe de combate ainda não confirmada pela ficha.</p> : null}
               </div>
             </div>
           )}

@@ -30,6 +30,7 @@ interface GameCatalogContextValue {
   monsters: GameCatalogData['monsters'];
   templates: RuntimeMonsterTemplate[];
   refresh: () => Promise<void>;
+  refreshInBackground: () => Promise<void>;
   saveFormation: (templateId: string, level: number, squads: EnemySquadUnit[]) => Promise<void>;
   copyFormation: (templateId: string, sourceLevel: number, destinationLevels: number[]) => Promise<number>;
   legacyFormationCount: number;
@@ -143,6 +144,27 @@ export const GameCatalogProvider: React.FC<React.PropsWithChildren> = ({ childre
 
   useEffect(() => { void refresh(); }, [refresh]);
 
+  const catalogRefreshInFlight = useRef(false);
+  const refreshInBackground = useCallback(async () => {
+    if (catalogRefreshInFlight.current) return;
+    catalogRefreshInFlight.current = true;
+    try {
+      const next = await fetchGameCatalogFromDb();
+      if (next.troops.length && next.monsters.length && next.templates.length) {
+        setData(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
+      }
+    } catch (refreshError) {
+      console.warn('Não foi possível atualizar o catálogo; mantendo a última leitura.', refreshError);
+    } finally { catalogRefreshInFlight.current = false; }
+  }, []);
+
+  useEffect(() => {
+    const handleFocus = () => { if (document.visibilityState === 'visible') void refreshInBackground(); };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+    return () => { window.removeEventListener('focus', handleFocus); document.removeEventListener('visibilitychange', handleFocus); };
+  }, [refreshInBackground]);
+
   const templates = useMemo(() => (data ? hydrateTemplates(data) : []), [data]);
 
   const saveFormation = useCallback(async (templateId: string, level: number, squads: EnemySquadUnit[]) => {
@@ -195,6 +217,7 @@ export const GameCatalogProvider: React.FC<React.PropsWithChildren> = ({ childre
     monsters: data?.monsters || [],
     templates,
     refresh,
+    refreshInBackground,
     saveFormation,
     copyFormation,
     legacyFormationCount: legacyDraft?.formationCount || 0,
@@ -203,7 +226,7 @@ export const GameCatalogProvider: React.FC<React.PropsWithChildren> = ({ childre
     legacyImportResult,
     importLegacyFormations,
     legacyImportDone,
-  }), [data, error, importLegacyFormations, legacyDraft, legacyImportDone, legacyImportResult, legacyImporting, loading, refresh, saveFormation, templates, copyFormation]);
+  }), [data, error, importLegacyFormations, legacyDraft, legacyImportDone, legacyImportResult, legacyImporting, loading, refresh, refreshInBackground, saveFormation, templates, copyFormation]);
 
   return <GameCatalogContext.Provider value={value}>{children}</GameCatalogContext.Provider>;
 };

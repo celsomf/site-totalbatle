@@ -210,7 +210,7 @@ export const CaptainsView: React.FC<CaptainsViewProps> = ({
                     <p className={`text-2xs font-bold mt-1 ${stats.primaryBonusColor}`}>
                       {stats.primaryBonusFormatted}
                     </p>
-                    {captain.marchSpeedBonusPercent > 0 && captain.specialty !== 'speed' && (
+                    {(captain.marchSpeedBonusPercent ?? 0) > 0 && captain.specialty !== 'speed' && (
                       <p className="text-3xs font-semibold text-slate-400">
                         +{stats.marchSpeedBonusPercent.toFixed(1)}% Vel.
                       </p>

@@ -74,7 +74,7 @@ export const BattlePreview: React.FC<BattlePreviewProps> = ({
                 : 'bg-emerald-950 text-emerald-200 border-emerald-500'
             }`}>
               {isDefeat ? <Skull className="w-3.5 h-3.5 text-rose-400" /> : <Crown className="w-3.5 h-3.5 text-amber-300" />}
-              <span>{isDefeat ? 'DERROTA PREVISTA' : 'VITÓRIA PREVISTA'}</span>
+              <span>{isDefeat ? 'DERROTA NO CENÁRIO' : 'VITÓRIA NO CENÁRIO — ESTIMATIVA APROXIMADA'}</span>
             </div>
           )}
 
@@ -182,7 +182,7 @@ export const BattlePreview: React.FC<BattlePreviewProps> = ({
                     </div>
                     <div className="min-w-0">
                       <span className="text-xs font-black text-white block truncate">{captain.name}</span>
-                      <span className="text-2xs font-bold text-emerald-400">Nv {captain.level || 15}</span>
+                      <span className="text-2xs font-bold text-emerald-400">Nv {profile.captainLevels[captain.id] || captain.level || 1}</span>
                     </div>
                   </div>
 

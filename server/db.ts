@@ -133,6 +133,7 @@ export async function initDatabase() {
         category VARCHAR(30) NOT NULL,
         tier INT NOT NULL,
         troop_class VARCHAR(30) NOT NULL,
+          initiative INT,
         base_attack INT NOT NULL,
         base_health INT NOT NULL,
         revival_silver_cost INT NOT NULL DEFAULT 0,
@@ -147,6 +148,8 @@ export async function initDatabase() {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    await client.query('ALTER TABLE troop_catalog ADD COLUMN IF NOT EXISTS initiative INT');
 
     // 7. Alvos por família e nível. A formação de cada alvo é composta pelas linhas
     // de monster_formation_units; uma combinação monstro + alvo só aparece uma vez.

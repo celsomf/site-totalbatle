@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import { pool, initDatabase } from './db';
 import { isCatalogWriteAuthorized } from './gameCatalog';
 import { mutateCatalogFormations, readCatalog } from './catalogApi';
+import { removeEnemyTroopProfileEntries } from '../src/domain/ownTroops';
+import { reconcileLegacySpy } from '../src/domain/legacyTroops';
 
 dotenv.config();
 
@@ -168,7 +170,10 @@ app.get(['/api/profile', '/api/profile/:id'], async (req, res) => {
 // POST /api/profile or /api/profile/:id (Save / Update entire profile)
 app.post(['/api/profile', '/api/profile/:id'], async (req, res) => {
   try {
-    const p = req.body;
+    if (JSON.stringify(req.body.activeMarches || []).includes('"berserker"')) {
+      return res.status(400).json({ error: 'Berserker é um inimigo e não pode ser reservado como tropa própria.' });
+    }
+    const p = reconcileLegacySpy(removeEnemyTroopProfileEntries(req.body));
     const profileId = req.params.id || p.id || 'main_profile';
     const client = await pool.connect();
 

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { TroopUnit, PlayerProfile } from '../types';
 import { TroopAvatar } from './TroopAvatar';
+import { DEFAULT_CAPTAINS } from '../data/captains';
+import { calculateUnitCombatStats } from '../utils/combatSimulator';
 import { X, Swords, Heart, Coins, Crosshair, Sparkles, Trash2, Check, Edit3, Save } from 'lucide-react';
 
 interface TroopDetailModalProps {
@@ -35,47 +37,15 @@ export const TroopDetailModal: React.FC<TroopDetailModalProps> = ({
     setSaveSuccess(false);
   }, [troop]);
 
-  // Exact account bonuses based on in-game screenshots and profile
-  const getAccountBonuses = () => {
-    let strengthBonus = 111.5; // Default guardsman
-    let healthBonus = 25.5;
-
-    if (troop.category === 'specialist') {
-      if (troop.troopClass === 'ranged') {
-        strengthBonus = troop.id.includes('spy') || troop.id.includes('jaeger') || troop.id.includes('panoptic') ? 121.5 : 99.0;
-        healthBonus = 25.5;
-      } else if (troop.troopClass === 'melee') {
-        strengthBonus = 77.0;
-        healthBonus = 25.5;
-      } else if (troop.troopClass === 'mounted') {
-        strengthBonus = 76.5;
-        healthBonus = 25.5;
-      } else if (troop.troopClass === 'flying') {
-        strengthBonus = 75.5;
-        healthBonus = 27.5;
-      }
-    } else if (troop.category === 'guardsman') {
-      strengthBonus = profile?.academyBonus?.guardsmenAttack || 111.5;
-      healthBonus = profile?.academyBonus?.guardsmenHealth || 25.5;
-    } else if (troop.category === 'monster') {
-      strengthBonus = profile?.academyBonus?.monstersAttack || 88.0;
-      healthBonus = profile?.academyBonus?.monstersHealth || 40.5;
-    }
-
-    return {
-      carryingCapacity: 4.0,
-      health: healthBonus,
-      marchSpeed: 41.0,
-      strength: strengthBonus,
-      trainingCost: 29.0,
-      trainingSpeed: 57.7,
-      revivalReductionMultiplier: 1.74,
-    };
-  };
-
-  const accountBonuses = getAccountBonuses();
-  const effectiveAttack = Math.round(editAttack * (1 + accountBonuses.strength / 100));
-  const effectiveHealth = Math.round(editHealth * (1 + accountBonuses.health / 100));
+  // Share the simulator's sourced inputs. The old panel fabricated account bonuses
+  // from hard-coded values and treated all mercenaries as a default guardsman.
+  const captain = DEFAULT_CAPTAINS.find(entry => entry.id === profile?.selectedCaptainId);
+  const effective = profile && captain
+    ? calculateUnitCombatStats({ ...troop, customAttack: editAttack, customHealth: editHealth }, profile, captain, 0, 0)
+    : { unitAttack: editAttack, unitHealth: editHealth };
+  const effectiveAttack = effective.unitAttack;
+  const effectiveHealth = effective.unitHealth;
+  const accountBonuses = { strength: (effectiveAttack / editAttack - 1) * 100, health: (effectiveHealth / editHealth - 1) * 100 };
 
   const handleSave = () => {
     if (onUpdateCustomStat) {
@@ -244,24 +214,24 @@ export const TroopDetailModal: React.FC<TroopDetailModalProps> = ({
             </h3>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-slate-300 font-semibold">
               <div className="flex justify-between">
-                <span className="text-slate-400">Liderança:</span>
+                <span className="text-slate-400">{troop.category === 'mercenary' ? 'Autoridade:' : troop.category === 'monster' ? 'Dominância:' : 'Liderança:'}</span>
                 <strong className="text-white font-mono">{troop.leadershipCost}</strong>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Velocidade:</span>
-                <strong className="text-white font-mono">{troop.speed || 50}</strong>
+                <strong className="text-white font-mono">{troop.speed ?? 'Não informada'}</strong>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Iniciativa:</span>
-                <strong className="text-white font-mono">10</strong>
+                <strong className="text-white font-mono">{troop.initiative ?? 'Não informada'}</strong>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Consumo de Comida:</span>
-                <strong className="text-white font-mono">{troop.foodConsumption || 5}</strong>
+                <strong className="text-white font-mono">{troop.foodConsumption ?? 'Não informado'}</strong>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Capacidade de Carga:</span>
-                <strong className="text-white font-mono">{troop.capacity || 100}</strong>
+                <strong className="text-white font-mono">{troop.capacity ?? 'Não informada'}</strong>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Estoque no Quartel:</span>
@@ -277,6 +247,9 @@ export const TroopDetailModal: React.FC<TroopDetailModalProps> = ({
               Características da Tropa (Features)
             </h3>
             <div className="space-y-1.5 text-xs">
+              {troop.aspects?.bonusVsEpicMonstersPercent ? <p className="text-emerald-300">Força somente contra monstros épicos: +{troop.aspects.bonusVsEpicMonstersPercent}%</p> : null}
+              {troop.aspects?.receivesGuardsmenBonuses ? <p className="text-slate-300">Guarda: recebe bônus de Guardas; usa autoridade de Mercenários.</p> : null}
+              {troop.aspects?.combatClassUnverified ? <p className="text-amber-300">Classe de combate provisória; a ficha recebida não a informa.</p> : null}
               {troop.aspects?.isPvpDoubled && (
                 <div className="bg-[#111827] p-2.5 rounded-lg border border-slate-700/80 flex items-center justify-between">
                   <span className="text-slate-300 font-medium">Batalha PvP contra outros jogadores:</span>
@@ -344,7 +317,7 @@ export const TroopDetailModal: React.FC<TroopDetailModalProps> = ({
           <div className="bg-[#0b0f19] p-4 rounded-xl border border-slate-700/80 space-y-2.5 text-xs">
             <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-700/80 pb-1.5">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              Bônus da Conta (Bonuses)
+              Bônus considerados pelo modelo (sem dragão)
             </h3>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-slate-300 font-semibold">
               <div className="flex justify-between">
@@ -355,27 +328,8 @@ export const TroopDetailModal: React.FC<TroopDetailModalProps> = ({
                 <span className="text-slate-400">Saúde:</span>
                 <strong className="text-emerald-400 font-mono">+{accountBonuses.health.toFixed(1)}%</strong>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Velocidade de Marcha:</span>
-                <strong className="text-emerald-400 font-mono">+{accountBonuses.marchSpeed.toFixed(1)}%</strong>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Capacidade de Carga:</span>
-                <strong className="text-emerald-400 font-mono">+{accountBonuses.carryingCapacity.toFixed(1)}%</strong>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Custo de Treinamento:</span>
-                <strong className="text-amber-300 font-mono">+{accountBonuses.trainingCost.toFixed(1)}%</strong>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Velocidade de Treinamento:</span>
-                <strong className="text-emerald-400 font-mono">+{accountBonuses.trainingSpeed.toFixed(1)}%</strong>
-              </div>
-              <div className="flex justify-between col-span-2 pt-2 border-t border-slate-800">
-                <span className="text-slate-400">Custo de Reviver Reduzido em:</span>
-                <strong className="text-amber-300 font-mono font-bold">{accountBonuses.revivalReductionMultiplier} vezes</strong>
-              </div>
             </div>
+            <p className="text-slate-400">{captain ? `Capitão considerado: ${captain.name}. ` : 'Sem capitão informado. '}Valores calculados com o perfil cadastrado; ainda precisam de conferência com o jogo. Outros bônus não informados não são inventados.</p>
           </div>
 
           {/* Revival Costs */}
@@ -385,8 +339,8 @@ export const TroopDetailModal: React.FC<TroopDetailModalProps> = ({
               <span className="text-slate-400 font-bold">Custo para Reviver:</span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-slate-200 font-mono font-bold">{troop.revivalSilverCost} Prata (Defesa)</span>
-              <span className="text-amber-400 font-mono font-bold">{troop.revivalGoldCost || 4} Ouro (Ataque)</span>
+              <span className="text-slate-200 font-mono font-bold">{troop.aspects?.revivalCostsUnverified ? 'Custo de defesa depende dos bônus da conta' : `${troop.revivalSilverCost} Prata (Defesa)`}</span>
+              <span className="text-amber-400 font-mono font-bold">{troop.aspects?.revivalCostsUnverified ? 'Custo de ataque depende dos bônus da conta' : `${troop.revivalGoldCost || 4} Ouro (Ataque)`}</span>
             </div>
           </div>
         </div>

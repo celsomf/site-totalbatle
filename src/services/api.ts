@@ -1,4 +1,5 @@
 import { PlayerProfile, ProfileSummary } from '../types';
+import { reconcileLegacySpy } from '../domain/legacyTroops';
 import type { GameCatalogData } from '../types/catalog';
 import type { EnemySquadUnit } from '../types';
 
@@ -109,7 +110,7 @@ export async function fetchProfileFromDb(profileId?: string): Promise<PlayerProf
     const res = await fetch(endpoint, { credentials: 'omit', signal: AbortSignal.timeout(2500) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    return data.profile || null;
+    return data.profile ? reconcileLegacySpy(data.profile) : null;
   } catch (e: any) {
     console.warn(`[API Client] Não foi possível carregar perfil '${profileId || 'default'}' do PostgreSQL:`, e.message);
     return null;
@@ -122,7 +123,7 @@ export async function saveProfileToDb(profile: PlayerProfile, profileId?: string
     const res = await fetch(`${API_BASE}/profile/${encodeURIComponent(targetId)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...profile, id: targetId }),
+      body: JSON.stringify({ ...reconcileLegacySpy(profile), id: targetId }),
       signal: AbortSignal.timeout(3000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

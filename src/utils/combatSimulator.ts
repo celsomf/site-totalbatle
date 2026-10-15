@@ -1,7 +1,10 @@
 import { TroopAspects, TroopClass, TroopTrait, TroopUnit, PlayerProfile, EnemySquadUnit, CombatRoundStep, SquadCasualty, CombatSimulationResult, Captain, MonsterTarget } from '../types';
 import type { MonsterPresetTemplate } from '../data/monsters';
 import { buildMonsterTargetFromTemplate } from '../domain/monsterTargets';
-import { getCaptainMonsterAttackBonus } from './captainStats';
+import { getCaptainCombatBonusForTroop } from './combatCaptainStats';
+import { isOwnTroop } from '../domain/ownTroops';
+import { applySquadDamage } from '../domain/squadDamage';
+import { calculateHitDamage, selectDamageTarget, strongestAvailable, COMBAT_ENGINE_VERSION } from '../domain/combatRules';
 
 export interface DispatchedTroop {
   id: string;
@@ -12,7 +15,11 @@ export interface DispatchedTroop {
   category?: 'guardsman' | 'specialist' | 'monster' | 'mercenary';
   isMercenary?: boolean;
   count: number;
+  /** Leadership / authority / dominance consumed by one unit in this stack. */
+  leadershipCost?: number;
   unitAttack: number;
+  baseAttack?: number;
+  initiative?: number;
   unitHealth: number;
   aspects?: TroopAspects;
   avatarIcon?: string;
@@ -27,6 +34,7 @@ const TROOP_CLASS_LABELS: Record<TroopClass, string> = {
 };
 
 const TROOP_TRAIT_LABELS: Record<TroopTrait, string> = {
+  epic: 'monstros épicos',
   beast: 'feras',
   giant: 'gigantes',
   dragon: 'dragões',
@@ -55,6 +63,7 @@ function getTargetTraits(target: {
   id?: string;
 }): TroopTrait[] {
   const traits = new Set<TroopTrait>(target.traits || []);
+  if (target.family === 'epic') traits.add('epic');
   const normalized = `${target.family || ''} ${target.subType || ''} ${target.name || ''} ${target.id || ''}`
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -78,6 +87,7 @@ function getAspectBonusAgainstTarget(
   if (!aspects) return 0;
 
   const traitBonuses: Record<TroopTrait, number | undefined> = {
+    epic: aspects.bonusVsEpicMonstersPercent,
     beast: aspects.bonusVsBeastsPercent,
     giant: aspects.bonusVsGiantsPercent,
     dragon: aspects.bonusVsDragonsPercent,
@@ -104,6 +114,7 @@ function getAspectBonusDescription(
   if (classBonus > 0) parts.push(`+${classBonus}% vs ${TROOP_CLASS_LABELS[targetClass]}`);
 
   const traitBonuses: Record<TroopTrait, number | undefined> = {
+    epic: aspects.bonusVsEpicMonstersPercent,
     beast: aspects.bonusVsBeastsPercent,
     giant: aspects.bonusVsGiantsPercent,
     dragon: aspects.bonusVsDragonsPercent,
@@ -149,9 +160,10 @@ function getExpectedAttack(
     profile,
     captain,
     captainBonusPercent,
-    dragonBonusPercent
+    dragonBonusPercent,
+    enemySquads.some((squad) => squad.family === 'epic')
   );
-  return unitAttack * getExpectedAspectMultiplier(troop.aspects, enemySquads);
+  return unitAttack + (troop.customAttack || troop.baseAttack) * (getExpectedAspectMultiplier(troop.aspects, enemySquads) - 1);
 }
 
 function getExpectedIncomingDamageMultiplier(
@@ -215,29 +227,35 @@ export function calculateUnitCombatStats(
   profile: PlayerProfile,
   captain: Captain,
   captainBonusPercent: number,
-  dragonBonusPercent: number
+  dragonBonusPercent: number,
+  vsEpicMonster = false
 ): { unitAttack: number; unitHealth: number } {
-  let attackBonusPercent = captainBonusPercent + dragonBonusPercent;
-  let healthBonusPercent = 0;
+  const captainLevel = profile.captainLevels?.[captain.id] || captain.level || 1;
+  const captainStars = profile.captainStars?.[captain.id] || captain.stars || 1;
+  const captainBonus = getCaptainCombatBonusForTroop(
+    captain,
+    captainLevel,
+    captainStars,
+    troop,
+    vsEpicMonster
+  );
+  const accountStrengthBonus = profile.heroGeneralAttackPercent || 0;
+  const captainGeneralAttackBonus = profile.captainGeneralAttackPercent?.[captain.id] || 0;
+  let attackBonusPercent = captainBonusPercent + captainBonus.strengthPercent + accountStrengthBonus + captainGeneralAttackBonus + dragonBonusPercent;
+  let healthBonusPercent = captainBonus.healthPercent;
 
-  if (troop.category === 'mercenary') {
-    attackBonusPercent =
-      dragonBonusPercent +
-      (profile.academyBonus?.monstersAttack || 20) +
-      (captain.specialty === 'monsters' ? captainBonusPercent : 0);
-    healthBonusPercent = profile.academyBonus?.monstersHealth || 40;
-  } else if (troop.category === 'guardsman') {
-    attackBonusPercent += profile.academyBonus?.guardsmenAttack || 25;
-    healthBonusPercent = profile.academyBonus?.guardsmenHealth || 25.5;
+  if (troop.category === 'guardsman' || troop.aspects?.receivesGuardsmenBonuses) {
+    attackBonusPercent += profile.academyBonus?.guardsmenAttack ?? 25;
+    healthBonusPercent += profile.academyBonus?.guardsmenHealth ?? 25.5;
   } else if (troop.category === 'specialist') {
-    attackBonusPercent += profile.academyBonus?.specialistsAttack || 15;
-    healthBonusPercent = profile.academyBonus?.specialistsHealth || 10;
-  } else if (troop.category === 'monster') {
-    attackBonusPercent += profile.academyBonus?.monstersAttack || 20;
-    healthBonusPercent = profile.academyBonus?.monstersHealth || 20;
+    attackBonusPercent += profile.academyBonus?.specialistsAttack ?? 15;
+    healthBonusPercent += profile.academyBonus?.specialistsHealth ?? 10;
+  } else if (troop.category === 'monster' || troop.category === 'mercenary') {
+    attackBonusPercent += profile.academyBonus?.monstersAttack ?? 20;
+    healthBonusPercent += profile.academyBonus?.monstersHealth ?? 20;
   } else {
     attackBonusPercent += 20;
-    healthBonusPercent = 20;
+    healthBonusPercent += 20;
   }
 
   const rawAtk = troop.customAttack || troop.baseAttack || 50;
@@ -322,14 +340,27 @@ function trimRedundantHighRiskTroops(
   return optimized;
 }
 
+function getStackLineKey(troop: TroopUnit): string | undefined {
+  if (troop.category === 'guardsman') return `guardsman:${troop.troopClass}`;
+
+  // Especialistas e monstros só podem ser empilhados com outras versões da
+  // mesma unidade. A classe sozinha não prova que duas unidades são da mesma linha.
+  const tieredFamily = troop.id.match(/^(?:s|m)(\d+)_(.+)$/i);
+  if (tieredFamily && (troop.category === 'specialist' || troop.category === 'monster')) {
+    return `${troop.category}:${tieredFamily[2].toLowerCase()}`;
+  }
+
+  return undefined;
+}
+
 /**
- * Reorganiza os guardas enviados da mesma classe em camadas de ataque.
- * Cada nível inferior é dimensionado para entregar ataque próximo ao nível acima,
- * seguindo a fórmula de empilhamento do vídeo.
+ * Aplica o método do vídeo por linha de tropa: 100 unidades do nível mais alto
+ * e, para cada nível inferior, força do nível superior × 100 ÷ força inferior.
+ * O fator 100 é escalado para caber no orçamento e no estoque de cada linha.
  */
-function rebalanceGuardTierStacks(
+function rebalanceTroopTierStacks(
   dispatched: DispatchedTroop[],
-  availableGuards: TroopUnit[],
+  availableTroops: TroopUnit[],
   profile: PlayerProfile,
   captain: Captain,
   captainBonusPercent: number,
@@ -337,60 +368,51 @@ function rebalanceGuardTierStacks(
   enemySquads: EnemySquadUnit[]
 ): DispatchedTroop[] {
   let optimized = [...dispatched];
-  const deployedClasses = new Set(
-    optimized
-      .filter((troop) => troop.category === 'guardsman' && troop.tier >= 2)
-      .map((troop) => troop.troopClass)
-  );
+  const lineKeys = new Set(optimized.map((troop) => {
+    const source = availableTroops.find((candidate) => candidate.id === troop.id);
+    return source ? getStackLineKey(source) : undefined;
+  }).filter((key): key is string => Boolean(key)));
 
-  for (const troopClass of deployedClasses) {
-    const deployedLayers = optimized.filter(
-      (troop) => troop.category === 'guardsman' && troop.tier >= 2 && troop.troopClass === troopClass
-    );
-    const totalClassCount = deployedLayers.reduce((sum, troop) => sum + troop.count, 0);
+  for (const lineKey of lineKeys) {
+    const deployedLayers = optimized.filter((troop) => {
+      const source = availableTroops.find((candidate) => candidate.id === troop.id);
+      return source && getStackLineKey(source) === lineKey;
+    });
+    const lineBudget = deployedLayers.reduce((sum, troop) => {
+      const source = availableTroops.find((candidate) => candidate.id === troop.id);
+      return sum + troop.count * (source?.leadershipCost || 1);
+    }, 0);
+    if (lineBudget <= 0) continue;
+
     const highestDeployedTier = Math.max(...deployedLayers.map((troop) => troop.tier));
-    let layers = availableGuards
-      .filter((troop) =>
-        troop.category === 'guardsman' &&
-        troop.troopClass === troopClass &&
-        troop.tier >= 2 &&
-        troop.tier <= highestDeployedTier
-      )
+    let layers = availableTroops
+      .filter((troop) => getStackLineKey(troop) === lineKey && troop.ownedCount > 0 && troop.tier <= highestDeployedTier)
       .sort((a, b) => b.tier - a.tier);
-
-    if (layers.length < 2 || totalClassCount <= 1) continue;
-
     let layerAttacks = layers.map((troop) => getExpectedAttack(
-      troop,
-      profile,
-      captain,
-      captainBonusPercent,
-      dragonBonusPercent,
-      enemySquads
+      troop, profile, captain, captainBonusPercent, dragonBonusPercent, enemySquads
     ));
 
     while (layers.length >= 2) {
-      let bestCounts: number[] | null = null;
+      const topAttack = layerAttacks[0];
+      if (topAttack <= 0) break;
+
+      let bestCounts: number[] | undefined;
       let low = 1;
-      let high = Math.min(totalClassCount, layers[0].ownedCount);
+      let high = Math.min(Math.floor(lineBudget / (layers[0].leadershipCost || 1)), layers[0].ownedCount);
 
       while (low <= high) {
         const anchorCount = Math.floor((low + high) / 2);
-        const counts = [anchorCount];
-
-        for (let index = 1; index < layers.length; index += 1) {
-          const previousAttack = layerAttacks[index - 1];
-          const currentAttack = layerAttacks[index];
-          const previousCount = counts[index - 1];
-          counts.push(currentAttack > 0
-            ? Math.ceil(previousCount * previousAttack / currentAttack)
-            : Number.POSITIVE_INFINITY);
-        }
-
+        const counts = layers.map((layer, index) => {
+          const attack = layerAttacks[index];
+          return attack > 0 ? Math.ceil(anchorCount * topAttack / attack) : Number.POSITIVE_INFINITY;
+        });
         const fitsStock = counts.every((count, index) => count <= layers[index].ownedCount);
-        const fitsCapacity = counts.reduce((sum, count) => sum + count, 0) <= totalClassCount;
+        const fitsBudget = counts.reduce(
+          (sum, count, index) => sum + count * (layers[index].leadershipCost || 1),
+          0
+        ) <= lineBudget;
 
-        if (fitsStock && fitsCapacity) {
+        if (fitsStock && fitsBudget) {
           bestCounts = counts;
           low = anchorCount + 1;
         } else {
@@ -398,47 +420,26 @@ function rebalanceGuardTierStacks(
         }
       }
 
+      // If the lowest layer cannot fit even once, retry with the next complete
+      // chain. Do not put leftover units into one layer: that breaks the ratio.
       if (!bestCounts) {
-        // If the full chain cannot fit, keep the strongest layers and try a
-        // shorter chain rather than dropping the class from the march.
         layers = layers.slice(0, -1);
         layerAttacks = layerAttacks.slice(0, -1);
         continue;
       }
 
-      let remaining = totalClassCount - bestCounts.reduce((sum, count) => sum + count, 0);
-      while (remaining > 0) {
-        let weakestLayerIndex = -1;
-        let weakestLayerAttack = Number.POSITIVE_INFINITY;
-
-        for (let index = 0; index < layers.length; index += 1) {
-          if (bestCounts[index] >= layers[index].ownedCount) continue;
-          const stackAttack = bestCounts[index] * layerAttacks[index];
-          if (stackAttack < weakestLayerAttack) {
-            weakestLayerIndex = index;
-            weakestLayerAttack = stackAttack;
-          }
-        }
-
-        if (weakestLayerIndex < 0) break;
-        bestCounts[weakestLayerIndex] += 1;
-        remaining -= 1;
-      }
-
       const replacedIds = new Set(deployedLayers.map((troop) => troop.id));
       optimized = optimized.filter((troop) => !replacedIds.has(troop.id));
-
       for (let index = 0; index < layers.length; index += 1) {
         const troop = layers[index];
         const count = bestCounts[index];
-        if (count <= 0) continue;
-
         const { unitAttack, unitHealth } = calculateUnitCombatStats(
           troop,
           profile,
           captain,
           captainBonusPercent,
-          dragonBonusPercent
+          dragonBonusPercent,
+          enemySquads.some((squad) => squad.family === 'epic')
         );
         optimized.push({
           id: troop.id,
@@ -446,16 +447,18 @@ function rebalanceGuardTierStacks(
           tier: troop.tier,
           troopClass: troop.troopClass,
           traits: getTargetTraits(troop),
-          category: 'guardsman',
-          isMercenary: false,
+          category: troop.category,
+          isMercenary: troop.category === 'mercenary',
           count,
+          leadershipCost: troop.leadershipCost || 1,
           unitAttack,
           unitHealth,
+          baseAttack: troop.customAttack || troop.baseAttack,
+          initiative: troop.initiative,
           aspects: troop.aspects,
           avatarIcon: troop.avatarIcon || troop.id,
         });
       }
-
       break;
     }
   }
@@ -475,6 +478,7 @@ function simulateCombatWithOpeningSide(
       ...t,
       currentCount: t.count,
       initialCount: t.count,
+      residualDamage: 0,
     }));
 
   const enemies = enemySquads
@@ -483,6 +487,7 @@ function simulateCombatWithOpeningSide(
       ...s,
       currentCount: s.count,
       initialCount: s.count,
+      residualDamage: 0,
     }));
 
   const initialEnemyHp = enemies.reduce((sum, e) => sum + e.unitHealth * e.initialCount, 0);
@@ -503,49 +508,25 @@ function simulateCombatWithOpeningSide(
       break;
     }
 
-    // A iniciativa da maioria das tropas do jogador não está cadastrada.
-    // Mantemos a ordem relativa existente, mas calculamos as duas aberturas
-    // possíveis para não garantir vitória apenas porque o jogador começou.
-    type CombatActor = { side: 'player' | 'enemy'; squad: any };
-    const turnQueue: CombatActor[] = [];
-
-    // Mercenários do jogador
-    const playerMercs = playerSquads
-      .filter((p) => p.currentCount > 0 && (p.isMercenary || p.category === 'mercenary'))
-      .sort((a, b) => b.tier - a.tier || b.unitAttack - a.unitAttack);
-
-    // Inimigos
-    const sortedEnemies = enemies
-      .filter((e) => e.currentCount > 0)
-      .sort((a, b) => b.tier - a.tier || b.initiative - a.initiative);
-
-    // Tropas regulares do jogador
-    const playerRegulars = playerSquads
-      .filter((p) => p.currentCount > 0 && !p.isMercenary && p.category !== 'mercenary')
-      .sort((a, b) => b.tier - a.tier || b.unitAttack - a.unitAttack);
-
-    const queueMercenaries = () => playerMercs.forEach((m) => turnQueue.push({ side: 'player', squad: m }));
-    const queueEnemies = () => sortedEnemies.forEach((e) => turnQueue.push({ side: 'enemy', squad: e }));
-    const queueRegulars = () => playerRegulars.forEach((r) => turnQueue.push({ side: 'player', squad: r }));
-
-    if (openingSide === 'player') {
-      queueMercenaries();
-      queueEnemies();
-      queueRegulars();
-    } else {
-      queueEnemies();
-      queueMercenaries();
-      queueRegulars();
-    }
-
-    for (const actor of turnQueue) {
-      if (actor.squad.currentCount <= 0) continue;
+    // Official combat video01:22–01:45: alternate sides; each living stack acts once.
+    // If one side exhausts its stacks, the other finishes its remaining attacks.
+    type CombatActor = { side: 'player'; squad: typeof playerSquads[number] } | { side: 'enemy'; squad: typeof enemies[number] };
+    const actedPlayers = new Set<string>();
+    const actedEnemies = new Set<string>();
+    let nextSide = openingSide;
+    while (true) {
+      const nextPlayer = strongestAvailable(playerSquads.filter(unit => !actedPlayers.has(unit.id)));
+      const nextEnemy = strongestAvailable(enemies.filter(unit => !actedEnemies.has(unit.id)));
+      if (!nextPlayer && !nextEnemy) break;
+      const actor: CombatActor = nextPlayer && (nextSide === 'player' || !nextEnemy)
+        ? { side: 'player', squad: nextPlayer } : { side: 'enemy', squad: nextEnemy! };
+      if (actor.side === 'player') actedPlayers.add(actor.squad.id); else actedEnemies.add(actor.squad.id);
+      nextSide = actor.side === 'player' ? 'enemy' : 'player';
 
       if (actor.side === 'player') {
         const pSquad = actor.squad;
-        const targetEnemy = enemies
-          .filter((e) => e.currentCount > 0)
-          .sort((a, b) => b.unitAttack * b.currentCount - a.unitAttack * a.currentCount)[0];
+        const targetEnemy = selectDamageTarget(enemies, enemy => calculateHitDamage(pSquad,
+          getAspectBonusAgainstTarget(pSquad.aspects, enemy.troopClass, getTargetTraits(enemy))));
 
         if (!targetEnemy) break;
 
@@ -554,16 +535,13 @@ function simulateCombatWithOpeningSide(
           targetEnemy.troopClass,
           getTargetTraits(targetEnemy)
         );
-        const aspectMultiplier = 1 + aspectBonus / 100;
-        const damage = Math.round(pSquad.currentCount * pSquad.unitAttack * aspectMultiplier);
+        const damage = calculateHitDamage(pSquad, aspectBonus);
         totalPlayerDamage += damage;
 
-        const casualties = Math.min(
-          targetEnemy.currentCount,
-          Math.max(1, Math.floor(damage / targetEnemy.unitHealth))
-        );
-
-        targetEnemy.currentCount = Math.max(0, targetEnemy.currentCount - casualties);
+        const hit = applySquadDamage(targetEnemy, damage);
+        const casualties = hit.casualties;
+        targetEnemy.currentCount = hit.currentCount;
+        targetEnemy.residualDamage = hit.residualDamage;
 
         rounds.push({
           step: stepIndex++,
@@ -591,44 +569,27 @@ function simulateCombatWithOpeningSide(
         const alivePlayerTargets = playerSquads.filter((p) => p.currentCount > 0);
         if (alivePlayerTargets.length === 0) break;
 
-        const targetPlayer = [...alivePlayerTargets].sort((a, b) => {
-          const aBonus = getAspectBonusAgainstTarget(
-            eSquad.aspects,
-            a.troopClass,
-            getTargetTraits(a)
-          );
-          const bBonus = getAspectBonusAgainstTarget(
-            eSquad.aspects,
-            b.troopClass,
-            getTargetTraits(b)
-          );
-          return b.unitHealth * b.currentCount - a.unitHealth * a.currentCount ||
-            bBonus - aBonus ||
-            b.unitAttack * b.currentCount - a.unitAttack * a.currentCount ||
-            b.tier - a.tier;
-        })[0];
+        const targetPlayer = selectDamageTarget(alivePlayerTargets, player => calculateHitDamage(eSquad,
+          getAspectBonusAgainstTarget(eSquad.aspects, player.troopClass, getTargetTraits(player))))!;
 
         const aspectBonus = getAspectBonusAgainstTarget(
           eSquad.aspects,
           targetPlayer.troopClass,
           getTargetTraits(targetPlayer)
         );
-        const multiplier = 1 + aspectBonus / 100;
         const bonusText = getAspectBonusDescription(
           eSquad.aspects,
           targetPlayer.troopClass,
           getTargetTraits(targetPlayer)
         ) || '';
 
-        const damage = Math.round(eSquad.currentCount * eSquad.unitAttack * multiplier);
+        const damage = calculateHitDamage(eSquad, aspectBonus);
         totalEnemyDamage += damage;
 
-        const casualties = Math.min(
-          targetPlayer.currentCount,
-          Math.max(1, Math.floor(damage / targetPlayer.unitHealth))
-        );
-
-        targetPlayer.currentCount = Math.max(0, targetPlayer.currentCount - casualties);
+        const hit = applySquadDamage(targetPlayer, damage);
+        const casualties = hit.casualties;
+        targetPlayer.currentCount = hit.currentCount;
+        targetPlayer.residualDamage = hit.residualDamage;
 
         rounds.push({
           step: stepIndex++,
@@ -662,6 +623,7 @@ function simulateCombatWithOpeningSide(
     name: p.name,
     tier: p.tier,
     isMercenary: p.isMercenary,
+    category: p.category,
     initialCount: p.initialCount,
     lostCount: p.initialCount - p.currentCount,
     survivingCount: p.currentCount,
@@ -676,7 +638,7 @@ function simulateCombatWithOpeningSide(
     survivingCount: e.currentCount,
   }));
 
-  const remainingEnemyHp = enemies.reduce((sum, e) => sum + e.unitHealth * e.currentCount, 0);
+  const remainingEnemyHp = enemies.reduce((sum, e) => sum + e.unitHealth * e.currentCount - e.residualDamage, 0);
 
   // Safety level classification
   let safetyLevel: 'CLEAN_VICTORY' | 'PROTECTED_VICTORY' | 'COSTLY_VICTORY' | 'DEFEAT' = 'DEFEAT';
@@ -722,6 +684,15 @@ function simulateCombatWithOpeningSide(
   }
 
   return {
+    model: { version: COMBAT_ENGINE_VERSION, validationStatus: 'experimental', assumptions: [
+      'Atributos efetivos da conta ainda não conferidos com as fichas desta batalha.',
+      'Dano parcial conservado entre golpes: hipótese ainda não validada.',
+      'Empates de dano usam desempate determinístico; regra exata ainda não confirmada.',
+      'Duas aberturas fixas avaliadas; não representam todas as sequências aleatórias por rodada.',
+      'Iniciativa própria ausente não é inferida do nível ou da classe.',
+      'Acertos críticos não são sorteados; limite de dez rodadas no cenário.',
+      'Grupos antigos sem força-base separada usam a força efetiva como aproximação para aspectos; não validação.',
+    ] },
     outcome,
     safetyLevel,
     totalPlayerDamage,
@@ -755,11 +726,21 @@ export function simulateCombat(
 ): CombatSimulationResult {
   const playerOpens = simulateCombatWithOpeningSide(dispatchedTroops, enemySquads, 'player');
   const enemyOpens = simulateCombatWithOpeningSide(dispatchedTroops, enemySquads, 'enemy');
+  // Only decide initiative when every participating unit has a sourced value.
+  const livingPlayers = dispatchedTroops.filter(unit => unit.count > 0);
+  const livingEnemies = enemySquads.filter(unit => unit.count > 0);
+  if (livingPlayers.length && livingEnemies.length && [...livingPlayers, ...livingEnemies].every(unit => Number.isFinite(unit.initiative))) {
+    const playerInitiative = Math.max(...livingPlayers.map(unit => unit.initiative!));
+    const enemyInitiative = Math.max(...livingEnemies.map(unit => unit.initiative));
+    if (playerInitiative !== enemyInitiative) return playerInitiative > enemyInitiative ? playerOpens : enemyOpens;
+  }
 
   if (playerOpens.outcome !== enemyOpens.outcome) {
     return playerOpens.outcome === 'DEFEAT' ? playerOpens : enemyOpens;
   }
 
+  const lossPriority = compareValuableLosses(playerOpens, enemyOpens);
+  if (lossPriority !== 0) return lossPriority > 0 ? playerOpens : enemyOpens;
   const playerLossHealth = getCasualtyHealth(playerOpens, dispatchedTroops);
   const enemyLossHealth = getCasualtyHealth(enemyOpens, dispatchedTroops);
   if (playerLossHealth !== enemyLossHealth) {
@@ -770,6 +751,10 @@ export function simulateCombat(
     return playerOpens.remainingEnemyHp > enemyOpens.remainingEnemyHp ? playerOpens : enemyOpens;
   }
 
+  if (playerOpens.totalEnemyDamage !== enemyOpens.totalEnemyDamage) {
+    return playerOpens.totalEnemyDamage > enemyOpens.totalEnemyDamage ? playerOpens : enemyOpens;
+  }
+
   return playerOpens.totalPlayerDamage <= enemyOpens.totalPlayerDamage ? playerOpens : enemyOpens;
 }
 
@@ -777,36 +762,32 @@ export function simulateCombat(
  * Constrói a lista de tropas enviadas na marcha com base no estoque real do jogador,
  * respeitando os limites de marcha do monstro e aplicando bônus de dragão, academia e capitão.
  */
-export function buildDispatchedTroops(
+function buildInitialDispatchedTroops(
   troops: TroopUnit[],
   profile: PlayerProfile,
   targetMonster: MonsterTarget,
   captain: Captain,
-  sendDragon: boolean
+  sendDragon: boolean,
+  candidates?: DispatchedTroop[][]
 ): DispatchedTroop[] {
   const isRare = targetMonster.attackMode === 'rare';
   const isCommon = targetMonster.attackMode === 'common';
 
-  const activeCaptainLevel = profile.captainLevels?.[captain.id] || captain.level || 1;
-  const activeCaptainStars = profile.captainStars?.[captain.id] || captain.stars || 1;
-  const captainBonusPercent = getCaptainMonsterAttackBonus(
-    captain,
-    activeCaptainLevel,
-    activeCaptainStars
-  );
+  // O bônus do capitão é calculado para cada tipo de tropa mais abaixo.
+  const captainBonusPercent = 0;
   const dragonBonusPercent = sendDragon ? 15 : 0;
 
   const maxGuards =
-    profile.maxMarchCapacity ||
-    targetMonster.marchCapacities?.guards ||
+    profile.maxMarchCapacity ??
+    targetMonster.marchCapacities?.guards ??
     (isRare ? 5250 : isCommon ? 2725 : 2000);
   const maxMercs =
-    profile.mercenaryCapacity ||
-    targetMonster.marchCapacities?.mercenaries ||
+    profile.mercenaryCapacity ??
+    targetMonster.marchCapacities?.mercenaries ??
     (isRare ? 2520 : isCommon ? 1340 : 1000);
   const maxMonsters =
-    profile.specialCapacity ||
-    targetMonster.marchCapacities?.monsters ||
+    profile.specialCapacity ??
+    targetMonster.marchCapacities?.monsters ??
     (isRare ? 1260 : isCommon ? 670 : 500);
 
   // 1. Filtrar tropas disponíveis com estoque ativo
@@ -837,7 +818,8 @@ export function buildDispatchedTroops(
 
   for (const merc of availableMercs) {
     if (remainingMercCapacity <= 0) break;
-    const count = Math.min(merc.ownedCount, remainingMercCapacity);
+    const leadershipCost = merc.leadershipCost || 1;
+    const count = Math.min(merc.ownedCount, Math.floor(remainingMercCapacity / leadershipCost));
     if (count <= 0) continue;
 
     const { unitAttack, unitHealth } = calculateUnitCombatStats(
@@ -845,7 +827,8 @@ export function buildDispatchedTroops(
       profile,
       captain,
       captainBonusPercent,
-      dragonBonusPercent
+      dragonBonusPercent,
+      targetMonster.type === 'epic_monster'
     );
 
     dispatchedTroopsList.push({
@@ -857,13 +840,16 @@ export function buildDispatchedTroops(
       category: 'mercenary',
       isMercenary: true,
       count,
+      leadershipCost,
       unitAttack,
       unitHealth,
+      baseAttack: merc.customAttack || merc.baseAttack,
+      initiative: merc.initiative,
       aspects: merc.aspects,
       avatarIcon: merc.avatarIcon || merc.id,
     });
 
-    remainingMercCapacity -= count;
+    remainingMercCapacity -= count * leadershipCost;
   }
 
   // 3. Avaliar inimigos, aspectos e fraquezas
@@ -906,7 +892,8 @@ export function buildDispatchedTroops(
       profile,
       captain,
       captainBonusPercent,
-      dragonBonusPercent
+      dragonBonusPercent,
+      targetMonster.type === 'epic_monster'
     );
 
     dispatchedTroopsList.push({
@@ -918,8 +905,11 @@ export function buildDispatchedTroops(
       category: 'monster',
       isMercenary: false,
       count,
+      leadershipCost: costPerUnit,
       unitAttack,
       unitHealth,
+      baseAttack: mon.customAttack || mon.baseAttack,
+      initiative: mon.initiative,
       aspects: mon.aspects,
       avatarIcon: mon.avatarIcon || mon.id,
     });
@@ -946,14 +936,19 @@ export function buildDispatchedTroops(
   const meleeFodder = fodderTroops.find((f) => f.troopClass === 'melee');
 
   if (hasEnemyRanged && rangedFodder && remainingGuardsCapacity > 0) {
-    const fodderCount = Math.min(rangedFodder.ownedCount, Math.min(remainingGuardsCapacity, 200));
+    const leadershipCost = rangedFodder.leadershipCost || 1;
+    const fodderCount = Math.min(
+      rangedFodder.ownedCount,
+      Math.min(Math.floor(remainingGuardsCapacity / leadershipCost), 200)
+    );
     if (fodderCount > 0) {
       const { unitAttack, unitHealth } = calculateUnitCombatStats(
         rangedFodder,
         profile,
         captain,
         captainBonusPercent,
-        dragonBonusPercent
+        dragonBonusPercent,
+        targetMonster.type === 'epic_monster'
       );
       dispatchedTroopsList.push({
         id: rangedFodder.id,
@@ -964,24 +959,32 @@ export function buildDispatchedTroops(
         category: rangedFodder.category,
         isMercenary: false,
         count: fodderCount,
+        leadershipCost,
         unitAttack,
         unitHealth,
+        baseAttack: rangedFodder.customAttack || rangedFodder.baseAttack,
+        initiative: rangedFodder.initiative,
         aspects: rangedFodder.aspects,
         avatarIcon: rangedFodder.avatarIcon || rangedFodder.id,
       });
-      remainingGuardsCapacity -= fodderCount;
+      remainingGuardsCapacity -= fodderCount * leadershipCost;
     }
   }
 
   if (hasEnemyMelee && meleeFodder && remainingGuardsCapacity > 0) {
-    const fodderCount = Math.min(meleeFodder.ownedCount, Math.min(remainingGuardsCapacity, 150));
+    const leadershipCost = meleeFodder.leadershipCost || 1;
+    const fodderCount = Math.min(
+      meleeFodder.ownedCount,
+      Math.min(Math.floor(remainingGuardsCapacity / leadershipCost), 150)
+    );
     if (fodderCount > 0) {
       const { unitAttack, unitHealth } = calculateUnitCombatStats(
         meleeFodder,
         profile,
         captain,
         captainBonusPercent,
-        dragonBonusPercent
+        dragonBonusPercent,
+        targetMonster.type === 'epic_monster'
       );
       dispatchedTroopsList.push({
         id: meleeFodder.id,
@@ -992,12 +995,15 @@ export function buildDispatchedTroops(
         category: meleeFodder.category,
         isMercenary: false,
         count: fodderCount,
+        leadershipCost,
         unitAttack,
         unitHealth,
+        baseAttack: meleeFodder.customAttack || meleeFodder.baseAttack,
+        initiative: meleeFodder.initiative,
         aspects: meleeFodder.aspects,
         avatarIcon: meleeFodder.avatarIcon || meleeFodder.id,
       });
-      remainingGuardsCapacity -= fodderCount;
+      remainingGuardsCapacity -= fodderCount * leadershipCost;
     }
   }
 
@@ -1027,7 +1033,8 @@ export function buildDispatchedTroops(
       const availableLeft = noble.ownedCount - alreadyAllocated;
       if (availableLeft <= 0) continue;
 
-      const count = Math.min(availableLeft, remainingGuardsCapacity);
+      const leadershipCost = noble.leadershipCost || 1;
+      const count = Math.min(availableLeft, Math.floor(remainingGuardsCapacity / leadershipCost));
       const existing = dispatchedTroopsList.find((t) => t.id === noble.id);
       if (existing) {
         existing.count += count;
@@ -1037,7 +1044,8 @@ export function buildDispatchedTroops(
           profile,
           captain,
           captainBonusPercent,
-          dragonBonusPercent
+          dragonBonusPercent,
+          targetMonster.type === 'epic_monster'
         );
         dispatchedTroopsList.push({
           id: noble.id,
@@ -1048,19 +1056,27 @@ export function buildDispatchedTroops(
           category: noble.category,
           isMercenary: false,
           count,
+          leadershipCost,
           unitAttack,
           unitHealth,
+          baseAttack: noble.customAttack || noble.baseAttack,
+          initiative: noble.initiative,
           aspects: noble.aspects,
           avatarIcon: noble.avatarIcon || noble.id,
         });
       }
-      remainingGuardsCapacity -= count;
+      remainingGuardsCapacity -= count * leadershipCost;
     }
   }
 
-  const stackedTroopsList = rebalanceGuardTierStacks(
-    dispatchedTroopsList,
-    nobleTroops.filter((troop) => troop.category === 'guardsman'),
+  candidates?.push(dispatchedTroopsList);
+  const troopsToBalance = isRare || isCommon
+    ? trimRedundantHighRiskTroops(dispatchedTroopsList, enemySquads)
+    : dispatchedTroopsList;
+  candidates?.push(troopsToBalance);
+  const stackedTroopsList = rebalanceTroopTierStacks(
+    troopsToBalance,
+    availableTroops,
     profile,
     captain,
     captainBonusPercent,
@@ -1068,12 +1084,174 @@ export function buildDispatchedTroops(
     enemySquads
   );
 
-  return trimRedundantHighRiskTroops(stackedTroopsList, enemySquads);
+  // Preserve both proposals: redistribution is a candidate, never an unchecked replacement.
+  return stackedTroopsList;
+}
+
+/** Negative means fewer losses, protecting the highest tiers before lower tiers. */
+export function compareLossesByTier(a: CombatSimulationResult, b: CombatSimulationResult): number {
+  const tiers = [...new Set([...a.playerCasualties, ...b.playerCasualties].map((loss) => loss.tier))]
+    .sort((left, right) => right - left);
+  for (const tier of tiers) {
+    const count = (result: CombatSimulationResult) => result.playerCasualties
+      .filter((loss) => loss.tier === tier).reduce((sum, loss) => sum + loss.lostCount, 0);
+    const difference = count(a) - count(b);
+    if (difference !== 0) return difference;
+  }
+  return 0;
+}
+
+interface FormationCandidate {
+  troops: DispatchedTroop[];
+  result: CombatSimulationResult;
+}
+
+/** Explicit qualitative priority; no currency estimates or numeric value weights. */
+export function compareValuableLosses(a: CombatSimulationResult, b: CombatSimulationResult): number {
+  const special = (unit: SquadCasualty) => unit.category === 'monster' || unit.category === 'mercenary' || unit.isMercenary === true;
+  const subset = (result: CombatSimulationResult, expensive: boolean) => ({ ...result,
+    playerCasualties: result.playerCasualties.filter(unit => special(unit) === expensive) });
+  return compareLossesByTier(subset(a, true), subset(b, true)) || compareLossesByTier(subset(a, false), subset(b, false));
+}
+
+function compareFormations(a: FormationCandidate, b: FormationCandidate): number {
+  if (a.result.outcome !== b.result.outcome) return a.result.outcome === 'VICTORY' ? -1 : 1;
+  if (a.result.outcome === 'DEFEAT' && a.result.remainingEnemyHp !== b.result.remainingEnemyHp) {
+    return a.result.remainingEnemyHp - b.result.remainingEnemyHp;
+  }
+  const losses = compareValuableLosses(a.result, b.result);
+  if (losses !== 0) return losses;
+  return a.troops.reduce((sum, troop) => sum + troop.count, 0)
+    - b.troops.reduce((sum, troop) => sum + troop.count, 0);
+}
+
+/** Bounded search, using real simulated outcomes; tier is value priority, not currency. */
+export function buildDispatchedTroops(
+  troops: TroopUnit[], profile: PlayerProfile, target: MonsterTarget,
+  captain: Captain, sendDragon: boolean, searchBudget = 640
+): DispatchedTroop[] {
+  troops = troops.filter(isOwnTroop);
+  const seeds: DispatchedTroop[][] = [];
+  const initial = buildInitialDispatchedTroops(troops, profile, target, captain, sendDragon, seeds);
+  const enemies = (target.enemySquads || []).filter((enemy) => enemy.count > 0);
+  if (enemies.length === 0) return initial;
+
+  const isRare = target.attackMode === 'rare';
+  const isCommon = target.attackMode === 'common';
+  const validLimit = (value: number) => Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+  const limits = {
+    regular: validLimit(profile.maxMarchCapacity ?? target.marchCapacities?.guards ?? (isRare ? 5250 : isCommon ? 2725 : 2000)),
+    mercenary: validLimit(profile.mercenaryCapacity ?? target.marchCapacities?.mercenaries ?? (isRare ? 2520 : isCommon ? 1340 : 1000)),
+    monster: validLimit(profile.specialCapacity ?? target.marchCapacities?.monsters ?? (isRare ? 1260 : isCommon ? 670 : 500)),
+  };
+  const group = (troop: { category?: string }) => troop.category === 'mercenary' ? 'mercenary'
+    : troop.category === 'monster' ? 'monster' : 'regular';
+  const available = [...new Map(troops.filter((troop) => troop.isUnlocked !== false && troop.ownedCount > 0)
+    .map((troop) => [troop.id, troop])).values()];
+  const pool = available.map((troop): DispatchedTroop => ({
+    id: troop.id, name: troop.name, tier: troop.tier, troopClass: troop.troopClass,
+    baseAttack: troop.customAttack || troop.baseAttack, initiative: troop.initiative,
+    traits: getTargetTraits(troop), category: troop.category,
+    isMercenary: troop.category === 'mercenary', leadershipCost: Math.max(1, troop.leadershipCost || 1),
+    count: Math.min(Math.floor(troop.ownedCount), Math.floor(limits[group(troop)] / Math.max(1, troop.leadershipCost || 1))),
+    ...calculateUnitCombatStats(troop, profile, captain, 0, sendDragon ? 15 : 0, target.type === 'epic_monster'),
+    aspects: troop.aspects, avatarIcon: troop.avatarIcon || troop.id,
+  })).filter((troop) => troop.count > 0);
+
+  const budget = Math.max(16, Math.min(640, Math.floor(searchBudget) || 640));
+  let evaluationLimit = budget;
+  const seen = new Set<string>();
+  let evaluations = 0;
+  let best: FormationCandidate | undefined;
+  let beam: FormationCandidate[] = [];
+  const evaluate = (proposal: DispatchedTroop[]) => {
+    if (evaluations >= evaluationLimit) return;
+    const remaining = { ...limits };
+    const counts = new Map(proposal.map((troop) => [troop.id, troop.count]));
+    const legal = pool.flatMap((troop) => {
+      const key = group(troop);
+      const count = Math.min(troop.count, Math.max(0, Math.floor(counts.get(troop.id) || 0)),
+        Math.floor(remaining[key] / troop.leadershipCost!));
+      remaining[key] -= count * troop.leadershipCost!;
+      return count > 0 ? [{ ...troop, count }] : [];
+    });
+    const key = legal.map((troop) => `${troop.id}:${troop.count}`).join('|');
+    if (seen.has(key)) return;
+    seen.add(key);
+    evaluations++;
+    const candidate = { troops: legal, result: simulateCombat(legal, enemies) };
+    if (!best || compareFormations(candidate, best) < 0) best = candidate;
+    beam = [...beam, candidate].sort(compareFormations).slice(0, 4);
+  };
+
+  // Small inventories are fully enumerated. Larger ones use diversified seeds and local search.
+  evaluate(initial);
+  seeds.forEach(evaluate);
+  const combinations = pool.reduce((product, troop) => product * (troop.count + 1), 1);
+  if (combinations <= budget - 1) {
+    const enumerate = (index: number, proposal: DispatchedTroop[]) => {
+      if (index === pool.length) { evaluate(proposal); return; }
+      for (let count = 0; count <= pool[index].count; count++) {
+        enumerate(index + 1, [...proposal, { ...pool[index], count }]);
+      }
+    };
+    enumerate(0, []);
+    return best?.troops || [];
+  }
+  const fill = (order: DispatchedTroop[]) => {
+    const remaining = { ...limits };
+    return order.map((troop) => {
+      const key = group(troop);
+      const count = Math.min(troop.count, Math.floor(remaining[key] / troop.leadershipCost!));
+      remaining[key] -= count * troop.leadershipCost!;
+      return { ...troop, count };
+    });
+  };
+  evaluate(fill(pool));
+  evaluate(fill([...pool].sort((a, b) => a.tier - b.tier)));
+  evaluate(fill([...pool].sort((a, b) => b.tier - a.tier)));
+  evaluate(fill([...pool].sort((a, b) => b.unitAttack / b.leadershipCost! - a.unitAttack / a.leadershipCost!)));
+  for (const troop of pool) evaluate([troop]);
+  for (let round = 0; round < 3 && evaluations < evaluationLimit; round++) {
+    const parents = [...beam];
+    for (const parent of parents) {
+      for (const troop of pool) {
+        const current = parent.troops.find((entry) => entry.id === troop.id)?.count || 0;
+        const free = limits[group(troop)] - parent.troops.filter((entry) => group(entry) === group(troop))
+          .reduce((sum, entry) => sum + entry.count * entry.leadershipCost!, 0);
+        const maximum = Math.min(troop.count, current + Math.floor(free / troop.leadershipCost!));
+        const incoming = enemies.reduce((sum, enemy) => sum + enemy.unitAttack * enemy.count
+          * (1 + getAspectBonusAgainstTarget(enemy.aspects, troop.troopClass, troop.traits) / 100), 0);
+        const strongestHealth = Math.max(0, ...parent.troops.filter((entry) => entry.id !== troop.id)
+          .map((entry) => entry.unitHealth * entry.count));
+        const choices = new Set([0, 1, current - 1, current + 1, maximum,
+          Math.floor(current / 2), Math.floor(maximum / 4), Math.floor(maximum / 2), Math.floor(maximum * 3 / 4),
+          Math.floor(incoming / troop.unitHealth) + 1, Math.floor(strongestHealth / troop.unitHealth) + 1]);
+        for (const count of choices) {
+          if (count < 0 || count > maximum || count === current) continue;
+          evaluate([...parent.troops.filter((entry) => entry.id !== troop.id), { ...troop, count }]);
+        }
+        // Replace a competing stack, allowing exploration even when its capacity is full.
+        for (const other of parent.troops.filter((entry) => entry.id !== troop.id && group(entry) === group(troop))) {
+          evaluate(fill([troop, ...parent.troops.filter((entry) => entry.id !== other.id && entry.id !== troop.id)]));
+        }
+      }
+    }
+  }
+  // Keep every candidate from the original bounded search. Then verify at most one
+  // removal per troop type, so cleanup cannot displace a better candidate or go unbounded.
+  evaluationLimit = budget + pool.length;
+  const finalStackIds = best?.troops.map(troop => troop.id) || [];
+  for (const id of finalStackIds) {
+    if (!best || evaluations >= evaluationLimit) break;
+    evaluate(best.troops.filter(troop => troop.id !== id));
+  }
+  return best?.troops || [];
 }
 
 /**
  * Encontra o nível ótimo para farmar XP e subir de nível mais rápido:
- * O nível mais alto do monstro que o exército atual do jogador vence com segurança (sem perdas nobres).
+ * O nível mais alto encontrado na busca limitada com vitória sem perdas previstas.
  */
 export function findOptimalFarmLevel(
   template: MonsterPresetTemplate,
@@ -1085,6 +1263,7 @@ export function findOptimalFarmLevel(
   optimalLevel: number;
   optimalXp: number;
   isSafe: boolean;
+  zeroLossesInModel: boolean;
   canBeatAnyLevel: boolean;
 } {
   const maxAvailable = Math.max(...(template.availableLevels || [template.defaultLevel]), template.defaultLevel);
@@ -1093,16 +1272,18 @@ export function findOptimalFarmLevel(
   let bestLevel = 1;
   let bestXp = 0;
   let foundSafe = false;
+  let firstVictory: { level: number; xp: number } | undefined;
 
   for (let lvl = maxLevelToTest; lvl >= 1; lvl--) {
     const target = buildMonsterTargetFromTemplate(template, lvl);
     if (!target.enemySquads || target.enemySquads.length === 0) continue;
-    const dispatched = buildDispatchedTroops(troops, profile, target, captain, sendDragon);
+    const dispatched = buildDispatchedTroops(troops, profile, target, captain, sendDragon, 96);
     if (dispatched.length === 0) continue;
 
     const sim = simulateCombat(dispatched, target.enemySquads || []);
+    if (sim.outcome === 'VICTORY' && !firstVictory) firstVictory = { level: lvl, xp: target.xpReward || 0 };
 
-    if (sim.outcome !== 'DEFEAT') {
+    if (sim.outcome === 'VICTORY' && sim.playerCasualties.every((loss) => loss.lostCount === 0)) {
       bestLevel = lvl;
       bestXp = target.xpReward || 0;
       foundSafe = true;
@@ -1111,9 +1292,11 @@ export function findOptimalFarmLevel(
   }
 
   return {
-    optimalLevel: bestLevel,
-    optimalXp: bestXp,
-    isSafe: foundSafe,
-    canBeatAnyLevel: foundSafe,
+    optimalLevel: foundSafe ? bestLevel : firstVictory?.level || 1,
+    optimalXp: foundSafe ? bestXp : firstVictory?.xp || 0,
+    // Real-battle fidelity is still failing; zero simulated losses are not validated safety.
+    isSafe: false,
+    zeroLossesInModel: foundSafe,
+    canBeatAnyLevel: Boolean(firstVictory),
   };
 }

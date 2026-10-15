@@ -165,6 +165,14 @@ async function migrate() {
   try {
     await client.query('BEGIN');
 
+    // Retired enemy mistakenly present in older recruitable catalogs. Never reseed it.
+    await client.query('DELETE FROM troop_catalog WHERE id = $1', ['berserker']);
+    // Correct a known portrait mismatch without merging the two distinct boar units.
+    await client.query(
+      'UPDATE troop_catalog SET avatar_path=$2 WHERE id=$1 AND avatar_path=$3',
+      ['m3_beast', '/assets/troops/battle_boar.png', '/assets/monsters/berserker_avatar.png']
+    );
+
     const monsterSeedById = new Map<string, MonsterCatalogSeed>(
       MONSTER_CATALOG_SEED.map((monster) => [monster.id, monster])
     );
@@ -183,8 +191,8 @@ async function migrate() {
         `INSERT INTO troop_catalog (
           id, name, category, tier, troop_class, base_attack, base_health,
           revival_silver_cost, revival_gold_cost, leadership_cost, speed, capacity,
-          food_consumption, aspects, avatar_icon, avatar_path
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            food_consumption, aspects, avatar_icon, avatar_path, initiative
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
         ON CONFLICT (id) DO NOTHING`,
         [
           troop.id,
@@ -203,6 +211,7 @@ async function migrate() {
           JSON.stringify(troop.aspects || {}),
           troop.avatarIcon || null,
           avatar || null,
+            troop.initiative ?? null,
         ]
       );
       insertedTroops += result.rowCount || 0;

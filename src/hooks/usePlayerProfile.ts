@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { PlayerProfile, ProfileSummary, TroopUnit } from '../types';
 import { useGameCatalog } from '../context/GameCatalogContext';
+import { cancelMarch } from '../domain/cancelMarch';
+import { reconcileLegacySpy } from '../domain/legacyTroops';
+import { isOwnTroop } from '../domain/ownTroops';
 import {
   fetchProfileFromDb,
   saveProfileToDb,
@@ -21,7 +24,7 @@ export const DEMO_TROOP_COUNTS: Record<string, number> = {
   g2_mounted: 523,
   g1_siege: 137,
   g1_heavy: 351,
-  s1_assassin: 3,
+  s1_spy: 3,
   m3_golem: 5,
   m3_specter: 104,
   emerald_dragon: 133,
@@ -124,11 +127,14 @@ export function usePlayerProfile() {
       const saved = localStorage.getItem(PROFILES_STORAGE_PREFIX + activeProfileId);
       if (saved) {
         const parsed = JSON.parse(saved);
-        return {
-          ...createCleanProfile(activeProfileId),
+        const defaults = createCleanProfile(activeProfileId);
+        return reconcileLegacySpy({
+          ...defaults,
           ...parsed,
+          captainLevels: { ...defaults.captainLevels, ...(parsed.captainLevels || {}) },
+          captainStars: { ...(defaults.captainStars || {}), ...(parsed.captainStars || {}) },
           id: activeProfileId,
-        };
+        });
       }
       // Se for a primeira vez e for main_profile, carregar com demo
       const initial = createCleanProfile('main_profile');
@@ -284,11 +290,11 @@ export function usePlayerProfile() {
     if (localData) {
       try {
         const parsed = JSON.parse(localData);
-        setProfile({
+        setProfile(reconcileLegacySpy({
           ...createCleanProfile(targetId, 'Comandante', 'K:310', '', catalogTroops.map((troop) => troop.id)),
           ...parsed,
           id: targetId,
-        });
+        }));
       } catch (e) {
         console.error('Erro ao ler perfil do localStorage:', e);
       }
@@ -369,12 +375,16 @@ export function usePlayerProfile() {
     setProfile((prev) => ({ ...prev, ...updates }));
   };
 
+  const cancelActiveMarch = (marchId: string) => {
+    setProfile((prev) => cancelMarch(prev, marchId));
+  };
+
   const updateCaptainLevel = (captainId: string, level: number) => {
     setProfile((prev) => ({
       ...prev,
       captainLevels: {
         ...prev.captainLevels,
-        [captainId]: level,
+        [captainId]: Math.max(1, Math.min(600, level)),
       },
     }));
   };
@@ -384,7 +394,7 @@ export function usePlayerProfile() {
       ...prev,
       captainStars: {
         ...(prev.captainStars || {}),
-        [captainId]: Math.max(1, Math.min(6, stars)),
+        [captainId]: Math.max(1, Math.min(7, stars)),
       },
     }));
   };
@@ -420,6 +430,7 @@ export function usePlayerProfile() {
   };
 
   const addTroop = (newTroop: TroopUnit) => {
+    if (!isOwnTroop(newTroop)) return;
     setProfile((prev) => {
       const isCustom = newTroop.id.startsWith('custom_');
       let updatedCustom = prev.customTroops || [];
@@ -457,7 +468,7 @@ export function usePlayerProfile() {
   };
 
   const getHydratedTroops = (): TroopUnit[] => {
-    const allTroops = [...catalogTroops, ...(profile.customTroops || [])];
+    const allTroops = [...catalogTroops, ...(profile.customTroops || [])].filter(isOwnTroop);
     return allTroops.map((t) => {
       const isUnlocked = profile.unlockedTroopIds.includes(t.id);
       const custom = profile.customTroopStats[t.id];
@@ -541,6 +552,7 @@ export function usePlayerProfile() {
     createNewProfile,
     deleteProfile,
     updateProfile,
+    cancelActiveMarch,
     updateCaptainLevel,
     updateCaptainStars,
     toggleSelectCaptain,

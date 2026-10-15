@@ -21,3 +21,20 @@ build/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Local recovery copies and raw account diagnostics stay on this computer.
+.local-backups/
+/docs/erros/batalha-real-20261015/
+/docs/erros/estoque-ids-legados/
+/docs/erros/marcha-um-mercenario/
+/docs/erros/recomendacao-por-nivel/
+/docs/erros/remover-marcha/
+/tests/fixtures/water-redundant.json
+/server/compare-game-preparation.ts
+/server/diagnose-single-mercenary.ts
+/server/fix-beast-avatar.ts
+/server/fix-berserker-enemy.ts
+/server/fix-heavy-spy.ts
+/server/fix-mercenary-vi.ts
+/server/fix-spy-and-berserker.ts
+/server/remove-legacy-titan.ts

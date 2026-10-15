@@ -537,7 +537,7 @@ export const MonsterSelector: React.FC<MonsterSelectorProps> = ({
                     isSaved
                       ? `Nível ${lvl}: Composição personalizada salva`
                       : isOptimal
-                      ? `Nível ${lvl}: Nível ótimo de farm seguro`
+                      ? `Nível ${lvl}: melhor resultado encontrado no modelo experimental`
                       : `Selecionar Nível ${lvl}`
                   }
                 >

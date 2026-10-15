@@ -135,9 +135,9 @@ export const BarracksView: React.FC<BarracksViewProps> = ({
           </div>
 
           <div className="bg-[#0b0f19] border border-slate-700/80 p-3.5 rounded-xl shadow-inner">
-            <span className="text-xs font-semibold text-slate-400 block">Mercenários Épicos (V)</span>
+            <span className="text-xs font-semibold text-slate-400 block">Caçadores de Monstro Épico</span>
             <div className="text-lg sm:text-xl font-mono font-black text-purple-300 mt-0.5">
-              {(troops.find((t) => t.id === 'epic_monster_hunter_v')?.ownedCount || 0).toLocaleString('pt-BR')} <span className="text-xs font-sans text-slate-400 font-normal">un.</span>
+              {troops.filter((t) => t.id === 'epic_monster_hunter_v' || t.id === 'epic_monster_hunter_vi').reduce((sum, t) => sum + t.ownedCount, 0).toLocaleString('pt-BR')} <span className="text-xs font-sans text-slate-400 font-normal">un.</span>
             </div>
           </div>
         </div>

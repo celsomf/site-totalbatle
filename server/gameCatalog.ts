@@ -2,12 +2,13 @@ import { timingSafeEqual } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import type { EnemySquadUnit } from '../src/types';
 import type { CatalogTargetLevel, GameCatalogData } from '../src/types/catalog';
+import { isOwnTroop } from '../src/domain/ownTroops';
 
 type Queryable = Pick<PoolClient, 'query'>;
 
 export async function getGameCatalog(db: Queryable): Promise<GameCatalogData> {
   const troopsResult = await db.query(
-      `SELECT id, name, category, tier, troop_class AS "troopClass", base_attack AS "baseAttack",
+      `SELECT id, name, category, tier, initiative, troop_class AS "troopClass", base_attack AS "baseAttack",
         base_health AS "baseHealth", revival_silver_cost AS "revivalSilverCost",
         revival_gold_cost AS "revivalGoldCost", leadership_cost AS "leadershipCost", speed,
         capacity, food_consumption AS "foodConsumption", aspects, avatar_icon AS "avatarIcon",
@@ -89,7 +90,7 @@ export async function getGameCatalog(db: Queryable): Promise<GameCatalogData> {
   }
 
   return {
-    troops: troopsResult.rows.map((row) => ({
+    troops: troopsResult.rows.filter(isOwnTroop).map((row) => ({
       ...row,
       ownedCount: 0,
       isUnlocked: true,
